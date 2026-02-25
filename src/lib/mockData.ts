@@ -32,5 +32,5 @@ export const mockOrders = [
 export const mockChats = [
   { id: "1", name: "Jane Doe", lastMessage: "Is this still available?", time: "2m ago", avatar: "J" },
   { id: "2", name: "Alex Morgan", lastMessage: "Thanks for the quick reply!", time: "1h ago", avatar: "A" },
-  { id: "3", name: "Sam Kim", lastMessage: "Can you do $30?", time: "3h ago", avatar: "S" },
+  { id: "3", name: "Sam Kim", lastMessage: "Can you do ₹30?", time: "3h ago", avatar: "S" },
 ];

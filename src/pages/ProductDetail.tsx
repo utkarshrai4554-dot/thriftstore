@@ -3,10 +3,17 @@ import { mockProducts } from "@/lib/mockData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Eye, ShoppingCart, Heart, Share2 } from "lucide-react";
+import { useCart } from "@/contexts/CartContext";
+import { useWishlist } from "@/contexts/WishlistContext";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 const ProductDetail = () => {
   const { id } = useParams();
   const product = mockProducts.find((p) => p.id === id);
+  const { addToCart } = useCart();
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const { user } = useAuth();
 
   if (!product) {
     return (
@@ -18,6 +25,60 @@ const ProductDetail = () => {
       </div>
     );
   }
+
+  const handleAddToCart = () => {
+    if (!user) {
+      toast.error('Please login to add items to cart');
+      return;
+    }
+    
+    addToCart({ 
+      id: product.id, 
+      name: product.name, 
+      price: product.price, 
+      image: product.image, 
+      category: product.category, 
+      condition: product.condition 
+    });
+    toast.success('Added to cart!');
+  };
+
+  const handleToggleWishlist = () => {
+    if (!user) {
+      toast.error('Please login to add items to wishlist');
+      return;
+    }
+    
+    const inWishlist = isInWishlist(product.id);
+    
+    if (inWishlist) {
+      removeFromWishlist(product.id);
+      toast.success('Removed from wishlist');
+    } else {
+      addToWishlist({ 
+        id: product.id, 
+        name: product.name, 
+        price: product.price, 
+        image: product.image, 
+        category: product.category, 
+        condition: product.condition 
+      });
+      toast.success('Added to wishlist!');
+    }
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: product.name,
+        text: `Check out this ${product.name} on StyleEase!`,
+        url: window.location.href
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast.success('Link copied to clipboard!');
+    }
+  };
 
   return (
     <div className="min-h-screen py-8">
@@ -38,7 +99,7 @@ const ProductDetail = () => {
                 <Badge variant="outline" className="capitalize">{product.condition}</Badge>
               </div>
               <h1 className="font-display text-3xl font-bold mb-2">{product.name}</h1>
-              <p className="font-display text-4xl font-bold text-primary">${product.price}</p>
+              <p className="font-display text-4xl font-bold text-primary">₹{product.price}</p>
             </div>
 
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -49,14 +110,15 @@ const ProductDetail = () => {
             <p className="text-muted-foreground leading-relaxed">{product.description}</p>
 
             <div className="border-t pt-6 space-y-3">
-              <Button size="lg" className="w-full text-base">
+              <Button size="lg" className="w-full text-base" onClick={handleAddToCart}>
                 <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
               </Button>
               <div className="flex gap-3">
-                <Button variant="outline" size="lg" className="flex-1">
-                  <Heart className="mr-2 h-4 w-4" /> Wishlist
+                <Button variant="outline" size="lg" className="flex-1" onClick={handleToggleWishlist}>
+                  <Heart className={`mr-2 h-4 w-4 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} /> 
+                  {isInWishlist(product.id) ? 'Remove from Wishlist' : 'Wishlist'}
                 </Button>
-                <Button variant="outline" size="lg" className="flex-1">
+                <Button variant="outline" size="lg" className="flex-1" onClick={handleShare}>
                   <Share2 className="mr-2 h-4 w-4" /> Share
                 </Button>
               </div>

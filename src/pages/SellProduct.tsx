@@ -73,7 +73,7 @@ const SellProduct = () => {
           </div>
 
           <div className="space-y-2">
-            <Label>Price ($)</Label>
+            <Label>Price (₹)</Label>
             <Input type="number" min="1" placeholder="0.00" required />
           </div>
 

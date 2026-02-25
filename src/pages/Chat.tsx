@@ -7,8 +7,8 @@ import { Send, ArrowLeft } from "lucide-react";
 const mockMessages = [
   { id: 1, from: "them", text: "Hi! Is the vintage jacket still available?", time: "2:30 PM" },
   { id: 2, from: "me", text: "Yes it is! Are you interested?", time: "2:31 PM" },
-  { id: 3, from: "them", text: "Definitely! Can you do $75?", time: "2:33 PM" },
-  { id: 4, from: "me", text: "How about $80? It's in great condition.", time: "2:34 PM" },
+  { id: 3, from: "them", text: "Definitely! Can you do ₹75?", time: "2:33 PM" },
+  { id: 4, from: "me", text: "How about ₹80? It's in great condition.", time: "2:34 PM" },
   { id: 5, from: "them", text: "Deal! How do I proceed?", time: "2:35 PM" },
 ];
 

@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 
 const stats = [
-  { label: "Total Sales", value: "$24,580", icon: DollarSign, change: "+12%" },
+  { label: "Total Sales", value: "₹24,580", icon: DollarSign, change: "+12%" },
   { label: "Active Users", value: "1,284", icon: Users, change: "+8%" },
   { label: "Products Listed", value: "432", icon: ShoppingBag, change: "+15%" },
   { label: "Donations", value: "89", icon: Gift, change: "+22%" },
