@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Gift, ShoppingBag, Truck, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/ProductCard";
+import { BirthdayBonusAlert } from "@/components/BirthdayBonusAlert";
 import { mockProducts, rewardTiers } from "@/lib/mockData";
 import heroImage from "@/assets/hero-thrift.jpg";
 
@@ -15,6 +16,7 @@ const features = [
 const Index = () => {
   return (
     <div className="min-h-screen">
+      <BirthdayBonusAlert />
       {/* Hero */}
       <section className="relative h-[85vh] flex items-center overflow-hidden">
         <img src={heroImage} alt="StyleEase curated thrift" className="absolute inset-0 w-full h-full object-cover" />

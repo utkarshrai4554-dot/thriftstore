@@ -108,18 +108,6 @@ export const LoginForm = ({ onSuccess, onRegisterClick }: LoginFormProps) => {
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Login
           </Button>
-          {/* Debug Button - Remove in production */}
-          <Button 
-            type="button" 
-            variant="outline" 
-            className="w-full mt-2"
-            onClick={() => {
-              console.log('🔍 Debug: Testing basic Firebase connection...');
-              // testBasicFirebaseConnection();
-            }}
-          >
-            🔧 Test Firebase Connection
-          </Button>
         </form>
 
         {onRegisterClick && (

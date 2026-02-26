@@ -1,5 +1,4 @@
-import { 
-  createUserWithEmailAndPassword, 
+import { createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   signOut,
   User,
@@ -7,15 +6,17 @@ import {
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { createUserProfile } from './userService';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 export interface AuthError {
   code: string;
   message: string;
 }
 
-export const registerUser = async (email: string, password: string, displayName: string): Promise<User> => {
+export const registerUser = async (email: string, password: string, displayName: string, phone?: string, address?: string, birthdate?: string): Promise<User> => {
   try {
-    console.log('🔍 Starting user registration:', { email, displayName });
+    console.log('🔍 Starting user registration:', { email, displayName, phone, address, birthdate });
     console.log('🔍 Attempting Firebase authentication...');
     const userCredential: UserCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
@@ -23,12 +24,33 @@ export const registerUser = async (email: string, password: string, displayName:
     console.log('🔍 User email verified:', user.email);
     console.log('🔍 Attempting to create user profile...');
     
+    // Save to users collection (main data source for rewards)
     await createUserProfile(user.uid, {
       email: user.email!,
       displayName,
+      phone,
+      address,
+      birthdate,
+      rewardPoints: 50,
+      role: 'customer',
       createdAt: new Date(),
       updatedAt: new Date()
     });
+    
+    // Also save to userProfiles collection for profile display
+    const profileRef = doc(db, 'userProfiles', user.uid);
+    await setDoc(profileRef, {
+      displayName,
+      email: user.email!,
+      phone,
+      address,
+      birthdate,
+      rewardPoints: 50,
+      role: 'customer',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    
     console.log('✅ User profile creation completed');
     console.log('🔍 Registration flow completed successfully');
     

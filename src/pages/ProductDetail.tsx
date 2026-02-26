@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { mockProducts } from "@/lib/mockData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { toast } from "sonner";
 
 const ProductDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const product = mockProducts.find((p) => p.id === id);
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
@@ -29,6 +30,7 @@ const ProductDetail = () => {
   const handleAddToCart = () => {
     if (!user) {
       toast.error('Please login to add items to cart');
+      navigate('/auth');
       return;
     }
     
@@ -46,6 +48,7 @@ const ProductDetail = () => {
   const handleToggleWishlist = () => {
     if (!user) {
       toast.error('Please login to add items to wishlist');
+      navigate('/auth');
       return;
     }
     

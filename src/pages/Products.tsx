@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ProductCard from "@/components/ProductCard";
+import { BirthdayBonusAlert } from "@/components/BirthdayBonusAlert";
 import { mockProducts, categories, conditions } from "@/lib/mockData";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,7 @@ const Products = () => {
 
   return (
     <div className="min-h-screen py-8">
+      <BirthdayBonusAlert />
       <div className="container mx-auto px-4">
         <div className="mb-8">
           <h1 className="font-display text-3xl font-bold mb-2">Shop Pre-Loved</h1>

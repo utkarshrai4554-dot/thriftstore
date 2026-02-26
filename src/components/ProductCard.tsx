@@ -1,5 +1,5 @@
 import { Eye, ShoppingCart, Heart } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
@@ -21,6 +21,7 @@ const ProductCard = ({ id, name, price, category, condition, image, views }: Pro
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist, loading: wishlistLoading } = useWishlist();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -28,6 +29,7 @@ const ProductCard = ({ id, name, price, category, condition, image, views }: Pro
     
     if (!user) {
       toast.error('Please login to add items to cart');
+      navigate('/auth');
       return;
     }
     
@@ -40,6 +42,7 @@ const ProductCard = ({ id, name, price, category, condition, image, views }: Pro
     
     if (!user) {
       toast.error('Please login to add items to wishlist');
+      navigate('/auth');
       return;
     }
     

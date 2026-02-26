@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, ShoppingBag, Heart, MessageCircle, User, Package, BarChart3, ShoppingCart } from "lucide-react";
+import { Menu, X, ShoppingBag, Heart, User, Package, BarChart3, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/contexts/CartContext";
@@ -10,7 +10,6 @@ const navLinks = [
   { to: "/products", label: "Shop" },
   { to: "/sell", label: "Sell" },
   { to: "/donate", label: "Donate" },
-  { to: "/chat", label: "Chat", icon: MessageCircle },
   { to: "/orders", label: "Orders", icon: Package },
   { to: "/admin", label: "Admin", icon: BarChart3 },
   { to: "/delivery", label: "Delivery", icon: Package }
@@ -106,7 +105,7 @@ const Navbar = () => {
           </Link>
 
           {user ? (
-            <Link to="/dashboard">
+            <Link to="/profile">
               <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50" size="sm">
                 <User className="h-4 w-4 mr-2" />
                 {userProfile?.displayName || user?.email?.split('@')[0]}
@@ -164,7 +163,7 @@ const Navbar = () => {
               <Button variant="outline" size="sm">Delivery</Button>
             </Link>
             {user ? (
-              <Link to="/dashboard" onClick={() => setOpen(false)}>
+              <Link to="/profile" onClick={() => setOpen(false)}>
                 <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50" size="sm">
                   <User className="h-4 w-4 mr-2" />
                   {userProfile?.displayName || user?.email?.split('@')[0]}

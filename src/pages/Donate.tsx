@@ -1,15 +1,48 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { donationCauses } from "@/lib/mockData";
-import { Gift, Heart, Award, Truck } from "lucide-react";
+import { Gift, Heart, Award, Truck, ImagePlus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { toast } from "sonner";
 
 const Donate = () => {
   const [selectedCause, setSelectedCause] = useState("");
-  const { toast } = useToast();
+  const { user } = useAuth();
+  const [donationImages, setDonationImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const validFiles = files.filter(file => file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024);
+    
+    if (validFiles.length !== files.length) {
+      toast.error('Some files were invalid. Please upload only images under 5MB.');
+    }
+
+    setDonationImages(prev => [...prev, ...validFiles]);
+    
+    // Create previews
+    validFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreviews(prev => [...prev, e.target?.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (index: number) => {
+    setDonationImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
 
   const causeIcons: Record<string, typeof Heart> = {
     "Charity": Heart,
@@ -18,9 +51,62 @@ const Donate = () => {
     "Disaster Relief": Truck,
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    toast({ title: "Donation submitted!", description: "We'll arrange a free pickup. You'll receive a certificate soon." });
+    
+    if (!user) {
+      toast.error('Please login to submit a donation');
+      return;
+    }
+    
+    if (!selectedCause) {
+      toast.error('Please select a cause');
+      return;
+    }
+    
+    if (donationImages.length === 0) {
+      toast.error('Please add at least one image of the donation item');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const formData = new FormData(e.currentTarget);
+      const donationData = {
+        userId: user.uid,
+        cause: selectedCause,
+        description: formData.get('description') as string,
+        pickupAddress: formData.get('pickupAddress') as string,
+        images: donationImages.map(file => ({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          url: URL.createObjectURL(file) // In production, upload to storage service
+        })),
+        status: 'pending',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+
+      // Save to Firestore
+      const donationRef = doc(db, 'donations', `${Date.now()}_${user.uid}`);
+      await setDoc(donationRef, donationData);
+
+      toast.success('Donation submitted successfully! We\'ll arrange a free pickup and send you a certificate.');
+      
+      // Reset form
+      e.currentTarget.reset();
+      setDonationImages([]);
+      setImagePreviews([]);
+      setSelectedCause('');
+      
+    } catch (error) {
+      console.error('Error submitting donation:', error);
+      toast.error('Failed to submit donation. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -71,18 +157,74 @@ const Donate = () => {
             </div>
           </div>
 
+          <div className="space-y-3">
+            <Label>Donation Images *</Label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            
+            {imagePreviews.length > 0 && (
+              <div className="grid grid-cols-3 gap-4">
+                {imagePreviews.map((preview, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={preview}
+                      alt={`Donation image ${index + 1}`}
+                      className="w-full h-32 object-cover rounded-lg border"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => removeImage(index)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+                {imagePreviews.length < 3 && (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed rounded-lg h-32 flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-colors"
+                  >
+                    <ImagePlus className="h-6 w-6 text-muted-foreground mb-1" />
+                    <span className="text-xs text-muted-foreground">Add Image</span>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {imagePreviews.length === 0 && (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
+              >
+                <ImagePlus className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Click to upload donation images</p>
+                <p className="text-xs text-muted-foreground mt-1">PNG, JPG up to 5MB each (max 3 images)</p>
+              </div>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label>Item Description</Label>
-            <Textarea placeholder="What are you donating?" rows={3} required />
+            <Textarea name="description" placeholder="What are you donating?" rows={3} required />
           </div>
 
           <div className="space-y-2">
             <Label>Pickup Address</Label>
-            <Input placeholder="Your address for free pickup" required />
+            <Input name="pickupAddress" placeholder="Your address for free pickup" required />
           </div>
 
-          <Button type="submit" size="lg" className="w-full text-base">
-            <Gift className="mr-2 h-5 w-5" /> Submit Donation
+          <Button type="submit" size="lg" className="w-full text-base" disabled={isSubmitting}>
+            <Gift className="mr-2 h-5 w-5" />
+            {isSubmitting ? 'Submitting...' : 'Submit Donation'}
           </Button>
         </form>
       </div>

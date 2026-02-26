@@ -15,7 +15,10 @@ const registerSchema = z.object({
   displayName: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: z.string()
+  confirmPassword: z.string(),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  birthdate: z.string().optional()
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -46,7 +49,7 @@ export const RegisterForm = ({ onSuccess, onLoginClick }: RegisterFormProps) => 
     setError(null);
 
     try {
-      await registerUser(data.email, data.password, data.displayName);
+      await registerUser(data.email, data.password, data.displayName, data.phone, data.address, data.birthdate);
       toast({
         title: 'Registration successful',
         description: 'Your account has been created successfully!',
@@ -128,6 +131,49 @@ export const RegisterForm = ({ onSuccess, onLoginClick }: RegisterFormProps) => 
             />
             {errors.confirmPassword && (
               <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone Number (Optional)</Label>
+            <Input
+              id="phone"
+              type="tel"
+              placeholder="Enter your phone number"
+              {...register('phone')}
+              disabled={isLoading}
+            />
+            {errors.phone && (
+              <p className="text-sm text-destructive">{errors.phone.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="address">Address (Optional)</Label>
+            <Input
+              id="address"
+              type="text"
+              placeholder="Enter your address"
+              {...register('address')}
+              disabled={isLoading}
+            />
+            {errors.address && (
+              <p className="text-sm text-destructive">{errors.address.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="birthdate">Birth Date (Optional)</Label>
+            <Input
+              id="birthdate"
+              type="date"
+              placeholder="Enter your birth date"
+              {...register('birthdate')}
+              disabled={isLoading}
+              max={new Date().toISOString().split('T')[0]}
+            />
+            {errors.birthdate && (
+              <p className="text-sm text-destructive">{errors.birthdate.message}</p>
             )}
           </div>
 

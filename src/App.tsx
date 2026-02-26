@@ -7,18 +7,20 @@ import Navbar from "@/components/Navbar";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/contexts/CartContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import Wishlist from "./pages/Wishlist";
+import Profile from "./pages/Profile";
 import SellProduct from "./pages/SellProduct";
 import Donate from "./pages/Donate";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
-import Chat from "./pages/Chat";
 import OrderTracking from "./pages/OrderTracking";
+import Orders from "./pages/Orders";
 import AdminDashboard from "./pages/AdminDashboard";
 import DeliveryDashboard from "./pages/DeliveryDashboard";
 import NotFound from "./pages/NotFound";
@@ -28,19 +30,21 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <AuthProvider>
-        <CartProvider>
-          <WishlistProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Navbar />
-              <Routes>
+      <ThemeProvider>
+        <AuthProvider>
+          <CartProvider>
+            <WishlistProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Navbar />
+                <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/products/:id" element={<ProductDetail />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/wishlist" element={<Wishlist />} />
+                <Route path="/profile" element={<Profile />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route 
                   path="/dashboard" 
@@ -67,18 +71,10 @@ const App = () => (
                   } 
                 />
                 <Route 
-                  path="/chat" 
-                  element={
-                    <ProtectedRoute>
-                      <Chat />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
                   path="/orders" 
                   element={
                     <ProtectedRoute>
-                      <OrderTracking />
+                      <Orders />
                     </ProtectedRoute>
                   } 
                 />
@@ -104,8 +100,9 @@ const App = () => (
           </WishlistProvider>
         </CartProvider>
       </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+    </ThemeProvider>
+  </TooltipProvider>
+</QueryClientProvider>
 );
 
 export default App;

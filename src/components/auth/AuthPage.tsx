@@ -6,7 +6,7 @@ export const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
 
   const handleAuthSuccess = () => {
-    window.location.href = '/dashboard';
+    window.location.href = '/';
   };
 
   return (
