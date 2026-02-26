@@ -65,6 +65,7 @@ export default {
           DEFAULT: "hsl(var(--warm))",
           foreground: "hsl(var(--warm-foreground))",
         },
+        "dark-brown": "hsl(var(--dark-brown))",
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",

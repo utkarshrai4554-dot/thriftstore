@@ -187,24 +187,30 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const addToCart = async (item: Omit<CartItem, 'quantity' | 'addedAt'>) => {
     if (!auth.currentUser) return;
 
-    // Don't add serverTimestamp to individual items
-    const newItem: CartItem = {
-      ...item,
-      quantity: 1
-    };
-
     setItems(prevItems => {
       const existingItem = prevItems.find(cartItem => cartItem.id === item.id);
       let updatedItems;
       
       if (existingItem) {
+        // Check if item already exists in cart (quantity would be >= 1)
+        if (existingItem.quantity >= 1) {
+          toast('Only one item available in store as it is thrifted');
+          return prevItems; // Don't add more
+        }
+        // This case shouldn't happen with our logic, but just in case
         updatedItems = prevItems.map(cartItem =>
           cartItem.id === item.id
-            ? { ...cartItem, quantity: cartItem.quantity + 1 }
+            ? { ...cartItem, quantity: 1 }
             : cartItem
         );
       } else {
+        // Add new item with quantity 1
+        const newItem: CartItem = {
+          ...item,
+          quantity: 1
+        };
         updatedItems = [...prevItems, newItem];
+        toast.success('Item added to cart!');
       }
 
       // Save to Firestore
@@ -226,6 +232,12 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const updateQuantity = async (id: string, quantity: number) => {
     if (!auth.currentUser) return;
 
+    // Limit maximum quantity to 1
+    if (quantity > 1) {
+      toast('Only one item available in store as it is thrifted');
+      return;
+    }
+
     if (quantity <= 0) {
       removeFromCart(id);
       return;
@@ -233,7 +245,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
     setItems(prevItems => {
       const updatedItems = prevItems.map(item =>
-        item.id === id ? { ...item, quantity } : item
+        item.id === id ? { ...item, quantity: 1 } : item
       );
       saveCartToFirestore(auth.currentUser!.uid, updatedItems);
       return updatedItems;

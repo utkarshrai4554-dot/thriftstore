@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 const navLinks = [
   { to: "/products", label: "Shop" },
@@ -17,6 +18,7 @@ const navLinks = [
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
+  const { theme } = useTheme();
   const { user, userProfile } = useAuth();
   const { getCartCount } = useCart();
   const { getWishlistCount } = useWishlist();
@@ -24,6 +26,14 @@ const Navbar = () => {
 
   const cartCount = getCartCount();
   const wishlistCount = getWishlistCount();
+
+  // Filter navLinks based on user role
+  const filteredNavLinks = navLinks.filter(link => {
+    if (link.to === "/admin" || link.to === "/delivery") {
+      return userProfile?.role === 'admin';
+    }
+    return true;
+  });
 
   return (
     <nav className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b">
@@ -34,7 +44,7 @@ const Navbar = () => {
 
         {/* Desktop */}
         <div className="hidden md:flex items-center gap-6">
-          {navLinks.map((l) => (
+          {filteredNavLinks.map((l) => (
             <Link
               key={l.to}
               to={l.to}
@@ -82,10 +92,10 @@ const Navbar = () => {
         <div className="hidden md:flex items-center gap-2">
           {/* Cart Icon */}
           <Link to="/cart">
-            <Button variant="ghost" size="sm" className="relative">
+            <Button variant="ghost" size="sm" className={`relative ${theme === 'dark' ? 'text-card-foreground hover:bg-warm/10' : 'text-foreground hover:bg-muted'}`}>
               <ShoppingCart className="h-5 w-5" />
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                <span className={`absolute -top-1 -right-1 text-xs rounded-full h-5 w-5 flex items-center justify-center ${theme === 'dark' ? 'bg-warm text-warm-foreground' : 'bg-primary text-primary-foreground'}`}>
                   {cartCount}
                 </span>
               )}
@@ -94,10 +104,10 @@ const Navbar = () => {
 
           {/* Wishlist Icon */}
           <Link to="/wishlist">
-            <Button variant="ghost" size="sm" className="relative">
+            <Button variant="ghost" size="sm" className={`relative ${theme === 'dark' ? 'text-card-foreground hover:bg-warm/10' : 'text-foreground hover:bg-muted'}`}>
               <Heart className="h-5 w-5" />
               {wishlistCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                <span className={`absolute -top-1 -right-1 text-xs rounded-full h-5 w-5 flex items-center justify-center ${theme === 'dark' ? 'bg-warm text-warm-foreground' : 'bg-primary text-primary-foreground'}`}>
                   {wishlistCount}
                 </span>
               )}
@@ -106,14 +116,14 @@ const Navbar = () => {
 
           {user ? (
             <Link to="/profile">
-              <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50" size="sm">
+              <Button variant="outline" className={`${theme === 'dark' ? 'border-warm text-warm-foreground hover:bg-warm/10' : 'border-primary text-primary hover:bg-primary/10'}`} size="sm">
                 <User className="h-4 w-4 mr-2" />
                 {userProfile?.displayName || user?.email?.split('@')[0]}
               </Button>
             </Link>
           ) : (
             <Link to="/auth">
-              <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50" size="sm">
+              <Button variant="outline" className={`${theme === 'dark' ? 'border-warm text-warm-foreground hover:bg-warm/10' : 'border-primary text-primary hover:bg-primary/10'}`} size="sm">
                 Login / Register
               </Button>
             </Link>
@@ -125,27 +135,27 @@ const Navbar = () => {
         <div className="md:hidden border-t bg-card px-4 pb-4 animate-fade-in">
           {/* Mobile Cart and Wishlist */}
           <div className="flex gap-4 py-3 border-b">
-            <Link to="/cart" onClick={() => setOpen(false)} className="flex items-center gap-2">
+            <Link to="/cart" onClick={() => setOpen(false)} className={`flex items-center gap-2 ${theme === 'dark' ? 'text-card-foreground hover:text-warm-foreground' : 'text-foreground hover:text-primary'}`}>
               <ShoppingCart className="h-5 w-5" />
               <span>Cart</span>
               {cartCount > 0 && (
-                <span className="bg-primary text-primary-foreground text-xs rounded-full px-2 py-1">
+                <span className={`text-xs rounded-full px-2 py-1 ${theme === 'dark' ? 'bg-warm text-warm-foreground' : 'bg-primary text-primary-foreground'}`}>
                   {cartCount}
                 </span>
               )}
             </Link>
-            <Link to="/wishlist" onClick={() => setOpen(false)} className="flex items-center gap-2">
+            <Link to="/wishlist" onClick={() => setOpen(false)} className={`flex items-center gap-2 ${theme === 'dark' ? 'text-card-foreground hover:text-warm-foreground' : 'text-foreground hover:text-primary'}`}>
               <Heart className="h-5 w-5" />
               <span>Wishlist</span>
               {wishlistCount > 0 && (
-                <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1">
+                <span className={`text-xs rounded-full px-2 py-1 ${theme === 'dark' ? 'bg-warm text-warm-foreground' : 'bg-primary text-primary-foreground'}`}>
                   {wishlistCount}
                 </span>
               )}
             </Link>
           </div>
           
-          {navLinks.map((l) => (
+          {filteredNavLinks.map((l) => (
             <Link
               key={l.to}
               to={l.to}
@@ -156,22 +166,16 @@ const Navbar = () => {
             </Link>
           ))}
           <div className="flex gap-2 pt-2">
-            <Link to="/admin" onClick={() => setOpen(false)}>
-              <Button variant="outline" size="sm">Admin</Button>
-            </Link>
-            <Link to="/delivery" onClick={() => setOpen(false)}>
-              <Button variant="outline" size="sm">Delivery</Button>
-            </Link>
             {user ? (
               <Link to="/profile" onClick={() => setOpen(false)}>
-                <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50" size="sm">
+                <Button variant="outline" className="border-warm text-warm-foreground hover:bg-warm/10" size="sm">
                   <User className="h-4 w-4 mr-2" />
                   {userProfile?.displayName || user?.email?.split('@')[0]}
                 </Button>
               </Link>
             ) : (
               <Link to="/auth" onClick={() => setOpen(false)}>
-                <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50" size="sm">
+                <Button variant="outline" className="border-warm text-warm-foreground hover:bg-warm/10" size="sm">
                   Login / Register
                 </Button>
               </Link>

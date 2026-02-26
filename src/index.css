@@ -48,6 +48,7 @@
     /* Custom tokens */
     --warm: 30 70% 55%;
     --warm-foreground: 40 33% 96%;
+    --dark-brown: 20 35% 30%;         /* Dark brown text for better readability */
     --success: 145 50% 40%;
     --success-foreground: 40 33% 96%;
     --vintage: 25 30% 35%;
@@ -55,39 +56,69 @@
   }
 
   .dark {
-    --background: 150 20% 8%;
-    --foreground: 40 30% 92%;
-    --card: 150 18% 12%;
-    --card-foreground: 40 30% 92%;
-    --popover: 150 18% 12%;
-    --popover-foreground: 40 30% 92%;
-    --primary: 85 40% 45%;
-    --primary-foreground: 150 20% 8%;
-    --secondary: 30 55% 55%;
-    --secondary-foreground: 150 20% 8%;
-    --muted: 150 12% 18%;
-    --muted-foreground: 40 15% 60%;
-    --accent: 30 55% 55%;
-    --accent-foreground: 150 20% 8%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 40 30% 92%;
-    --border: 150 12% 20%;
-    --input: 150 12% 20%;
-    --ring: 85 40% 45%;
-    --sidebar-background: 150 18% 10%;
-    --sidebar-foreground: 40 30% 92%;
-    --sidebar-primary: 85 40% 45%;
-    --sidebar-primary-foreground: 150 20% 8%;
-    --sidebar-accent: 150 12% 18%;
-    --sidebar-accent-foreground: 40 30% 92%;
-    --sidebar-border: 150 12% 20%;
-    --sidebar-ring: 85 40% 45%;
-    --warm: 30 65% 50%;
-    --warm-foreground: 150 20% 8%;
-    --success: 145 45% 45%;
-    --success-foreground: 150 20% 8%;
-    --vintage: 25 25% 55%;
-    --cream: 150 20% 8%;
+    /* ========== DARK MODE – BROWN & BEIGE MINIMALIST ========== */
+    
+    /* Base Background */
+    --background: 24 18% 12%;           /* Lighter mocha brown */
+    --foreground: 38 28% 86%;           /* Soft warm beige text */
+    
+    /* Surfaces */
+    --card: 24 18% 16%;                 /* Darker mocha for contrast */
+    --card-foreground: 38 28% 86%;
+    --popover: 24 18% 16%;
+    --popover-foreground: 38 28% 86%;
+    
+    /* Primary (Main brand brown) */
+    --primary: 28 35% 38%;              /* Rich cocoa brown */
+    --primary-foreground: 38 30% 92%;   /* Light beige */
+    
+    /* Secondary (Soft contrast brown) */
+    --secondary: 30 20% 18%;            /* Muted dark brown */
+    --secondary-foreground: 38 28% 86%;
+    
+    /* Muted */
+    --muted: 28 15% 16%;
+    --muted-foreground: 35 18% 65%;     /* Dusty beige */
+    
+    /* Accent (Warm sand highlight) */
+    --accent: 34 40% 45%;               /* Caramel */
+    --accent-foreground: 38 30% 94%;
+    
+    /* Destructive */
+    --destructive: 8 50% 45%;           /* Brick red */
+    --destructive-foreground: 38 30% 94%;
+    
+    /* Success */
+    --success: 32 35% 40%;              /* Earthy brown-green feel */
+    --success-foreground: 38 30% 94%;
+    
+    /* Borders & Inputs */
+    --border: 28 15% 20%;
+    --input: 28 15% 16%;
+    --ring: 34 40% 45%;
+    
+    /* Sidebar */
+    --sidebar-background: 24 18% 12%;
+    --sidebar-foreground: 38 28% 86%;
+    --sidebar-primary: 28 35% 38%;
+    --sidebar-primary-foreground: 38 30% 92%;
+    --sidebar-accent: 34 40% 45%;
+    --sidebar-accent-foreground: 38 30% 94%;
+    --sidebar-border: 28 15% 20%;
+    --sidebar-ring: 34 40% 45%;
+    
+    /* Warm */
+    --warm: 32 45% 42%;                 /* Deep caramel */
+    --warm-foreground: 38 30% 94%;
+    
+    /* Dark Brown Text */
+    --dark-brown: 20 35% 30%;           /* Dark brown text for better readability */
+    
+    /* Vintage */
+    --vintage: 22 25% 22%;              /* Antique wood */
+    
+    /* Cream adaptation */
+    --cream: 38 28% 88%;                /* Soft beige */
   }
 }
 
@@ -109,5 +140,38 @@
   }
   .font-sans {
     font-family: 'DM Sans', sans-serif;
+  }
+  
+  /* Toast styles for theme-aware colors */
+  .toast-styles {
+    --toast-bg: hsl(var(--card));
+    --toast-text: hsl(var(--card-foreground));
+    --toast-border: hsl(var(--border));
+  }
+  
+  .dark .toast-styles {
+    --toast-bg: hsl(var(--card));
+    --toast-text: hsl(var(--card-foreground));
+    --toast-border: hsl(var(--border));
+  }
+  
+  /* Success toast styles */
+  .toast-success {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border-color: hsl(var(--primary));
+  }
+  
+  .dark .toast-success {
+    background: hsl(var(--warm));
+    color: hsl(var(--warm-foreground));
+    border-color: hsl(var(--warm));
+  }
+  
+  /* Error toast styles */
+  .toast-error {
+    background: hsl(var(--destructive));
+    color: hsl(var(--destructive-foreground));
+    border-color: hsl(var(--destructive));
   }
 }

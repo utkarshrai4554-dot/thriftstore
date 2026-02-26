@@ -5,6 +5,9 @@ import ProductCard from "@/components/ProductCard";
 import { BirthdayBonusAlert } from "@/components/BirthdayBonusAlert";
 import { mockProducts, rewardTiers } from "@/lib/mockData";
 import heroImage from "@/assets/hero-thrift.jpg";
+import heroImageDark from "@/assets/hero-thrift-dark.jpg";
+import { useTheme } from "@/contexts/ThemeContext";
+import { useReviews } from "@/contexts/ReviewContext";
 
 const features = [
   { icon: ShoppingBag, title: "Buy & Sell", desc: "Curated thrift finds verified for authenticity" },
@@ -14,13 +17,18 @@ const features = [
 ];
 
 const Index = () => {
+  const { theme } = useTheme();
+  const { getProductAverageRating, getProductTotalReviews } = useReviews();
+  
   return (
     <div className="min-h-screen">
       <BirthdayBonusAlert />
       {/* Hero */}
       <section className="relative h-[85vh] flex items-center overflow-hidden">
-        <img src={heroImage} alt="StyleEase curated thrift" className="absolute inset-0 w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-r from-foreground/70 via-foreground/40 to-transparent" />
+        <img src={theme === 'dark' ? heroImageDark : heroImage} alt="StyleEase curated thrift" className="absolute inset-0 w-full h-full object-cover" />
+        {theme === 'light' && (
+          <div className="absolute inset-0 bg-gradient-to-r from-foreground/70 via-foreground/40 to-transparent" />
+        )}
         <div className="relative container mx-auto px-4">
           <div className="max-w-xl animate-fade-in">
             <p className="text-primary-foreground/80 font-medium text-sm tracking-widest uppercase mb-4">Curated Pre-Loved Fashion</p>
@@ -32,12 +40,12 @@ const Index = () => {
             </p>
             <div className="flex flex-wrap gap-3">
               <Link to="/products">
-                <Button size="lg" className="bg-green-600 text-white hover:bg-green-700 text-base px-8">
+                <Button size="lg" className={`text-base px-8 ${theme === 'dark' ? 'bg-primary hover:bg-primary/90 text-primary-foreground' : 'bg-green-600 hover:bg-green-700 text-white'}`}>
                   Shop Now <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
               <Link to="/sell">
-                <Button size="lg" variant="outline" className="border-green-600 text-green-600 hover:bg-green-50 text-base px-8">
+                <Button size="lg" variant="outline" className={`text-base px-8 ${theme === 'dark' ? 'border-warm text-warm-foreground hover:bg-warm hover:text-card-foreground' : 'border-green-600 text-green-600 hover:bg-green-50'}`}>
                   Start Selling
                 </Button>
               </Link>
@@ -77,7 +85,12 @@ const Index = () => {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
             {mockProducts.slice(0, 4).map((p) => (
-              <ProductCard key={p.id} {...p} />
+              <ProductCard 
+                key={p.id} 
+                {...p} 
+                averageRating={getProductAverageRating(p.id)}
+                totalReviews={getProductTotalReviews(p.id)}
+              />
             ))}
           </div>
         </div>
@@ -107,7 +120,7 @@ const Index = () => {
         <div className="container mx-auto px-4 text-center">
           <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">Ready to Thrift?</h2>
           <p className="text-muted-foreground mb-8 max-w-md mx-auto">Join thousands of conscious shoppers making sustainable fashion choices.</p>
-          <Link to="/auth">
+          <Link to="/get-started">
             <Button size="lg" className="px-10 text-base">Get Started</Button>
           </Link>
         </div>

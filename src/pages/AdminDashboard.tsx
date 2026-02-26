@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   BarChart3, Users, Package, Gift, Truck, TrendingUp,
-  CheckCircle, XCircle, Eye, DollarSign, ShoppingBag
+  CheckCircle, XCircle, DollarSign, ShoppingBag
 } from "lucide-react";
 
 const stats = [
@@ -21,10 +21,10 @@ const pendingProducts = [
 ];
 
 const topProducts = [
-  { name: "Vintage Leather Jacket", views: 445, sales: 12 },
-  { name: "Art Deco Vase", views: 312, sales: 8 },
-  { name: "Retro Gold Necklace", views: 234, sales: 15 },
-  { name: "Classic Canvas Sneakers", views: 201, sales: 6 },
+  { name: "Vintage Leather Jacket", sales: 12 },
+  { name: "Art Deco Vase", sales: 8 },
+  { name: "Retro Gold Necklace", sales: 15 },
+  { name: "Classic Canvas Sneakers", sales: 6 },
 ];
 
 const deliveryAgents = [
@@ -109,7 +109,6 @@ const AdminDashboard = () => {
                         <p className="font-medium text-sm">{p.name}</p>
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> {p.views}</span>
                         <span className="flex items-center gap-1"><ShoppingBag className="h-3 w-3" /> {p.sales}</span>
                       </div>
                     </div>

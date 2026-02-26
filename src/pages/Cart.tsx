@@ -13,6 +13,9 @@ const Cart = () => {
     if (newQuantity < 1) {
       removeFromCart(id);
       toast.success('Item removed from cart');
+    } else if (newQuantity > 1) {
+      // Let the context handle the toast for quantity > 1
+      updateQuantity(id, newQuantity);
     } else {
       updateQuantity(id, newQuantity);
     }
@@ -119,6 +122,8 @@ const Cart = () => {
                             onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
                             className="w-16 text-center h-8"
                             min="1"
+                            max="1"
+                            readOnly
                           />
                           <Button
                             variant="outline"

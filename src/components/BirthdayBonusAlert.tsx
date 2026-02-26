@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { getUserProfile, hasValidBirthdayReward } from '@/services/userService';
 import { Button } from '@/components/ui/button';
 import { X, Clock, Gift } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface BirthdayBonusAlertProps {
   onClose?: () => void;
@@ -10,6 +11,7 @@ interface BirthdayBonusAlertProps {
 
 export const BirthdayBonusAlert = ({ onClose }: BirthdayBonusAlertProps) => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [showAlert, setShowAlert] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState('');
   const [birthdayPoints, setBirthdayPoints] = useState(0);
@@ -81,27 +83,27 @@ export const BirthdayBonusAlert = ({ onClose }: BirthdayBonusAlertProps) => {
   if (!showAlert || !user) return null;
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-6 shadow-lg">
+    <div className="bg-card border border-border rounded-lg p-4 mb-6 shadow-lg">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="bg-orange-500 rounded-full p-2">
-            <Gift className="h-4 w-4 text-white" />
+          <div className={`rounded-full p-2 ${theme === 'dark' ? 'bg-warm' : 'bg-green-100'}`}>
+            <Gift className={`h-4 w-4 ${theme === 'dark' ? 'text-warm-foreground' : 'text-green-700'}`} />
           </div>
           <div>
-            <div className="text-white font-medium mb-1">
-              � Birthday Bonus Active!
+            <div className="text-card-foreground font-medium mb-1">
+              🎂 Birthday Bonus Active!
             </div>
-            <div className="text-gray-300 text-sm">
-              You have <span className="text-orange-400 font-semibold">{totalPoints}</span> points 
-              <span className="text-gray-500 ml-1">({birthdayPoints} bonus)</span>
+            <div className="text-muted-foreground text-sm">
+              You have <span className={`font-semibold ${theme === 'dark' ? 'text-warm-foreground' : 'text-green-600'}`}>{totalPoints}</span> points 
+              <span className="text-muted-foreground/70 ml-1">({birthdayPoints} bonus)</span>
             </div>
           </div>
         </div>
         
         <div className="flex items-center gap-3">
-          <div className="bg-gray-700 rounded-full px-3 py-1.5 flex items-center gap-1.5">
-            <Clock className="h-3 w-3 text-orange-400" />
-            <span className="text-sm font-medium text-gray-200">
+          <div className={`rounded-full px-3 py-1.5 flex items-center gap-1.5 border ${theme === 'dark' ? 'bg-muted border-border' : 'bg-green-50 border-green-200'}`}>
+            <Clock className={`h-3 w-3 ${theme === 'dark' ? 'text-warm-foreground' : 'text-green-600'}`} />
+            <span className="text-sm font-medium text-card-foreground">
               {timeRemaining}
             </span>
           </div>
@@ -110,7 +112,7 @@ export const BirthdayBonusAlert = ({ onClose }: BirthdayBonusAlertProps) => {
             variant="ghost"
             size="sm"
             onClick={handleClose}
-            className="text-gray-400 hover:text-white hover:bg-gray-700 rounded-full h-6 w-6 p-0"
+            className={`rounded-full h-6 w-6 p-0 ${theme === 'dark' ? 'text-muted-foreground hover:text-card-foreground hover:bg-muted' : 'text-muted-foreground hover:text-foreground hover:bg-green-50'}`}
           >
             <X className="h-4 w-4" />
           </Button>

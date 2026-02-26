@@ -7,9 +7,12 @@ import Navbar from "@/components/Navbar";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/contexts/CartContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
+import { ReviewProvider } from "@/contexts/ReviewContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { AdminRoute } from "@/components/auth/AdminRoute";
 import Index from "./pages/Index";
+import GetStarted from "./pages/GetStarted";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
@@ -34,16 +37,18 @@ const App = () => (
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Navbar />
-                <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/products" element={<Products />} />
-                <Route path="/products/:id" element={<ProductDetail />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/wishlist" element={<Wishlist />} />
+              <ReviewProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <Navbar />
+                  <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/get-started" element={<GetStarted />} />
+                  <Route path="/products" element={<Products />} />
+                  <Route path="/products/:id" element={<ProductDetail />} />
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/wishlist" element={<Wishlist />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route 
@@ -81,27 +86,28 @@ const App = () => (
                 <Route 
                   path="/admin" 
                   element={
-                    <ProtectedRoute>
+                    <AdminRoute>
                       <AdminDashboard />
-                    </ProtectedRoute>
+                    </AdminRoute>
                   } 
                 />
                 <Route 
                   path="/delivery" 
                   element={
-                    <ProtectedRoute>
+                    <AdminRoute>
                       <DeliveryDashboard />
-                    </ProtectedRoute>
+                    </AdminRoute>
                   } 
                 />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
-          </WishlistProvider>
-        </CartProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  </TooltipProvider>
+          </ReviewProvider>
+        </WishlistProvider>
+      </CartProvider>
+    </AuthProvider>
+  </ThemeProvider>
+</TooltipProvider>
 </QueryClientProvider>
 );
 

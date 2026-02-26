@@ -1,16 +1,19 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { Search, SlidersHorizontal } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
-import { BirthdayBonusAlert } from "@/components/BirthdayBonusAlert";
-import { mockProducts, categories, conditions } from "@/lib/mockData";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { BirthdayBonusAlert } from "@/components/BirthdayBonusAlert";
+import { mockProducts, categories, conditions } from "@/lib/mockData";
+import { useReviews } from "@/contexts/ReviewContext";
 
 const Products = () => {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [condition, setCondition] = useState("All");
   const [showFilters, setShowFilters] = useState(false);
+  const { getProductAverageRating, getProductTotalReviews } = useReviews();
 
   const filtered = mockProducts.filter((p) => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
@@ -86,7 +89,12 @@ const Products = () => {
         <p className="text-sm text-muted-foreground mb-4">{filtered.length} items found</p>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {filtered.map((p) => (
-            <ProductCard key={p.id} {...p} />
+            <ProductCard 
+              key={p.id} 
+              {...p} 
+              averageRating={getProductAverageRating(p.id)}
+              totalReviews={getProductTotalReviews(p.id)}
+            />
           ))}
         </div>
         {filtered.length === 0 && (

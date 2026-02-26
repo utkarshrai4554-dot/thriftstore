@@ -35,18 +35,18 @@ const BirthdayCountdownAlert = ({ birthdate, hasValidBirthdayReward }: BirthdayC
   // Show special alert for birthdays within 7 days
   if (isApproaching) {
     return (
-      <Card className="mb-6 border-blue-200 bg-blue-50">
+      <Card className="mb-6 border-warm bg-warm/10">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
-            <Cake className="h-8 w-8 text-blue-600" />
+            <Cake className="h-8 w-8 text-warm-foreground" />
             <div className="flex-1">
-              <div className="font-semibold text-blue-900">
+              <div className="font-semibold text-card-foreground">
                 🎉 Your Birthday is Coming Soon!
               </div>
-              <div className="text-sm text-blue-700">
+              <div className="text-sm text-muted-foreground">
                 Get ready for your special day! You'll receive 50 bonus reward points on your birthday, valid for 30 days.
               </div>
-              <Badge variant="secondary" className="mt-2 bg-blue-100 text-blue-800">
+              <Badge variant="secondary" className="mt-2 bg-warm/20 text-warm-foreground border-warm/30">
                 <Gift className="h-3 w-3 mr-1" />
                 {countdown.days > 0 ? `${countdown.days} days` : countdown.timeString}
               </Badge>
@@ -63,12 +63,12 @@ const BirthdayCountdownAlert = ({ birthdate, hasValidBirthdayReward }: BirthdayC
       <Card className="mb-6">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
-            <Cake className="h-6 w-6 text-purple-600" />
+            <Cake className="h-6 w-6 text-accent" />
             <div className="flex-1">
-              <div className="font-medium text-gray-900">
+              <div className="font-medium text-card-foreground">
                 Next Birthday Countdown
               </div>
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-muted-foreground">
                 {countdown.timeString}
               </div>
             </div>

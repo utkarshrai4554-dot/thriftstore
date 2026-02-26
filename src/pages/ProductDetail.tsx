@@ -2,11 +2,14 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { mockProducts } from "@/lib/mockData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Eye, ShoppingCart, Heart, Share2 } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Heart, Share2, Star } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
+import { useReviews } from "@/contexts/ReviewContext";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import ReviewForm from "@/components/ReviewForm";
+import ReviewList from "@/components/ReviewList";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -14,7 +17,11 @@ const ProductDetail = () => {
   const product = mockProducts.find((p) => p.id === id);
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const { getProductAverageRating, getProductTotalReviews } = useReviews();
   const { user } = useAuth();
+
+  const averageRating = getProductAverageRating(id || '');
+  const totalReviews = getProductTotalReviews(id || '');
 
   if (!product) {
     return (
@@ -101,16 +108,30 @@ const ProductDetail = () => {
                 <Badge>{product.category}</Badge>
                 <Badge variant="outline" className="capitalize">{product.condition}</Badge>
               </div>
-              <h1 className="font-display text-3xl font-bold mb-2">{product.name}</h1>
-              <p className="font-display text-4xl font-bold text-primary">₹{product.price}</p>
+              <h1 className="font-display text-3xl font-bold mb-2" style={{ color: 'hsl(var(--dark-brown))' }}>{product.name}</h1>
+              <p className="font-display text-4xl font-bold text-primary mb-2">₹{product.price}</p>
+              {totalReviews > 0 && (
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="flex">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`h-4 w-4 ${
+                          star <= Math.round(averageRating)
+                            ? 'fill-yellow-400 text-yellow-400'
+                            : 'text-muted-foreground'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    {averageRating.toFixed(1)} ({totalReviews} reviews)
+                  </span>
+                </div>
+              )}
             </div>
 
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1"><Eye className="h-4 w-4" /> {product.views} views</span>
-              <span>Age: {product.age}</span>
-            </div>
-
-            <p className="text-muted-foreground leading-relaxed">{product.description}</p>
+            <p className="text-muted-foreground leading-relaxed mb-6" style={{ color: 'hsl(var(--dark-brown))' }}>{product.description}</p>
 
             <div className="border-t pt-6 space-y-3">
               <Button size="lg" className="w-full text-base" onClick={handleAddToCart}>
@@ -130,6 +151,23 @@ const ProductDetail = () => {
             <div className="bg-muted rounded-xl p-4 text-sm">
               <p className="font-medium mb-1">✨ Earn 10 reward points with this purchase</p>
               <p className="text-muted-foreground">Upload original bill for 50 bonus points after admin verification.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Reviews Section */}
+        <div className="mt-16 space-y-8">
+          <div className="text-center">
+            <h2 className="font-display text-3xl font-bold mb-2">Customer Reviews</h2>
+            <p className="text-muted-foreground">See what others think about this product</p>
+          </div>
+          
+          <div className="grid lg:grid-cols-2 gap-8">
+            <div>
+              <ReviewForm productId={product.id} productName={product.name} />
+            </div>
+            <div>
+              <ReviewList productId={product.id} />
             </div>
           </div>
         </div>
