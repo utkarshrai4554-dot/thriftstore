@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { toast } from "sonner";
+import FreeLocationPicker from "@/components/FreeLocationPicker";
 
 const SellProduct = () => {
   const { toast } = useToast();
@@ -21,6 +22,7 @@ const SellProduct = () => {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [billFile, setBillFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<{ address: string; latitude: number; longitude: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const billInputRef = useRef<HTMLInputElement>(null);
 
@@ -188,6 +190,13 @@ const SellProduct = () => {
           <div className="space-y-2">
             <Label>Price (₹)</Label>
             <Input name="price" type="number" min="1" placeholder="0.00" required />
+          </div>
+
+          <div className="space-y-4">
+            <Label>Location *</Label>
+            <FreeLocationPicker
+              onLocationSelect={(location) => setSelectedLocation(location)}
+            />
           </div>
 
           <div className="space-y-2">

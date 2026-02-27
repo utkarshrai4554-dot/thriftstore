@@ -30,9 +30,9 @@ const Navbar = () => {
   // Filter navLinks based on user role
   const filteredNavLinks = navLinks.filter(link => {
     if (link.to === "/admin" || link.to === "/delivery") {
-      return userProfile?.role === 'admin';
+      return userProfile?.role === 'admin';  // Only admin and delivery for admins
     }
-    return true;
+    return true;  // Show all other links for everyone
   });
 
   return (

@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
+import FreeLocationPicker from "@/components/FreeLocationPicker";
 
 const Donate = () => {
   const [selectedCause, setSelectedCause] = useState("");
@@ -17,6 +18,7 @@ const Donate = () => {
   const [donationImages, setDonationImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<{ address: string; latitude: number; longitude: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -217,9 +219,11 @@ const Donate = () => {
             <Textarea name="description" placeholder="What are you donating?" rows={3} required />
           </div>
 
-          <div className="space-y-2">
-            <Label>Pickup Address</Label>
-            <Input name="pickupAddress" placeholder="Your address for free pickup" required />
+          <div className="space-y-4">
+            <Label>Pickup Location *</Label>
+            <FreeLocationPicker
+              onLocationSelect={(location) => setSelectedLocation(location)}
+            />
           </div>
 
           <Button type="submit" size="lg" className="w-full text-base" disabled={isSubmitting}>
