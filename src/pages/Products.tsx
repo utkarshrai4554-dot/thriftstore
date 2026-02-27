@@ -31,6 +31,23 @@ const Products = () => {
           <p className="text-muted-foreground">Discover unique finds at great prices</p>
         </div>
 
+        {/* Categories */}
+        <div className="mb-6">
+          <p className="text-sm font-medium mb-3">Categories</p>
+          <div className="flex flex-wrap gap-2">
+            {categories.map((c) => (
+              <Badge
+                key={c}
+                variant={category === c ? "default" : "outline"}
+                className="cursor-pointer px-3 py-1"
+                onClick={() => setCategory(c)}
+              >
+                {c}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
         {/* Search & Filter */}
         <div className="flex gap-3 mb-6">
           <div className="relative flex-1">
@@ -51,22 +68,7 @@ const Products = () => {
         </div>
 
         {showFilters && (
-          <div className="mb-6 p-4 bg-card rounded-xl border animate-fade-in space-y-4">
-            <div>
-              <p className="text-sm font-medium mb-2">Category</p>
-              <div className="flex flex-wrap gap-2">
-                {categories.map((c) => (
-                  <Badge
-                    key={c}
-                    variant={category === c ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => setCategory(c)}
-                  >
-                    {c}
-                  </Badge>
-                ))}
-              </div>
-            </div>
+          <div className="mb-6 p-4 bg-card rounded-xl border animate-fade-in">
             <div>
               <p className="text-sm font-medium mb-2">Condition</p>
               <div className="flex flex-wrap gap-2">

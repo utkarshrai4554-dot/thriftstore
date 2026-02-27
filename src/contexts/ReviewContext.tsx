@@ -12,7 +12,8 @@ import {
   query,
   where,
   orderBy,
-  getDocs
+  getDocs,
+  deleteDoc
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { toast } from 'sonner';
@@ -30,6 +31,8 @@ export interface Review {
 interface ReviewContextType {
   reviews: Review[];
   addReview: (review: Omit<Review, 'id' | 'date'>) => void;
+  deleteReview: (reviewId: string) => void;
+  updateReview: (reviewId: string, updatedData: { rating?: number; comment?: string }) => void;
   getProductReviews: (productId: string) => Review[];
   getProductAverageRating: (productId: string) => number;
   getProductTotalReviews: (productId: string) => number;
@@ -128,11 +131,50 @@ export const ReviewProvider = ({ children }: { children: ReactNode }) => {
     return getProductReviews(productId).length;
   };
 
+  const deleteReview = async (reviewId: string) => {
+    try {
+      // Delete from Firestore
+      const reviewRef = doc(db, 'reviews', reviewId);
+      await deleteDoc(reviewRef);
+
+      // Update local state
+      setReviews(prev => prev.filter(review => review.id !== reviewId));
+      toast.success('Review deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting review:', error);
+      toast.error('Failed to delete review');
+    }
+  };
+
+  const updateReview = async (reviewId: string, updatedData: { rating?: number; comment?: string }) => {
+    try {
+      // Update in Firestore
+      const reviewRef = doc(db, 'reviews', reviewId);
+      await updateDoc(reviewRef, {
+        ...updatedData,
+        updatedAt: serverTimestamp(),
+      });
+
+      // Update local state
+      setReviews(prev => prev.map(review => 
+        review.id === reviewId 
+          ? { ...review, ...updatedData }
+          : review
+      ));
+      toast.success('Review updated successfully!');
+    } catch (error) {
+      console.error('Error updating review:', error);
+      toast.error('Failed to update review');
+    }
+  };
+
   return (
     <ReviewContext.Provider
       value={{
         reviews,
         addReview,
+        deleteReview,
+        updateReview,
         getProductReviews,
         getProductAverageRating,
         getProductTotalReviews,
