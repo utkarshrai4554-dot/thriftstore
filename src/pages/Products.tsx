@@ -1,22 +1,97 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BirthdayBonusAlert } from "@/components/BirthdayBonusAlert";
-import { mockProducts, categories, conditions } from "@/lib/mockData";
+import { categories, conditions } from "@/lib/mockData";
 import { useReviews } from "@/contexts/ReviewContext";
+import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
+interface Product {
+  id: string;
+  title: string;
+  brand: string;
+  category: string;
+  color?: string;
+  size?: string;
+  condition: string;
+  originalPrice?: number;
+  sellingPrice: number;
+  description: string;
+  images: string[];
+  sellerId: string;
+  status: 'pending' | 'approved' | 'rejected' | 'sold';
+  views: number;
+  likes: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 const Products = () => {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [condition, setCondition] = useState("All");
   const [showFilters, setShowFilters] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const { getProductAverageRating, getProductTotalReviews } = useReviews();
 
-  const filtered = mockProducts.filter((p) => {
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const productsRef = collection(db, 'products');
+        const q = query(
+          productsRef,
+          where('status', '==', 'approved')
+        );
+        
+        // Sort in JavaScript instead of Firestore query to avoid index requirement
+        const querySnapshot = await getDocs(q);
+        const sortedProducts = querySnapshot.docs.sort((a, b) => 
+          (b.data().createdAt?.toMillis() || 0) - (a.data().createdAt?.toMillis() || 0)
+        );
+        const fetchedProducts: Product[] = [];
+        
+        sortedProducts.forEach((doc) => {
+          const data = doc.data();
+          fetchedProducts.push({
+            id: doc.id,
+            title: data.title || '',
+            brand: data.brand || '',
+            category: data.category || '',
+            color: data.color,
+            size: data.size,
+            condition: data.condition || 'Good',
+            originalPrice: data.originalPrice,
+            sellingPrice: data.sellingPrice || 0,
+            description: data.description || '',
+            images: data.images || [],
+            sellerId: data.sellerId || '',
+            status: data.status || 'approved',
+            views: data.views || 0,
+            likes: data.likes || 0,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date()
+          });
+        });
+        
+        setProducts(fetchedProducts);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  const filtered = products.filter((p) => {
+    const matchSearch = p.title.toLowerCase().includes(search.toLowerCase());
     const matchCat = category === "All" || p.category === category;
     const matchCond = condition === "All" || p.condition === condition;
     return matchSearch && matchCat && matchCond;
@@ -88,19 +163,40 @@ const Products = () => {
         )}
 
         {/* Results */}
-        <p className="text-sm text-muted-foreground mb-4">{filtered.length} items found</p>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-          {filtered.map((p) => (
-            <ProductCard 
-              key={p.id} 
-              {...p} 
-              averageRating={getProductAverageRating(p.id)}
-              totalReviews={getProductTotalReviews(p.id)}
-            />
-          ))}
-        </div>
-        {filtered.length === 0 && (
-          <p className="text-center text-muted-foreground py-20">No products match your filters.</p>
+        {loading ? (
+          <div className="text-center py-20">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="text-muted-foreground mt-2">Loading products...</p>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground mb-4">{filtered.length} items found</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              {filtered.map((p) => (
+                <ProductCard 
+                  key={p.id} 
+                  id={p.id}
+                  name={p.title}
+                  price={p.sellingPrice}
+                  category={p.category}
+                  condition={p.condition}
+                  image={p.images[0] || '/placeholder.jpg'}
+                  views={p.views}
+                  averageRating={getProductAverageRating(p.id)}
+                  totalReviews={getProductTotalReviews(p.id)}
+                />
+              ))}
+            </div>
+            {filtered.length === 0 && (
+              <div className="text-center py-20">
+                <p className="text-muted-foreground">
+                  {products.length === 0 
+                    ? "No approved products available yet. Check back soon!" 
+                    : "No products match your filters."}
+                </p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -32,7 +32,7 @@ export const registerUser = async (email: string, password: string, displayName:
       address,
       birthdate,
       rewardPoints: 50,
-      role: 'admin',
+      role: 'customer',
       createdAt: new Date(),
       updatedAt: new Date()
     });
@@ -46,7 +46,7 @@ export const registerUser = async (email: string, password: string, displayName:
       address,
       birthdate,
       rewardPoints: 50,
-      role: 'admin',
+      role: 'customer',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });

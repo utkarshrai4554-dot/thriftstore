@@ -11,6 +11,7 @@ import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 import FreeLocationPicker from "@/components/FreeLocationPicker";
+import AddressInput from "@/components/AddressInput";
 
 const Donate = () => {
   const [selectedCause, setSelectedCause] = useState("");
@@ -19,6 +20,24 @@ const Donate = () => {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ address: string; latitude: number; longitude: number } | null>(null);
+  const [address, setAddress] = useState<{
+    streetAddress: string;
+    apartment: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    fullAddress?: string;
+    latitude?: number;
+    longitude?: number;
+  }>({
+    streetAddress: '',
+    apartment: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: 'India'
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,6 +85,11 @@ const Donate = () => {
       return;
     }
     
+    if (!address.streetAddress || !address.city || !address.state || !address.postalCode) {
+      toast.error('Please fill in all required address fields');
+      return;
+    }
+
     if (donationImages.length === 0) {
       toast.error('Please add at least one image of the donation item');
       return;
@@ -79,7 +103,8 @@ const Donate = () => {
         userId: user.uid,
         cause: selectedCause,
         description: formData.get('description') as string,
-        pickupAddress: formData.get('pickupAddress') as string,
+        pickupAddress: address.fullAddress || '',
+        addressDetails: address,
         images: donationImages.map(file => ({
           name: file.name,
           size: file.size,
@@ -102,6 +127,14 @@ const Donate = () => {
       setDonationImages([]);
       setImagePreviews([]);
       setSelectedCause('');
+      setAddress({
+        streetAddress: '',
+        apartment: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: 'India'
+      });
       
     } catch (error) {
       console.error('Error submitting donation:', error);
@@ -221,8 +254,9 @@ const Donate = () => {
 
           <div className="space-y-4">
             <Label>Pickup Location *</Label>
-            <FreeLocationPicker
-              onLocationSelect={(location) => setSelectedLocation(location)}
+            <AddressInput
+              onAddressChange={(addr) => setAddress(addr)}
+              required={true}
             />
           </div>
 

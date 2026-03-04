@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Products collection rules (approved products for public viewing)
+    match /products/{productId} {
+      allow read: if true; // Anyone can read approved products
+      allow create: if request.auth != null && request.auth.token.admin == true; // Only admins can create
+      allow update: if request.auth != null && request.auth.token.admin == true; // Only admins can update
+      allow delete: if request.auth != null && request.auth.token.admin == true; // Only admins can delete
+    }
+    
+    // AcceptedProducts collection rules (for tracking approved products)
+    match /acceptedProducts/{productId} {
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      allow create: if request.auth != null && request.auth.token.admin == true;
+      allow update: if request.auth != null && request.auth.token.admin == true;
+      allow delete: if request.auth != null && request.auth.token.admin == true;
+    }
+    
+    // RejectedProducts collection rules (for tracking rejected products)
+    match /rejectedProducts/{productId} {
+      allow read: if request.auth != null && request.auth.token.admin == true;
+      allow create: if request.auth != null && request.auth.token.admin == true;
+      allow update: if request.auth != null && request.auth.token.admin == true;
+      allow delete: if request.auth != null && request.auth.token.admin == true;
+    }
+    
+    // Orders collection rules
+    match /orders/{orderId} {
+      allow read: if request.auth != null && (resource.data.customerId == request.auth.uid || request.auth.token.admin == true);
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && request.auth.token.admin == true;
+      allow delete: if request.auth != null && request.auth.token.admin == true;
+    }
+    
+    // Reviews collection rules
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // Users collection rules
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Admins collection rules
+    match /admins/{adminId} {
+      allow read, write: if request.auth != null && request.auth.token.admin == true;
+    }
+    
+    // SellProducts collection rules (pending products)
+    match /sellProducts/{productId} {
+      allow read: if request.auth != null && (resource.data.sellerId == request.auth.uid || request.auth.token.admin == true);
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (resource.data.sellerId == request.auth.uid || request.auth.token.admin == true);
+      allow delete: if request.auth != null && (resource.data.sellerId == request.auth.uid || request.auth.token.admin == true);
+    }
+  }
+}

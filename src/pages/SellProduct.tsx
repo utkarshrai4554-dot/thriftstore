@@ -11,8 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
-import { toast } from "sonner";
 import FreeLocationPicker from "@/components/FreeLocationPicker";
+import AddressInput from "@/components/AddressInput";
 
 const SellProduct = () => {
   const { toast } = useToast();
@@ -23,15 +23,38 @@ const SellProduct = () => {
   const [billFile, setBillFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ address: string; latitude: number; longitude: number } | null>(null);
+  const [address, setAddress] = useState<{
+    streetAddress: string;
+    apartment: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    fullAddress?: string;
+    latitude?: number;
+    longitude?: number;
+  }>({
+    streetAddress: '',
+    apartment: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: 'India'
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const billInputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const validFiles = files.filter(file => file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024);
     
     if (validFiles.length !== files.length) {
-      toast.error('Some files were invalid. Please upload only images under 5MB.');
+      toast({
+        title: "Invalid files",
+        description: "Please upload only images under 5MB.",
+        variant: "destructive",
+      });
     }
 
     setProductImages(prev => [...prev, ...validFiles]);
@@ -56,7 +79,11 @@ const SellProduct = () => {
     if (file && file.size <= 10 * 1024 * 1024) {
       setBillFile(file);
     } else {
-      toast.error('Bill file must be under 10MB');
+      toast({
+        title: "File too large",
+        description: "Bill file must be under 10MB",
+        variant: "destructive",
+      });
     }
   };
 
@@ -67,21 +94,42 @@ const SellProduct = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!user) {
-      toast.error('Please login to submit a product');
+      toast({
+        title: "Authentication required",
+        description: "Please login to submit a product",
+        variant: "destructive",
+      });
       return;
     }
     
     if (!accepted) {
-      toast.error('Please accept the authenticity policy');
+      toast({
+        title: "Policy acceptance required",
+        description: "Please accept the authenticity policy",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!address.streetAddress || !address.city || !address.state || !address.postalCode) {
+      toast({
+        title: "Address required",
+        description: "Please fill in all required address fields",
+        variant: "destructive",
+      });
       return;
     }
 
     if (productImages.length === 0) {
-      toast.error('Please add at least one product image');
+      toast({
+        title: "Image required",
+        description: "Please add at least one product image",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -90,48 +138,69 @@ const SellProduct = () => {
     try {
       const formData = new FormData(e.currentTarget);
       const productData = {
-        userId: user.uid,
-        name: formData.get('name') as string,
+        title: formData.get('name') as string,
+        brand: formData.get('brand') || 'Unknown',
         category: formData.get('category') as string,
-        age: formData.get('age') as string,
+        color: formData.get('color') as string || null,
+        size: formData.get('size') as string || null,
         condition: formData.get('condition') as string,
-        originalUrl: formData.get('originalUrl') as string,
-        price: parseFloat(formData.get('price') as string),
-        damageDetails: formData.get('damageDetails') as string,
+        originalPrice: formData.get('originalUrl') ? parseFloat(formData.get('originalUrl') as string) : null,
+        sellingPrice: parseFloat(formData.get('price') as string),
         description: formData.get('description') as string,
-        images: productImages.map(file => ({
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          url: URL.createObjectURL(file) // In production, upload to storage service
-        })),
-        hasBill: !!billFile,
-        billFile: billFile ? {
-          name: billFile.name,
-          size: billFile.size,
-          type: billFile.type
-        } : null,
+        images: imagePreviews,
+        sellerId: user.uid,
         status: 'pending',
+        views: 0,
+        likes: 0,
+        address: address.fullAddress || '',
+        addressDetails: address,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
 
-      // Save to Firestore
+      // Debug: Log the product data being submitted
+      console.log('Submitting product data:', productData);
+      console.log('Collection target: sellProducts');
+      console.log('User ID:', user.uid);
+
+      // Save to Firestore sellProducts collection
       const productRef = doc(db, 'sellProducts', `${Date.now()}_${user.uid}`);
+      console.log('Document path:', productRef.path);
+      
       await setDoc(productRef, productData);
 
-      toast.success('Product submitted successfully! Your item will be reviewed by our team.');
+      console.log('✅ Product saved to sellProducts with ID:', productRef.id);
+      console.log('🔍 Check sellProducts collection in Firebase Console');
+
+      toast({
+        title: "Product submitted for review!",
+        description: "Your product has been sent to admin for approval. You'll be notified once it's approved.",
+      });
       
       // Reset form
-      e.currentTarget.reset();
+      if (formRef.current) {
+        formRef.current.reset();
+      }
       setProductImages([]);
       setImagePreviews([]);
       setBillFile(null);
       setAccepted(false);
+      setAddress({
+        streetAddress: '',
+        apartment: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: 'India'
+      });
       
     } catch (error) {
       console.error('Error submitting product:', error);
-      toast.error('Failed to submit product. Please try again.');
+      toast({
+        title: "Failed to submit product",
+        description: "Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -145,12 +214,19 @@ const SellProduct = () => {
           <p className="text-muted-foreground">List your pre-loved items. We'll verify and handle the rest.</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Product Name</Label>
               <Input name="name" placeholder="e.g. Vintage Denim Jacket" required />
             </div>
+            <div className="space-y-2">
+              <Label>Brand</Label>
+              <Input name="brand" placeholder="e.g. Levi's, Nike, etc." required />
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Category</Label>
               <Select name="category" required>
@@ -161,13 +237,6 @@ const SellProduct = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Age of Product</Label>
-              <Input name="age" placeholder="e.g. 3 years" required />
             </div>
             <div className="space-y-2">
               <Label>Condition</Label>
@@ -182,6 +251,17 @@ const SellProduct = () => {
             </div>
           </div>
 
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <Input name="color" placeholder="e.g. Blue, Black, etc." />
+            </div>
+            <div className="space-y-2">
+              <Label>Size</Label>
+              <Input name="size" placeholder="e.g. M, L, XL, etc." />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label>Original Store URL</Label>
             <Input name="originalUrl" type="url" placeholder="https://..." />
@@ -193,9 +273,10 @@ const SellProduct = () => {
           </div>
 
           <div className="space-y-4">
-            <Label>Location *</Label>
-            <FreeLocationPicker
-              onLocationSelect={(location) => setSelectedLocation(location)}
+            <Label>Pickup Location *</Label>
+            <AddressInput
+              onAddressChange={(addr) => setAddress(addr)}
+              required={true}
             />
           </div>
 

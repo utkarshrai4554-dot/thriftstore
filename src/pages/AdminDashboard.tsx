@@ -2,38 +2,314 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import {
   BarChart3, Users, Package, Gift, Truck, TrendingUp,
-  CheckCircle, XCircle, DollarSign, ShoppingBag
+  CheckCircle, XCircle, DollarSign, ShoppingBag, Eye
 } from "lucide-react";
+import { collection, query, where, orderBy, getDocs, getDoc, doc as docRef, setDoc, deleteDoc, getCountFromServer } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/hooks/useAuth";
 
-const stats = [
-  { label: "Total Sales", value: "₹24,580", icon: DollarSign, change: "+12%" },
-  { label: "Active Users", value: "1,284", icon: Users, change: "+8%" },
-  { label: "Products Listed", value: "432", icon: ShoppingBag, change: "+15%" },
-  { label: "Donations", value: "89", icon: Gift, change: "+22%" },
-];
-
-const pendingProducts = [
-  { id: 1, name: "Vintage Silk Scarf", seller: "Anna K.", status: "pending" },
-  { id: 2, name: "Retro Sunglasses", seller: "Mike T.", status: "pending" },
-  { id: 3, name: "Leather Belt", seller: "Sarah M.", status: "pending" },
-];
-
-const topProducts = [
-  { name: "Vintage Leather Jacket", sales: 12 },
-  { name: "Art Deco Vase", sales: 8 },
-  { name: "Retro Gold Necklace", sales: 15 },
-  { name: "Classic Canvas Sneakers", sales: 6 },
-];
-
-const deliveryAgents = [
-  { name: "David R.", status: "online", deliveries: 23 },
-  { name: "Lisa P.", status: "online", deliveries: 18 },
-  { name: "Tom W.", status: "offline", deliveries: 31 },
-];
+interface PendingProduct {
+  id: string;
+  title: string;
+  sellerInfo?: {
+    displayName: string;
+    email: string;
+  };
+  status: string;
+  createdAt: Date;
+}
 
 const AdminDashboard = () => {
+  const { user } = useAuth();
+  const [pendingProducts, setPendingProducts] = useState<PendingProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState([
+    { label: "Total Sales", value: "₹0", icon: DollarSign, change: "+0%" },
+    { label: "Active Users", value: "0", icon: Users, change: "+0%" },
+    { label: "Products Listed", value: "0", icon: ShoppingBag, change: "+0%" },
+    { label: "Donations", value: "0", icon: Gift, change: "+0%" },
+  ]);
+  
+  // Tab counts
+  const [pendingCount, setPendingCount] = useState(0);
+  const [approvedCount, setApprovedCount] = useState(0);
+  const [rejectedCount, setRejectedCount] = useState(0);
+  const [allCount, setAllCount] = useState(0);
+
+  const topProducts = [
+    { name: "Vintage Leather Jacket", sales: 12 },
+    { name: "Art Deco Vase", sales: 8 },
+    { name: "Retro Gold Necklace", sales: 15 },
+    { name: "Classic Canvas Sneakers", sales: 6 },
+  ];
+
+  const deliveryAgents = [
+    { name: "David R.", status: "online", deliveries: 23 },
+    { name: "Lisa P.", status: "online", deliveries: 18 },
+    { name: "Tom W.", status: "offline", deliveries: 31 },
+  ];
+
+  const handleApproveProduct = async (productId: string) => {
+    console.log('🟢 Approve button clicked for product:', productId);
+    console.log('👤 Current user:', user);
+    
+    if (!user) {
+      console.error('❌ No user logged in');
+      toast.error('Please login to approve products');
+      return;
+    }
+    
+    try {
+      // Get product from sellProducts collection
+      const sellProductRef = docRef(db, 'sellProducts', productId);
+      const sellProductDoc = await getDoc(sellProductRef);
+      
+      if (!sellProductDoc.exists()) {
+        console.error('❌ Product not found in sellProducts');
+        toast.error('Product not found');
+        return;
+      }
+      
+      const productData = sellProductDoc.data();
+      console.log('📦 Product data found:', productData);
+      
+      // Move to products collection with approved status
+      console.log('🔄 Moving to products collection...');
+      const approvedProductRef = docRef(db, 'products', productId);
+      await setDoc(approvedProductRef, {
+        ...productData,
+        status: 'approved',
+        approvedAt: new Date(),
+        updatedAt: new Date()
+      });
+      console.log('✅ Successfully added to products collection');
+      
+      // Move to acceptedProducts collection
+      console.log('🔄 Moving to acceptedProducts collection...');
+      try {
+        const acceptedProductRef = docRef(db, 'acceptedProducts', productId);
+        await setDoc(acceptedProductRef, {
+          ...productData,
+          status: 'approved',
+          approvedAt: new Date(),
+          updatedAt: new Date()
+        });
+        console.log('✅ Successfully added to acceptedProducts collection');
+      } catch (acceptedProductsError) {
+        console.warn('⚠️ Failed to add to acceptedProducts collection:', acceptedProductsError);
+        // Continue with the process even if acceptedProducts fails
+      }
+      
+      // Delete from sellProducts collection
+      console.log('🗑️ Deleting from sellProducts collection...');
+      await deleteDoc(sellProductRef);
+      console.log('✅ Successfully deleted from sellProducts');
+      
+      toast.success('Product approved and moved to shop');
+      
+      // Refresh the pending products list
+      const updatedProducts = pendingProducts.filter(p => p.id !== productId);
+      setPendingProducts(updatedProducts);
+      
+      // Refresh stats to update product count
+      fetchStats();
+    } catch (error) {
+      console.error('❌ Error approving product:', error);
+      toast.error(`Failed to approve product: ${error.message}`);
+    }
+  };
+
+  const handleRejectProduct = async (productId: string) => {
+    try {
+      // Get the product from sellProducts collection
+      const sellProductRef = docRef(db, 'sellProducts', productId);
+      const sellProductDoc = await getDoc(sellProductRef);
+      
+      if (!sellProductDoc.exists()) {
+        toast.error('Product not found');
+        return;
+      }
+      
+      const productData = sellProductDoc.data();
+      
+      // Move to rejectedProducts collection
+      const rejectedProductRef = docRef(db, 'rejectedProducts', productId);
+      await setDoc(rejectedProductRef, {
+        ...productData,
+        status: 'rejected',
+        rejectedAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      // Delete from sellProducts collection
+      await deleteDoc(sellProductRef);
+      
+      toast.success('Product rejected and moved to rejected collection');
+      
+      // Refresh the pending products list
+      const updatedProducts = pendingProducts.filter(p => p.id !== productId);
+      setPendingProducts(updatedProducts);
+      
+      // Refresh stats to update product count
+      fetchStats();
+    } catch (error) {
+      console.error('Error rejecting product:', error);
+      toast.error('Failed to reject product');
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      console.log('📊 Fetching dashboard stats...');
+      
+      // Fetch total users count
+      const usersRef = collection(db, 'users');
+      const usersSnapshot = await getCountFromServer(usersRef);
+      const totalUsers = usersSnapshot.data().count;
+
+      // Fetch approved products count (from products collection)
+      const productsRef = collection(db, 'products');
+      const productsSnapshot = await getCountFromServer(productsRef);
+      const totalApproved = productsSnapshot.data().count;
+
+      // Fetch rejected products count (from rejectedProducts collection)
+      let totalRejected = 0;
+      try {
+        const rejectedRef = collection(db, 'rejectedProducts');
+        const rejectedSnapshot = await getCountFromServer(rejectedRef);
+        totalRejected = rejectedSnapshot.data().count;
+      } catch (error) {
+        console.log('rejectedProducts collection not found, count will be 0');
+      }
+
+      // Fetch sellProducts count (pending + any other statuses)
+      let totalSellProducts = 0;
+      try {
+        const sellProductsRef = collection(db, 'sellProducts');
+        const sellProductsSnapshot = await getCountFromServer(sellProductsRef);
+        totalSellProducts = sellProductsSnapshot.data().count;
+      } catch (error) {
+        console.log('sellProducts collection not found, count will be 0');
+      }
+
+      // Fetch donations count (assuming donations are stored in a donations collection)
+      let totalDonations = 0;
+      try {
+        const donationsRef = collection(db, 'donations');
+        const donationsSnapshot = await getCountFromServer(donationsRef);
+        totalDonations = donationsSnapshot.data().count;
+      } catch (error) {
+        console.log('Donations collection not found, keeping as 0');
+      }
+
+      // For total sales, we'll keep it as 0 for now (can be implemented later)
+      const totalSales = 0;
+      
+      // Calculate "All" count = approved + rejected + sellProducts
+      const totalCount = totalApproved + totalRejected + totalSellProducts;
+
+      console.log('📈 Stats fetched:', {
+        totalUsers,
+        totalApproved,
+        totalRejected,
+        totalSellProducts,
+        totalCount,
+        totalDonations
+      });
+
+      console.log('🔍 Checking collections status:');
+      console.log('- products collection:', totalApproved > 0 ? 'has data' : 'empty');
+      console.log('- rejectedProducts collection:', totalRejected > 0 ? 'has data' : 'empty');
+      console.log('- sellProducts collection:', totalSellProducts > 0 ? 'has data' : 'empty');
+
+      setStats([
+        { label: "Total Sales", value: `₹${totalSales.toLocaleString()}`, icon: DollarSign, change: "+0%" },
+        { label: "Active Users", value: totalUsers.toLocaleString(), icon: Users, change: "+0%" },
+        { label: "Products Listed", value: totalApproved.toLocaleString(), icon: ShoppingBag, change: "+0%" },
+        { label: "Donations", value: totalDonations.toLocaleString(), icon: Gift, change: "+0%" },
+      ]);
+
+      // Update tab counts with correct logic
+      setPendingCount(totalSellProducts); // sellProducts contains pending items
+      setApprovedCount(totalApproved);   // products collection contains approved items
+      setRejectedCount(totalRejected);   // rejectedProducts collection contains rejected items
+      setAllCount(totalCount);            // All = approved + rejected + sellProducts
+
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  useEffect(() => {
+    const fetchPendingProducts = async () => {
+      try {
+        setLoading(true);
+        console.log('🔍 AdminDashboard: Loading from sellProducts...');
+        
+        const productsRef = collection(db, 'sellProducts');
+        const q = query(
+          productsRef,
+          where('status', '==', 'pending')
+        );
+        
+        // Sort in JavaScript instead of Firestore query to avoid index requirement
+        const querySnapshot = await getDocs(q);
+        const sortedProducts = querySnapshot.docs.sort((a, b) => 
+          (b.data().createdAt?.toMillis() || 0) - (a.data().createdAt?.toMillis() || 0)
+        );
+        console.log(`📊 AdminDashboard: Found ${sortedProducts.length} pending products`);
+        
+        const products: PendingProduct[] = [];
+        
+        for (const doc of sortedProducts) {
+          const data = doc.data();
+          console.log('📦 AdminDashboard: Product data:', data);
+          
+          // Get seller information
+          let sellerInfo = undefined;
+          try {
+            const sellerDoc = await getDoc(docRef(db, 'users', data.sellerId));
+            if (sellerDoc.exists()) {
+              const sellerData = sellerDoc.data() as any;
+              sellerInfo = {
+                displayName: sellerData?.displayName || 'Unknown',
+                email: sellerData?.email || 'Unknown'
+              };
+            }
+          } catch (error) {
+            console.error('Error fetching seller info:', error);
+          }
+          
+          products.push({
+            id: doc.id,
+            title: data.title || 'Unknown Product',
+            sellerInfo,
+            status: data.status || 'pending',
+            createdAt: data.createdAt?.toDate() || new Date()
+          });
+        }
+        
+        console.log(`✅ AdminDashboard: Processed ${products.length} products`);
+        setPendingProducts(products);
+      } catch (error) {
+        console.error('Error fetching pending products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPendingProducts();
+    fetchStats();
+  }, []);
   return (
     <div className="min-h-screen py-8">
       <div className="container mx-auto px-4">
@@ -73,24 +349,62 @@ const AdminDashboard = () => {
                 <CardTitle className="text-lg">Products Awaiting Review</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="divide-y">
-                  {pendingProducts.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between py-3">
-                      <div>
-                        <p className="font-medium text-sm">{p.name}</p>
-                        <p className="text-xs text-muted-foreground">by {p.seller}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="text-success border-success/30 hover:bg-success/10">
-                          <CheckCircle className="h-4 w-4 mr-1" /> Approve
-                        </Button>
-                        <Button size="sm" variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10">
-                          <XCircle className="h-4 w-4 mr-1" /> Reject
-                        </Button>
-                      </div>
+                {loading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                    <p className="text-muted-foreground mt-2 text-sm">Loading pending products...</p>
+                  </div>
+                ) : pendingProducts.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="font-semibold text-lg mb-2">No Pending Products</h3>
+                    <p className="text-muted-foreground text-sm">All products have been reviewed.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="divide-y">
+                      {pendingProducts.map((p) => (
+                        <div key={p.id} className="flex items-center justify-between py-3">
+                          <div>
+                            <p className="font-medium text-sm">{p.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              by {p.sellerInfo?.displayName || 'Unknown Seller'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {p.createdAt.toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-green-600 border-green-200 hover:bg-green-50"
+                              onClick={() => handleApproveProduct(p.id)}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" /> Approve
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-red-600 border-red-200 hover:bg-red-50"
+                              onClick={() => handleRejectProduct(p.id)}
+                            >
+                              <XCircle className="h-4 w-4 mr-1" /> Reject
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                    <div className="mt-4 pt-4 border-t">
+                      <Link to="/admin/products">
+                        <Button className="w-full">
+                          <Eye className="h-4 w-4 mr-2" />
+                          View All Product Requests ({pendingProducts.length})
+                        </Button>
+                      </Link>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

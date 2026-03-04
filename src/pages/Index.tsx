@@ -3,11 +3,34 @@ import { ArrowRight, Gift, ShoppingBag, Truck, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/ProductCard";
 import { BirthdayBonusAlert } from "@/components/BirthdayBonusAlert";
-import { mockProducts, rewardTiers } from "@/lib/mockData";
+import { rewardTiers } from "@/lib/mockData";
 import heroImage from "@/assets/hero-thrift.jpg";
 import heroImageDark from "@/assets/hero-thrift-dark.jpg";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useReviews } from "@/contexts/ReviewContext";
+import { useState, useEffect } from "react";
+import { collection, query, where, orderBy, getDocs, limit } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
+interface Product {
+  id: string;
+  title: string;
+  brand: string;
+  category: string;
+  color?: string;
+  size?: string;
+  condition: string;
+  originalPrice?: number;
+  sellingPrice: number;
+  description: string;
+  images: string[];
+  sellerId: string;
+  status: 'pending' | 'approved' | 'rejected' | 'sold';
+  views: number;
+  likes: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 const features = [
   { icon: ShoppingBag, title: "Buy & Sell", desc: "Curated thrift finds verified for authenticity" },
@@ -19,6 +42,57 @@ const features = [
 const Index = () => {
   const { theme } = useTheme();
   const { getProductAverageRating, getProductTotalReviews } = useReviews();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const productsRef = collection(db, 'products');
+        const q = query(
+          productsRef,
+          where('status', '==', 'approved'),
+          orderBy('createdAt', 'desc'),
+          limit(4)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        const fetchedProducts: Product[] = [];
+        
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          fetchedProducts.push({
+            id: doc.id,
+            title: data.title || '',
+            brand: data.brand || '',
+            category: data.category || '',
+            color: data.color,
+            size: data.size,
+            condition: data.condition || 'Good',
+            originalPrice: data.originalPrice,
+            sellingPrice: data.sellingPrice || 0,
+            description: data.description || '',
+            images: data.images || [],
+            sellerId: data.sellerId || '',
+            status: data.status || 'approved',
+            views: data.views || 0,
+            likes: data.likes || 0,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date()
+          });
+        });
+        
+        setProducts(fetchedProducts);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
   
   return (
     <div className="min-h-screen">
@@ -84,14 +158,34 @@ const Index = () => {
             </Link>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-            {mockProducts.slice(0, 4).map((p) => (
-              <ProductCard 
-                key={p.id} 
-                {...p} 
-                averageRating={getProductAverageRating(p.id)}
-                totalReviews={getProductTotalReviews(p.id)}
-              />
-            ))}
+            {loading ? (
+              Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="animate-pulse">
+                  <div className="bg-muted rounded-lg h-64 mb-4"></div>
+                  <div className="h-4 bg-muted rounded mb-2"></div>
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                </div>
+              ))
+            ) : products.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <p className="text-muted-foreground">No approved products available yet.</p>
+              </div>
+            ) : (
+              products.map((p) => (
+                <ProductCard 
+                  key={p.id} 
+                  id={p.id}
+                  name={p.title}
+                  price={p.sellingPrice}
+                  category={p.category}
+                  condition={p.condition}
+                  image={p.images[0] || '/placeholder.jpg'}
+                  views={p.views}
+                  averageRating={getProductAverageRating(p.id)}
+                  totalReviews={getProductTotalReviews(p.id)}
+                />
+              ))
+            )}
           </div>
         </div>
       </section>

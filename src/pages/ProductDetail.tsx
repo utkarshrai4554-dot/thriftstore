@@ -1,5 +1,4 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { mockProducts } from "@/lib/mockData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ShoppingCart, Heart, Share2, Star } from "lucide-react";
@@ -8,20 +7,69 @@ import { useWishlist } from "@/contexts/WishlistContext";
 import { useReviews } from "@/contexts/ReviewContext";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { useState, useEffect } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import ReviewForm from "@/components/ReviewForm";
 import ReviewList from "@/components/ReviewList";
 
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const product = mockProducts.find((p) => p.id === id);
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { getProductAverageRating, getProductTotalReviews } = useReviews();
   const { user } = useAuth();
 
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (!id) return;
+      
+      try {
+        setLoading(true);
+        // First try to get from products collection (approved products)
+        const productRef = doc(db, 'products', id);
+        const productDoc = await getDoc(productRef);
+        
+        if (productDoc.exists()) {
+          setProduct({ id: productDoc.id, ...productDoc.data() });
+        } else {
+          // If not found in products, try sellProducts collection (pending products)
+          const sellProductRef = doc(db, 'sellProducts', id);
+          const sellProductDoc = await getDoc(sellProductRef);
+          
+          if (sellProductDoc.exists()) {
+            setProduct({ id: sellProductDoc.id, ...sellProductDoc.data() });
+          } else {
+            setProduct(null);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching product:', error);
+        setProduct(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [id]);
+
   const averageRating = getProductAverageRating(id || '');
   const totalReviews = getProductTotalReviews(id || '');
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading product...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -43,9 +91,9 @@ const ProductDetail = () => {
     
     addToCart({ 
       id: product.id, 
-      name: product.name, 
-      price: product.price, 
-      image: product.image, 
+      name: product.title || product.name, 
+      price: product.sellingPrice || product.price, 
+      image: product.images?.[0] || product.image, 
       category: product.category, 
       condition: product.condition 
     });
@@ -67,9 +115,9 @@ const ProductDetail = () => {
     } else {
       addToWishlist({ 
         id: product.id, 
-        name: product.name, 
-        price: product.price, 
-        image: product.image, 
+        name: product.title || product.name, 
+        price: product.sellingPrice || product.price, 
+        image: product.images?.[0] || product.image, 
         category: product.category, 
         condition: product.condition 
       });
@@ -80,8 +128,8 @@ const ProductDetail = () => {
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: product.name,
-        text: `Check out this ${product.name} on StyleEase!`,
+        title: product.title || product.name,
+        text: `Check out this ${product.title || product.name} on StyleEase!`,
         url: window.location.href
       });
     } else {
@@ -99,7 +147,7 @@ const ProductDetail = () => {
 
         <div className="grid md:grid-cols-2 gap-10">
           <div className="rounded-xl overflow-hidden bg-muted aspect-[3/4]">
-            <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+            <img src={product.images?.[0] || product.image} alt={product.title || product.name} className="w-full h-full object-cover" />
           </div>
 
           <div className="space-y-6">
@@ -108,8 +156,8 @@ const ProductDetail = () => {
                 <Badge>{product.category}</Badge>
                 <Badge variant="outline" className="capitalize">{product.condition}</Badge>
               </div>
-              <h1 className="font-display text-3xl font-bold mb-2" style={{ color: 'hsl(var(--dark-brown))' }}>{product.name}</h1>
-              <p className="font-display text-4xl font-bold text-primary mb-2">₹{product.price}</p>
+              <h1 className="font-display text-3xl font-bold mb-2" style={{ color: 'hsl(var(--dark-brown))' }}>{product.title || product.name}</h1>
+              <p className="font-display text-4xl font-bold text-primary mb-2">₹{product.sellingPrice || product.price}</p>
               {totalReviews > 0 && (
                 <div className="flex items-center gap-2 mb-4">
                   <div className="flex">
@@ -164,7 +212,7 @@ const ProductDetail = () => {
           
           <div className="grid lg:grid-cols-2 gap-8">
             <div>
-              <ReviewForm productId={product.id} productName={product.name} />
+              <ReviewForm productId={product.id} productName={product.title || product.name} />
             </div>
             <div>
               <ReviewList productId={product.id} />
