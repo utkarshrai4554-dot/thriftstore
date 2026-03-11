@@ -339,6 +339,7 @@ const AdminDashboard = () => {
         <Tabs defaultValue="products">
           <TabsList>
             <TabsTrigger value="products">Pending Products</TabsTrigger>
+            <TabsTrigger value="ngo-approval">NGO Approval</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="delivery">Delivery Agents</TabsTrigger>
           </TabsList>
@@ -405,6 +406,53 @@ const AdminDashboard = () => {
                     </div>
                   </>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="ngo-approval" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">NGO Management</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                        <Users className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">NGO Approvals</h3>
+                        <p className="text-sm text-muted-foreground">Review and approve NGO registrations</p>
+                      </div>
+                    </div>
+                    <Link to="/admin/ngo-approval">
+                      <Button className="w-full">
+                        <Eye className="h-4 w-4 mr-2" />
+                        Manage NGO Registrations
+                      </Button>
+                    </Link>
+                  </div>
+                  
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                        <Gift className="h-6 w-6 text-green-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">Donation Assignment</h3>
+                        <p className="text-sm text-muted-foreground">Assign donations to approved NGOs</p>
+                      </div>
+                    </div>
+                    <Link to="/admin/donation-assignment">
+                      <Button className="w-full" variant="outline">
+                        <Truck className="h-4 w-4 mr-2" />
+                        Assign Donations
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

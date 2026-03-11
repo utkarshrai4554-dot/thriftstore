@@ -28,9 +28,12 @@ import Dashboard from "./pages/Dashboard";
 import OrderTracking from "./pages/OrderTracking";
 import Orders from "./pages/Orders";
 import AdminDashboard from "./pages/AdminDashboard";
-import AdminProductApproval from "./pages/AdminProductApproval";
+import AdminNGOApproval from "./pages/AdminNGOApproval";
+import NGODashboard from "./pages/NGODashboard";
+import NGORegister from "./pages/NGORegister";
+import NGOLogin from "./pages/NGOLogin";
+import AdminDonationAssignment from "./pages/AdminDonationAssignment";
 import DeliveryDashboard from "./pages/DeliveryDashboard";
-import CheckoutPage from "./pages/CheckoutPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,7 +48,6 @@ const AppContent = () => {
         <Route path="/products" element={<Products />} />
         <Route path="/products/:id" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />
-        <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/auth" element={<Auth />} />
@@ -97,7 +99,39 @@ const AppContent = () => {
           path="/admin/products" 
           element={
             <AdminRoute>
-              <AdminProductApproval />
+              <AdminNGOApproval />
+            </AdminRoute>
+          } 
+        />
+        <Route 
+          path="/ngo-register" 
+          element={<NGORegister />} 
+        />
+        <Route 
+          path="/ngo-login" 
+          element={<NGOLogin />} 
+        />
+        <Route 
+          path="/admin/ngo-approval" 
+          element={
+            <AdminRoute>
+              <AdminNGOApproval />
+            </AdminRoute>
+          } 
+        />
+        <Route 
+          path="/ngo-dashboard" 
+          element={
+            <ProtectedRoute>
+              <NGODashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/donation-assignment" 
+          element={
+            <AdminRoute>
+              <AdminDonationAssignment />
             </AdminRoute>
           } 
         />

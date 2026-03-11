@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, ShoppingBag, Heart, User, Package, BarChart3, ShoppingCart } from "lucide-react";
+import { Menu, X, ShoppingBag, Heart, User, Package, BarChart3, ShoppingCart, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/contexts/CartContext";
@@ -18,7 +18,7 @@ const navLinks = [
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
-  const { theme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   const { user, userProfile } = useAuth();
   const { getCartCount } = useCart();
   const { getWishlistCount } = useWishlist();
@@ -113,6 +113,21 @@ const Navbar = () => {
               )}
             </Button>
           </Link>
+
+          {/* Theme Toggle */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleTheme}
+            className={`relative ${theme === 'dark' ? 'text-card-foreground hover:bg-warm/10' : 'text-foreground hover:bg-muted'}`}
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {theme === 'dark' ? (
+              <Sun className="h-5 w-5" />
+            ) : (
+              <Moon className="h-5 w-5" />
+            )}
+          </Button>
 
           {user ? (
             <Link to="/profile">

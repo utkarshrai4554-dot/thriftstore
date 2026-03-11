@@ -32,6 +32,7 @@
 
     --border: 40 15% 85%;
     --input: 40 15% 85%;
+
     --ring: 85 35% 28%;
 
     --radius: 0.75rem;
@@ -48,6 +49,7 @@
     /* Custom tokens */
     --warm: 30 70% 55%;
     --warm-foreground: 40 33% 96%;
+
     --dark-brown: 20 35% 30%;         /* Dark brown text for better readability */
     --success: 145 50% 40%;
     --success-foreground: 40 33% 96%;
@@ -131,6 +133,26 @@
   }
   h1, h2, h3 {
     font-family: 'Playfair Display', serif;
+    color: hsl(var(--foreground));
+    font-weight: 600;
+  }
+  
+  h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: hsl(var(--primary-foreground));
+  }
+  
+  h2 {
+    font-size: 2rem;
+    font-weight: 600;
+    color: hsl(var(--primary-foreground));
+  }
+  
+  h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: hsl(var(--primary-foreground));
   }
 }
 
