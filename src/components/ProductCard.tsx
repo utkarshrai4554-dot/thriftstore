@@ -18,13 +18,18 @@ interface ProductCardProps {
   views: number;
   averageRating?: number;
   totalReviews?: number;
+  quantity?: number;
+  soldQuantity?: number;
 }
 
-const ProductCard = ({ id, name, price, category, condition, image, views, averageRating = 0, totalReviews = 0 }: ProductCardProps) => {
+const ProductCard = ({ id, name, price, category, condition, image, views, averageRating = 0, totalReviews = 0, quantity = 1, soldQuantity = 0 }: ProductCardProps) => {
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist, loading: wishlistLoading } = useWishlist();
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  const remainingQuantity = quantity - soldQuantity;
+  const isOutOfStock = remainingQuantity <= 0;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -72,6 +77,11 @@ const ProductCard = ({ id, name, price, category, condition, image, views, avera
           <Badge variant="secondary" className="bg-card/90 backdrop-blur-sm text-card-foreground text-xs border-border">
             {category}
           </Badge>
+          {isOutOfStock && (
+            <Badge variant="destructive" className="text-xs">
+              Sold Out
+            </Badge>
+          )}
         </div>
         <div className="absolute top-3 right-3 flex flex-col gap-2">
           <Button
@@ -90,6 +100,12 @@ const ProductCard = ({ id, name, price, category, condition, image, views, avera
           <span className="font-display font-semibold text-lg text-card-foreground">₹{price}</span>
           <span className="text-xs text-muted-foreground capitalize">{condition}</span>
         </div>
+        {!isOutOfStock && (
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Available: {remainingQuantity}</span>
+            <span className="text-green-600 font-medium">In Stock</span>
+          </div>
+        )}
         {totalReviews > 0 && (
           <div className="flex items-center gap-1">
             <div className="flex">
@@ -113,8 +129,15 @@ const ProductCard = ({ id, name, price, category, condition, image, views, avera
           size="sm"
           className="w-full bg-primary hover:bg-primary/90 text-primary-foreground border-border"
           onClick={handleAddToCart}
+          disabled={isOutOfStock}
         >
-          <ShoppingCart className="mr-2 h-4 w-4" /> Add to Cart
+          {isOutOfStock ? (
+            <>Sold Out</>
+          ) : (
+            <>
+              <ShoppingCart className="mr-2 h-4 w-4" /> Add to Cart
+            </>
+          )}
         </Button>
       </div>
     </Link>

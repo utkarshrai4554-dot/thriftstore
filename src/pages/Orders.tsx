@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 import { 
   Calendar, 
   ShoppingBag, 
@@ -14,16 +15,25 @@ import {
   Truck,
   CheckCircle,
   Clock,
-  XCircle
+  XCircle,
+  X,
+  ChevronDown
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getUserOrders, Order } from "@/services/orderService";
 import { toast } from "sonner";
+import { Timestamp } from "firebase/firestore";
 
 const Orders = () => {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showOrderDetails, setShowOrderDetails] = useState(false);
 
   useEffect(() => {
     const loadOrders = async () => {
@@ -33,6 +43,7 @@ const Orders = () => {
       try {
         const userOrders = await getUserOrders(user.uid);
         setOrders(userOrders);
+        setFilteredOrders(userOrders);
       } catch (error) {
         console.error('Error loading orders:', error);
         toast.error('Failed to load orders');
@@ -43,6 +54,27 @@ const Orders = () => {
 
     loadOrders();
   }, [user]);
+
+  useEffect(() => {
+    let filtered = orders;
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(order => 
+        order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.items.some(item => 
+          item.productName.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+    }
+
+    // Filter by status
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(order => order.status === statusFilter);
+    }
+
+    setFilteredOrders(filtered);
+  }, [orders, searchTerm, statusFilter]);
 
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
@@ -84,6 +116,22 @@ const Orders = () => {
       month: 'short',
       day: 'numeric'
     });
+  };
+
+  const handleViewDetails = (order: Order) => {
+    setSelectedOrder(order);
+    setShowOrderDetails(true);
+  };
+
+  const handleTrackOrder = (trackingNumber: string) => {
+    // Open tracking URL or show tracking modal
+    window.open(`https://track.in/${trackingNumber}`, '_blank');
+  };
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setShowFilters(false);
   };
 
   if (!user) {
@@ -135,19 +183,60 @@ const Orders = () => {
             <h1 className="font-display text-3xl font-bold">Order History</h1>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <Search className="h-4 w-4 mr-2" />
-              Search
-            </Button>
-            <Button variant="outline" size="sm">
+            <div className="relative">
+              <Input
+                type="text"
+                placeholder="Search orders..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-64 pl-10"
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className={showFilters ? "bg-gray-100" : ""}
+            >
               <Filter className="h-4 w-4 mr-2" />
               Filter
+              <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showFilters ? "rotate-180" : ""}`} />
             </Button>
+            {(searchTerm || statusFilter !== 'all') && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <X className="h-4 w-4 mr-2" />
+                Clear
+              </Button>
+            )}
           </div>
         </div>
 
+        {/* Filter Dropdown */}
+        {showFilters && (
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-medium">Status:</span>
+                <div className="flex gap-2">
+                  {['all', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].map((status) => (
+                    <Button
+                      key={status}
+                      variant={statusFilter === status ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setStatusFilter(status)}
+                    >
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Orders List */}
-        {orders.length === 0 ? (
+        {filteredOrders.length === 0 && orders.length === 0 ? (
           <Card>
             <CardContent className="text-center py-16">
               <Package className="h-24 w-24 mx-auto text-muted-foreground mb-4" />
@@ -170,9 +259,22 @@ const Orders = () => {
               </div>
             </CardContent>
           </Card>
+        ) : filteredOrders.length === 0 && orders.length > 0 ? (
+          <Card>
+            <CardContent className="text-center py-16">
+              <Search className="h-24 w-24 mx-auto text-muted-foreground mb-4" />
+              <h3 className="font-display text-xl font-semibold mb-2">No orders found</h3>
+              <p className="text-muted-foreground mb-6">
+                Try adjusting your search or filters to find what you're looking for.
+              </p>
+              <Button onClick={clearFilters}>
+                Clear Filters
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
           <div className="space-y-4">
-            {orders.map((order) => (
+            {filteredOrders.map((order) => (
               <Card key={order.id}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -180,10 +282,10 @@ const Orders = () => {
                       <Badge variant="outline">#{order.orderNumber}</Badge>
                       <Badge className={getStatusColor(order.status)}>
                         {getStatusIcon(order.status)}
-                        <span className="ml-1">{order.status.charAt(0).toUpperCase() + order.status.slice(1)}</span>
+                        <span className="ml-1">{`${order.status.charAt(0).toUpperCase()}${order.status.slice(1)}`}</span>
                       </Badge>
                       <Badge variant={order.paymentStatus === 'paid' ? 'default' : 'secondary'}>
-                        {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                        {`${order.paymentStatus.charAt(0).toUpperCase()}${order.paymentStatus.slice(1)}`}
                       </Badge>
                     </div>
                     <div className="text-sm text-muted-foreground">
@@ -196,14 +298,14 @@ const Orders = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium">{order.items.length} items</p>
-                        <p className="text-lg font-semibold">${order.totalAmount.toFixed(2)}</p>
+                        <p className="text-lg font-semibold">${order.totalAmount?.toFixed(2) || '0.00'}</p>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => handleViewDetails(order)}>
                           View Details
                         </Button>
                         {order.trackingNumber && (
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" onClick={() => handleTrackOrder(order.trackingNumber!)}>
                             Track Order
                           </Button>
                         )}
@@ -212,35 +314,227 @@ const Orders = () => {
                     
                     {order.items.length > 0 && (
                       <div className="border-t pt-4">
-                        <p className="text-sm font-medium mb-2">Items:</p>
-                        <div className="space-y-2">
+                        <p className="text-sm font-medium mb-3">Items:</p>
+                        <div className="space-y-3">
                           {order.items.slice(0, 3).map((item, index) => (
-                            <div key={index} className="flex items-center justify-between text-sm">
-                              <span>{item.productName} x{item.quantity}</span>
-                              <span>${(item.price * item.quantity).toFixed(2)}</span>
+                            <div key={index} className="flex gap-3 items-center p-2 bg-gray-50 rounded">
+                              <div className="w-12 h-12 rounded bg-gray-100 overflow-hidden flex-shrink-0">
+                                <img 
+                                  src={item.productImage || '/placeholder.jpg'} 
+                                  alt={item.productName} 
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-medium text-sm">{item.productName}</p>
+                                <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
+                                {item.category && (
+                                  <p className="text-xs text-gray-500">{item.category}</p>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-sm">₹{item.price?.toFixed(2) || '0.00'}</p>
+                                <p className="text-xs text-gray-600">
+                                  ₹{((item.price || 0) * (item.quantity || 0)).toFixed(2)}
+                                </p>
+                              </div>
                             </div>
                           ))}
                           {order.items.length > 3 && (
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-muted-foreground pl-2">
                               +{order.items.length - 3} more items
                             </p>
                           )}
                         </div>
                       </div>
                     )}
-                    
-                    {order.estimatedDelivery && (
-                      <div className="text-xs text-muted-foreground">
-                        Estimated delivery: {formatDate(order.estimatedDelivery)}
+
+                    {/* Discount Information */}
+                    {(order.couponCode || order.pointsUsed > 0) && (
+                      <div className="border-t pt-4">
+                        <p className="text-sm font-medium mb-2">Discounts Applied:</p>
+                        <div className="space-y-2">
+                          {order.couponCode && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-green-600">Coupon ({order.couponCode}):</span>
+                              <span className="font-bold text-green-700">-₹{((order.totalAmount || 0) - (order.finalAmount || 0)).toFixed(2)}</span>
+                            </div>
+                          )}
+                          {order.pointsUsed > 0 && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-blue-600">Points Used:</span>
+                              <span className="font-bold text-blue-700">{order.pointsUsed} pts</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
+
+                    {/* Price Summary */}
+                    <div className="border-t pt-4">
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Subtotal:</span>
+                          <span className="font-medium">₹{order.totalAmount?.toFixed(2) || '0.00'}</span>
+                        </div>
+                        {order.finalAmount !== order.totalAmount && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Final Amount:</span>
+                            <span className="font-bold text-primary">₹{order.finalAmount?.toFixed(2) || '0.00'}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Payment Status:</span>
+                          <Badge variant={order.paymentStatus === 'paid' ? 'default' : 'secondary'}>
+                            {`${order.paymentStatus.charAt(0).toUpperCase()}${order.paymentStatus.slice(1)}`}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
                   </div>
+                  {order.estimatedDelivery && (
+                    <div className="text-xs text-muted-foreground">
+                      Estimated delivery: {formatDate(order.estimatedDelivery)}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
           </div>
         )}
       </div>
+
+      {/* Order Details Modal */}
+      {showOrderDetails && selectedOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b p-6 flex items-center justify-between">
+              <h2 className="font-display text-2xl font-bold">Order Details</h2>
+              <Button variant="ghost" size="sm" onClick={() => setShowOrderDetails(false)}>
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            
+            <div className="p-6">
+              {/* Order Header */}
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Badge variant="outline">#{selectedOrder.orderNumber}</Badge>
+                  <Badge className={getStatusColor(selectedOrder.status)}>
+                    {getStatusIcon(selectedOrder.status)}
+                    <span className="ml-1">{`${selectedOrder.status.charAt(0).toUpperCase()}${selectedOrder.status.slice(1)}`}</span>
+                  </Badge>
+                  <Badge variant={selectedOrder.paymentStatus === 'paid' ? 'default' : 'secondary'}>
+                    {`${selectedOrder.paymentStatus.charAt(0).toUpperCase()}${selectedOrder.paymentStatus.slice(1)}`}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Order Date:</span>
+                    <span className="ml-2 font-medium">{formatDate(selectedOrder.createdAt)}</span>
+                  </div>
+                  {selectedOrder.estimatedDelivery && (
+                    <div>
+                      <span className="text-gray-600">Estimated Delivery:</span>
+                      <span className="ml-2 font-medium">{formatDate(selectedOrder.estimatedDelivery)}</span>
+                    </div>
+                  )}
+                  {selectedOrder.trackingNumber && (
+                    <div>
+                      <span className="text-gray-600">Tracking Number:</span>
+                      <span className="ml-2 font-medium">{selectedOrder.trackingNumber}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-gray-600">Payment Method:</span>
+                    <span className="ml-2 font-medium">{selectedOrder.paymentMethod}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Items */}
+              <div className="mb-6">
+                <h3 className="font-semibold text-lg mb-4">Items</h3>
+                <div className="space-y-4">
+                  {selectedOrder.items.map((item, index) => (
+                    <div key={index} className="flex gap-4 items-center p-4 border rounded-lg">
+                      <div className="w-16 h-16 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0">
+                        <img 
+                          src={item.productImage || '/placeholder.jpg'} 
+                          alt={item.productName} 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium">{item.productName}</p>
+                        <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
+                        {item.size && <p className="text-sm text-gray-600">Size: {item.size}</p>}
+                        {item.color && <p className="text-sm text-gray-600">Color: {item.color}</p>}
+                        {item.category && <p className="text-sm text-gray-600">Category: {item.category}</p>}
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold">₹{item.price?.toFixed(2) || '0.00'}</p>
+                        <p className="text-sm text-gray-600">
+                          ₹{((item.price || 0) * (item.quantity || 0)).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Shipping Address */}
+              <div className="mb-6">
+                <h3 className="font-semibold text-lg mb-4">Shipping Address</h3>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm">{selectedOrder.shippingAddress.street}</p>
+                  <p className="text-sm">{selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.zipCode}</p>
+                  <p className="text-sm">{selectedOrder.shippingAddress.country}</p>
+                </div>
+              </div>
+
+              {/* Price Summary */}
+              <div className="mb-6">
+                <h3 className="font-semibold text-lg mb-4">Price Summary</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span>₹{selectedOrder.totalAmount?.toFixed(2) || '0.00'}</span>
+                  </div>
+                  {selectedOrder.couponCode && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Coupon ({selectedOrder.couponCode}):</span>
+                      <span>-₹{((selectedOrder.totalAmount || 0) - (selectedOrder.finalAmount || 0)).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {selectedOrder.pointsUsed > 0 && (
+                    <div className="flex justify-between text-blue-600">
+                      <span>Points Used:</span>
+                      <span>{selectedOrder.pointsUsed} pts</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-lg">
+                    <span>Total:</span>
+                    <span>₹{selectedOrder.finalAmount?.toFixed(2) || selectedOrder.totalAmount?.toFixed(2) || '0.00'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-4 justify-end">
+                <Button variant="outline" onClick={() => setShowOrderDetails(false)}>
+                  Close
+                </Button>
+                {selectedOrder.trackingNumber && (
+                  <Button onClick={() => handleTrackOrder(selectedOrder.trackingNumber!)}>
+                    Track Order
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -20,6 +20,10 @@ export interface Order {
   orderNumber: string;
   items: OrderItem[];
   totalAmount: number;
+  discountAmount?: number;
+  finalAmount?: number;
+  couponCode?: string;
+  pointsUsed?: number;
   status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   shippingAddress: {
     street: string;
@@ -45,6 +49,7 @@ export interface OrderItem {
   price: number;
   size?: string;
   color?: string;
+  category?: string;
 }
 
 export const createOrder = async (orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
@@ -70,14 +75,18 @@ export const getUserOrders = async (userId: string): Promise<Order[]> => {
     const ordersRef = collection(db, 'orders');
     const q = query(
       ordersRef,
-      where('userId', '==', userId),
-      orderBy('createdAt', 'desc')
+      where('userId', '==', userId)
     );
     
     const querySnapshot = await getDocs(q);
     const orders: Order[] = [];
     
-    querySnapshot.forEach((doc) => {
+    // Sort in JavaScript instead of Firestore query to avoid index requirement
+    const sortedDocs = querySnapshot.docs.sort((a, b) => 
+      (b.data().createdAt?.toMillis() || 0) - (a.data().createdAt?.toMillis() || 0)
+    );
+    
+    sortedDocs.forEach((doc) => {
       orders.push({
         id: doc.id,
         ...doc.data()

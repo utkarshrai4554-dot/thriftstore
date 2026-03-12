@@ -20,6 +20,8 @@ export interface CartItem {
   category: string;
   condition: string;
   quantity: number;
+  size?: string;
+  color?: string;
   addedAt?: any;
 }
 

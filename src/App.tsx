@@ -28,16 +28,17 @@ import Dashboard from "./pages/Dashboard";
 import OrderTracking from "./pages/OrderTracking";
 import Orders from "./pages/Orders";
 import AdminDashboard from "./pages/AdminDashboard";
-import AdminNGOApproval from "./pages/AdminNGOApproval";
-import NGODashboard from "./pages/NGODashboard";
-import NGORegister from "./pages/NGORegister";
-import NGOLogin from "./pages/NGOLogin";
+import AdminProductApproval from "./pages/AdminProductApproval";
+import DeliveryDashboard from "./pages/DeliveryDashboard";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import NotFound from "./pages/NotFound";
 import NGOAcceptedOrders from "./pages/NGOAcceptedOrders";
 import NGORequestedOrders from "./pages/NGORequestedOrders";
 import AdminDonationAssignment from "./pages/AdminDonationAssignment";
-import DeliveryDashboard from "./pages/DeliveryDashboard";
 import TestAuth from "./pages/TestAuth";
-import NotFound from "./pages/NotFound";
+import NGODashboard from "./pages/NGODashboard";
+import NGORegister from "./pages/NGORegister";
+import NGOLogin from "./pages/NGOLogin";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const AppContent = () => {
         <Route path="/products" element={<Products />} />
         <Route path="/products/:id" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />
+        <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/auth" element={<Auth />} />
@@ -103,66 +105,27 @@ const AppContent = () => {
           path="/admin/products" 
           element={
             <AdminRoute>
-              <AdminNGOApproval />
+              <AdminProductApproval />
             </AdminRoute>
           } 
         />
-        <Route 
-          path="/ngo-register" 
-          element={<NGORegister />} 
-        />
-        <Route 
-          path="/ngo-login" 
-          element={<NGOLogin />} 
-        />
-        <Route 
-          path="/admin/ngo-approval" 
+                <Route 
+          path="/admin" 
           element={
             <AdminRoute>
-              <AdminNGOApproval />
+              <AdminDashboard />
             </AdminRoute>
           } 
         />
         <Route 
-          path="/ngo-dashboard" 
-          element={
-            <ProtectedRoute>
-              <NGODashboard />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/ngo-accepted-orders" 
-          element={
-            <ProtectedRoute>
-              <NGOAcceptedOrders />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/ngo-requested-orders" 
-          element={
-            <ProtectedRoute>
-              <NGORequestedOrders />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/admin/donation-assignment" 
+          path="/delivery" 
           element={
             <AdminRoute>
-              <AdminDonationAssignment />
+              <DeliveryDashboard />
             </AdminRoute>
           } 
         />
-        <Route 
-          path="/my-orders" 
-          element={
-            <ProtectedRoute>
-              <BuyOrders />
-            </ProtectedRoute>
-          } 
-        />
+        <Route path="*" element={<NotFound />} />
         <Route 
           path="/admin" 
           element={

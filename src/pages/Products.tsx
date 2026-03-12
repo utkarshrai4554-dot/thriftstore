@@ -24,6 +24,8 @@ interface Product {
   images: string[];
   sellerId: string;
   status: 'pending' | 'approved' | 'rejected' | 'sold';
+  quantity: number;
+  soldQuantity: number;
   views: number;
   likes: number;
   createdAt: Date;
@@ -72,6 +74,8 @@ const Products = () => {
             images: data.images || [],
             sellerId: data.sellerId || '',
             status: data.status || 'approved',
+            quantity: data.quantity || 1,
+            soldQuantity: data.soldQuantity || 0,
             views: data.views || 0,
             likes: data.likes || 0,
             createdAt: data.createdAt?.toDate() || new Date(),
@@ -88,13 +92,18 @@ const Products = () => {
     };
 
     fetchProducts();
+    
+    // Set up interval to refresh products every 30 seconds
+    const interval = setInterval(fetchProducts, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const filtered = products.filter((p) => {
     const matchSearch = p.title.toLowerCase().includes(search.toLowerCase());
-    const matchCat = category === "All" || p.category === category;
-    const matchCond = condition === "All" || p.condition === condition;
-    return matchSearch && matchCat && matchCond;
+    const matchCategory = category === "All" || p.category === category;
+    const matchCondition = condition === "All" || p.condition === condition;
+    const hasQuantity = (p.quantity - (p.soldQuantity || 0)) > 0;
+    return matchSearch && matchCategory && matchCondition && hasQuantity;
   });
 
   return (
@@ -184,6 +193,8 @@ const Products = () => {
                   views={p.views}
                   averageRating={getProductAverageRating(p.id)}
                   totalReviews={getProductTotalReviews(p.id)}
+                  quantity={p.quantity}
+                  soldQuantity={p.soldQuantity}
                 />
               ))}
             </div>
