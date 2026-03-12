@@ -26,7 +26,7 @@ export interface UserProfile {
   birthdayRewardPoints?: number;
   birthdayRewardExpiry?: Date | Timestamp;
   lastBirthdayReward?: Date | Timestamp;
-  role?: 'customer' | 'admin' | 'seller';
+  role?: 'customer' | 'admin' | 'seller' | 'ngo';
   bio?: string;
   createdAt: Date | Timestamp;
   updatedAt: Date | Timestamp;
@@ -60,14 +60,115 @@ export const createUserProfile = async (uid: string, userData: Omit<UserProfile,
 
 export const getUserProfile = async (uid: string): Promise<UserProfile | null> => {
   try {
+    console.log('🔍 Getting user profile for UID:', uid);
+    
+    // First check regular user profile
     const userRef = doc(db, 'users', uid);
     const userDoc = await getDoc(userRef);
     
+    console.log('🔍 User profile exists:', userDoc.exists());
+    
     if (userDoc.exists()) {
-      return userDoc.data() as UserProfile;
+      const profile = userDoc.data() as UserProfile;
+      console.log('🔍 Current user profile role:', profile.role);
+      
+      // Check if user is an NGO using queries (like Profile.tsx)
+      const ngoQuery = query(
+        collection(db, 'ngoRegistrations'),
+        where('uid', '==', uid)
+      );
+      const ngoSnapshot = await getDocs(ngoQuery);
+      
+      const approvedNGOQuery = query(
+        collection(db, 'approvedNGOs'),
+        where('uid', '==', uid)
+      );
+      const approvedNGOSnapshot = await getDocs(approvedNGOQuery);
+      
+      console.log('🔍 NGO Snapshot size:', ngoSnapshot.size);
+      console.log('🔍 Approved NGO Snapshot size:', approvedNGOSnapshot.size);
+      
+      let ngoData = null;
+      let isNGO = false;
+      
+      if (!approvedNGOSnapshot.empty && approvedNGOSnapshot.docs[0].data()?.status === 'approved') {
+        ngoData = approvedNGOSnapshot.docs[0].data();
+        isNGO = true;
+        console.log('🔍 User is approved NGO');
+      } else if (!ngoSnapshot.empty) {
+        ngoData = ngoSnapshot.docs[0].data();
+        isNGO = true;
+        console.log('🔍 User is registered NGO');
+      }
+      
+      // If user is NGO, update profile with NGO role
+      if (isNGO && profile.role !== 'ngo') {
+        console.log('🔍 Updating user profile role to NGO');
+        await updateUserProfile(uid, { role: 'ngo' });
+        return {
+          ...profile,
+          role: 'ngo'
+        };
+      }
+      
+      console.log('🔍 Returning profile with role:', profile.role);
+      return profile;
     }
+    
+    // If no user profile, check if user is an NGO directly using queries
+    console.log('🔍 No user profile found, checking NGO status directly');
+    const ngoQuery = query(
+      collection(db, 'ngoRegistrations'),
+      where('uid', '==', uid)
+    );
+    const ngoSnapshot = await getDocs(ngoQuery);
+    
+    const approvedNGOQuery = query(
+      collection(db, 'approvedNGOs'),
+      where('uid', '==', uid)
+    );
+    const approvedNGOSnapshot = await getDocs(approvedNGOQuery);
+    
+    if (!approvedNGOSnapshot.empty && approvedNGOSnapshot.docs[0].data()?.status === 'approved') {
+      const ngoData = approvedNGOSnapshot.docs[0].data();
+      console.log('🔍 Creating user profile for approved NGO');
+      // Create user profile with NGO role
+      const userProfile: UserProfile = {
+        uid,
+        email: ngoData.email || '',
+        displayName: ngoData.name || '',
+        role: 'ngo',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      await createUserProfile(uid, userProfile);
+      return userProfile;
+    }
+    
+    if (!ngoSnapshot.empty) {
+      const ngoData = ngoSnapshot.docs[0].data();
+      console.log('🔍 Creating user profile for registered NGO');
+      // Create user profile with NGO role (pending)
+      const userProfile: UserProfile = {
+        uid,
+        email: ngoData.email || '',
+        displayName: ngoData.name || '',
+        role: 'ngo',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      await createUserProfile(uid, userProfile);
+      return userProfile;
+    }
+    
+    console.log('🔍 No user profile or NGO status found');
     return null;
   } catch (error: any) {
+    console.error('❌ Error getting user profile:', error);
     throw new Error(`Failed to get user profile: ${error.message}`);
   }
 };

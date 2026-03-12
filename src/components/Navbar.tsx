@@ -32,8 +32,19 @@ const Navbar = () => {
     if (link.to === "/admin" || link.to === "/delivery") {
       return userProfile?.role === 'admin';  // Only admin and delivery for admins
     }
+    // Restrict Shop, Sell, and Donate for NGO users
+    if (userProfile?.role === 'ngo' && (link.to === "/products" || link.to === "/sell" || link.to === "/donate")) {
+      return false;
+    }
     return true;  // Show all other links for everyone
   });
+
+  // NGO-specific navigation links
+  const ngoNavLinks = [
+    { to: "/ngo-dashboard", label: "Dashboard", icon: BarChart3 },
+    { to: "/ngo-accepted-orders", label: "Accepted Orders", icon: Package },
+    { to: "/ngo-requested-orders", label: "Requested Orders", icon: ShoppingCart }
+  ];
 
   return (
     <nav className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b">
@@ -44,17 +55,32 @@ const Navbar = () => {
 
         {/* Desktop */}
         <div className="hidden md:flex items-center gap-6">
-          {filteredNavLinks.map((l) => (
-            <Link
-              key={l.to}
-              to={l.to}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                location.pathname === l.to ? "text-primary" : "text-muted-foreground"
-              }`}
-            >
-              {l.label}
-            </Link>
-          ))}
+          {/* Show NGO-specific navigation for NGO users */}
+          {userProfile?.role === 'ngo' ? (
+            ngoNavLinks.map((l) => (
+              <Link
+                key={l.to}
+                to={l.to}
+                className={`text-sm font-medium transition-colors hover:text-primary ${
+                  location.pathname === l.to ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                {l.label}
+              </Link>
+            ))
+          ) : (
+            filteredNavLinks.map((l) => (
+              <Link
+                key={l.to}
+                to={l.to}
+                className={`text-sm font-medium transition-colors hover:text-primary ${
+                  location.pathname === l.to ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                {l.label}
+              </Link>
+            ))
+          )}
         </div>
 
         {/* Mobile toggle */}
@@ -170,16 +196,30 @@ const Navbar = () => {
             </Link>
           </div>
           
-          {filteredNavLinks.map((l) => (
-            <Link
-              key={l.to}
-              to={l.to}
-              onClick={() => setOpen(false)}
-              className="block py-2 text-sm font-medium text-muted-foreground hover:text-primary"
-            >
-              {l.label}
-            </Link>
-          ))}
+          {/* Mobile Navigation Links */}
+          {userProfile?.role === 'ngo' ? (
+            ngoNavLinks.map((l) => (
+              <Link
+                key={l.to}
+                to={l.to}
+                onClick={() => setOpen(false)}
+                className="block py-2 text-sm font-medium text-muted-foreground hover:text-primary"
+              >
+                {l.label}
+              </Link>
+            ))
+          ) : (
+            filteredNavLinks.map((l) => (
+              <Link
+                key={l.to}
+                to={l.to}
+                onClick={() => setOpen(false)}
+                className="block py-2 text-sm font-medium text-muted-foreground hover:text-primary"
+              >
+                {l.label}
+              </Link>
+            ))
+          )}
           <div className="flex gap-2 pt-2">
             {user ? (
               <Link to="/profile" onClick={() => setOpen(false)}>

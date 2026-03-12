@@ -3,10 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
 import { toast } from "sonner";
 import { Building, ArrowLeft } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const NGOLogin = () => {
   const [formData, setFormData] = useState({
@@ -14,37 +17,72 @@ const NGOLogin = () => {
     password: ""
   });
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // For now, we'll use a simple email-based login
-      // In production, you might want to implement proper NGO authentication
-      const response = await fetch('/api/ngo-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+      // Use Firebase authentication
+      const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      const user = userCredential.user;
 
-      if (response.ok) {
-        const data = await response.json();
-        toast.success(`Welcome back, ${data.ngoName}!`);
-        
-        // Store NGO session
-        localStorage.setItem('ngoUser', JSON.stringify(data));
-        
-        // Redirect to NGO dashboard
-        window.location.href = '/ngo-dashboard';
-      } else {
-        toast.error('Invalid email or password');
+      // Check if user is an approved NGO
+      const ngoDoc = await getDoc(doc(db, 'approvedNGOs', user.uid));
+      const registrationDoc = await getDoc(doc(db, 'ngoRegistrations', user.uid));
+      
+      let ngoData = null;
+      let isApproved = false;
+
+      if (ngoDoc.exists()) {
+        ngoData = ngoDoc.data();
+        isApproved = ngoData.status === 'approved';
+      } else if (registrationDoc.exists()) {
+        ngoData = registrationDoc.data();
+        isApproved = ngoData.status === 'approved';
       }
-    } catch (error) {
+
+      if (!ngoData) {
+        toast.error('No NGO registration found for this account');
+        await auth.signOut();
+        return;
+      }
+
+      if (!isApproved) {
+        toast.error('Your NGO registration is not yet approved. Please wait for admin approval.');
+        await auth.signOut();
+        return;
+      }
+
+      toast.success(`Welcome back, ${ngoData.name}!`);
+      
+      // Store NGO session
+      localStorage.setItem('ngoUser', JSON.stringify({
+        uid: user.uid,
+        email: user.email,
+        ...ngoData
+      }));
+      
+      // Redirect to NGO dashboard
+      navigate('/ngo-dashboard');
+    } catch (error: any) {
       console.error('NGO login error:', error);
-      toast.error('Login failed. Please try again.');
+      let errorMessage = 'Login failed. Please try again.';
+      
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email.';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Incorrect password.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address.';
+      } else if (error.code === 'auth/user-disabled') {
+        errorMessage = 'This account has been disabled.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many failed attempts. Please try again later.';
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

@@ -8,6 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { doc, setDoc, serverTimestamp, collection, addDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 const NGORegister = () => {
   const [formData, setFormData] = useState({
@@ -45,15 +47,26 @@ const NGORegister = () => {
     }
 
     try {
+      console.log('🔍 Starting NGO registration:', formData.email);
+      
+      // First, create user in Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      const user = userCredential.user;
+      
+      console.log('✅ Firebase auth successful for NGO! User UID:', user.uid);
+      
+      // Then save to ngoRegistrations collection
       const ngoData = {
         ...formData,
         status: 'pending',
         submittedAt: serverTimestamp(),
-        approvedAt: null
+        approvedAt: null,
+        uid: user.uid // Add Firebase UID for reference
       };
 
       const docRef = await addDoc(collection(db, 'ngoRegistrations'), ngoData);
       
+      console.log('✅ NGO registration saved to Firestore');
       toast.success('NGO registration submitted! Admin will review your application.');
       
       setFormData({
@@ -74,9 +87,15 @@ const NGORegister = () => {
         window.location.href = '/';
       }, 2000);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('NGO registration error:', error);
-      toast.error('Failed to submit registration. Please try again.');
+      
+      // Check if it's a Firebase Auth error
+      if (error.code && error.code.startsWith('auth/')) {
+        toast.error(`Registration failed: ${error.message}`);
+      } else {
+        toast.error('Failed to submit registration. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }

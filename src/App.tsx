@@ -32,8 +32,11 @@ import AdminNGOApproval from "./pages/AdminNGOApproval";
 import NGODashboard from "./pages/NGODashboard";
 import NGORegister from "./pages/NGORegister";
 import NGOLogin from "./pages/NGOLogin";
+import NGOAcceptedOrders from "./pages/NGOAcceptedOrders";
+import NGORequestedOrders from "./pages/NGORequestedOrders";
 import AdminDonationAssignment from "./pages/AdminDonationAssignment";
 import DeliveryDashboard from "./pages/DeliveryDashboard";
+import TestAuth from "./pages/TestAuth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +54,7 @@ const AppContent = () => {
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/test-auth" element={<TestAuth />} />
         <Route 
           path="/dashboard" 
           element={
@@ -124,6 +128,22 @@ const AppContent = () => {
           element={
             <ProtectedRoute>
               <NGODashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/ngo-accepted-orders" 
+          element={
+            <ProtectedRoute>
+              <NGOAcceptedOrders />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/ngo-requested-orders" 
+          element={
+            <ProtectedRoute>
+              <NGORequestedOrders />
             </ProtectedRoute>
           } 
         />

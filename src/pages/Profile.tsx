@@ -17,13 +17,17 @@ import {
   Edit,
   LogOut,
   Moon,
-  Sun
+  Sun,
+  Building,
+  CheckCircle,
+  HandHeart,
+  Package
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { doc, setDoc, serverTimestamp, getDoc, updateDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 import { checkAndAwardBirthdayReward, getTotalRewardPoints, hasValidBirthdayReward, getUserProfile, ensureUserHasRewardPoints, cleanupExpiredBirthdayRewards, saveUpdatedRewardPoints, getBirthdayCountdown, isBirthdayApproaching } from "@/services/userService";
@@ -36,6 +40,8 @@ const Profile = () => {
   const { getWishlistCount } = useWishlist();
   const { theme, toggleTheme } = useTheme();
   const [isEditing, setIsEditing] = useState(false);
+  const [isNGO, setIsNGO] = useState(false);
+  const [isNGOVerified, setIsNGOVerified] = useState(false);
   const [formData, setFormData] = useState({
     displayName: '',
     email: '',
@@ -110,6 +116,59 @@ const Profile = () => {
 
     loadUserProfile();
   }, [user, userProfile]);
+
+  // Check if user is an NGO and if verified
+  useEffect(() => {
+    const checkNGOStatus = async () => {
+      if (!user?.uid) {
+        console.log('🔍 No user UID found for NGO check');
+        return;
+      }
+
+      console.log('🔍 Checking NGO status for user:', user.email, user.uid);
+
+      try {
+        // Check if user is in ngoRegistrations by querying for UID field
+        const ngoQuery = query(
+          collection(db, 'ngoRegistrations'),
+          where('uid', '==', user.uid)
+        );
+        const ngoSnapshot = await getDocs(ngoQuery);
+        
+        // Check if user is in approvedNGOs by querying for UID field
+        const approvedNGOQuery = query(
+          collection(db, 'approvedNGOs'),
+          where('uid', '==', user.uid)
+        );
+        const approvedNGOSnapshot = await getDocs(approvedNGOQuery);
+        
+        const isInNGORegistration = !ngoSnapshot.empty;
+        const isApproved = !approvedNGOSnapshot.empty && approvedNGOSnapshot.docs[0].data()?.status === 'approved';
+        
+        console.log('🔍 NGO Status Check Results:', {
+          userUID: user.uid,
+          userEmail: user.email,
+          isInNGORegistration,
+          isApproved,
+          ngoSnapshotSize: ngoSnapshot.size,
+          approvedNGOSnapshotSize: approvedNGOSnapshot.size
+        });
+        
+        if (isInNGORegistration) {
+          console.log('🔍 NGO Registration Data:', ngoSnapshot.docs[0].data());
+        }
+        
+        setIsNGO(isInNGORegistration);
+        setIsNGOVerified(isApproved);
+        
+        console.log('🔍 NGO State Updated:', { isNGO, isNGOVerified });
+      } catch (error) {
+        console.error('❌ Error checking NGO status:', error);
+      }
+    };
+
+    checkNGOStatus();
+  }, [user]);
 
   // Birthday countdown timer (countdown to next birthday)
   useEffect(() => {
@@ -316,12 +375,267 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Birthday Countdown Alert */}
-        <BirthdayCountdownAlert 
+        {/* Birthday Countdown Alert - Only for regular users */}
+        {!isNGO && <BirthdayCountdownAlert 
           birthdate={formData.birthdate} 
           hasValidBirthdayReward={formData.hasValidBirthdayReward} 
-        />
+        />}
 
+        {/* NGO Profile Section */}
+        {isNGO ? (
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* NGO Main Info */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* NGO Information */}
+              <Card className="border-orange-200">
+                <CardHeader className="bg-orange-50">
+                  <CardTitle className="flex items-center gap-2 text-orange-900">
+                    <Building className="h-5 w-5" />
+                    NGO Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center space-x-4">
+                    <Avatar className="h-20 w-20 border-2 border-orange-200">
+                      <AvatarImage src={userProfile?.photoURL} />
+                      <AvatarFallback className="text-lg font-display bg-orange-100 text-orange-800">
+                        {userProfile?.displayName?.[0] || user?.email?.[0] || 'N'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <h3 className="font-display text-xl font-semibold text-orange-900">
+                        {userProfile?.displayName || user?.email?.split('@')[0]}
+                      </h3>
+                      <p className="text-orange-700">{user?.email}</p>
+                      <div className="flex gap-2 mt-1">
+                        <Badge variant="secondary">
+                          Member since {new Date(user?.metadata.creationTime || '').getFullYear()}
+                        </Badge>
+                        {isNGOVerified && (
+                          <Badge className="bg-green-100 text-green-800 border-green-200">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            NGO Verified
+                          </Badge>
+                        )}
+                        {!isNGOVerified && (
+                          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                            <Building className="h-3 w-3 mr-1" />
+                            NGO Pending Approval
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="displayName">NGO Name</Label>
+                      <Input
+                        id="displayName"
+                        name="displayName"
+                        value={formData.displayName}
+                        onChange={handleInputChange}
+                        disabled={!isEditing}
+                        placeholder="Enter NGO name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="email">Email Address</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        disabled
+                        placeholder="Email address"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input
+                        id="phone"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        disabled={!isEditing}
+                        placeholder="Enter phone number"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="address">Address</Label>
+                      <Input
+                        id="address"
+                        name="address"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        disabled={!isEditing}
+                        placeholder="Enter address"
+                      />
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* NGO Status Information */}
+                  <div className="bg-orange-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-orange-900 mb-2">NGO Status</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-orange-700">Registration Status:</span>
+                        <Badge className={isNGOVerified ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>
+                          {isNGOVerified ? "Verified" : "Pending"}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-orange-700">Account Type:</span>
+                        <Badge className="bg-orange-100 text-orange-800">
+                          <Building className="h-3 w-3 mr-1" />
+                          NGO Organization
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* NGO Actions */}
+              <Card className="border-orange-200">
+                <CardHeader className="bg-orange-50">
+                  <CardTitle className="flex items-center gap-2 text-orange-900">
+                    <HandHeart className="h-5 w-5" />
+                    NGO Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <Button 
+                      onClick={() => window.location.href = '/ngo-dashboard'}
+                      className="bg-orange-600 hover:bg-orange-700 text-white"
+                    >
+                      <HandHeart className="h-4 w-4 mr-2" />
+                      NGO Dashboard
+                    </Button>
+                    <Button 
+                      onClick={() => window.location.href = '/donate'}
+                      variant="outline"
+                      className="border-orange-200 text-orange-700 hover:bg-orange-50"
+                    >
+                      <Package className="h-4 w-4 mr-2" />
+                      Request Donations
+                    </Button>
+                  </div>
+                  
+                  {!isNGOVerified && (
+                    <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
+                      <p className="text-sm text-yellow-800">
+                        <strong>Note:</strong> Your NGO registration is pending approval. 
+                        You'll be able to access full NGO features once approved by an administrator.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* NGO Stats Sidebar */}
+            <div className="space-y-6">
+              <Card className="border-orange-200">
+                <CardHeader className="bg-orange-50">
+                  <CardTitle className="text-orange-900">NGO Statistics</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-orange-600">0</div>
+                    <p className="text-sm text-orange-600">Donations Received</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-green-600">0</div>
+                    <p className="text-sm text-orange-600">Donations Completed</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-blue-600">0</div>
+                    <p className="text-sm text-orange-600">Pending Requests</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-orange-200">
+                <CardHeader className="bg-orange-50">
+                  <CardTitle className="text-orange-900">Quick Links</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start text-orange-700 hover:bg-orange-50"
+                    onClick={() => window.location.href = '/ngo-dashboard'}
+                  >
+                    <HandHeart className="h-4 w-4 mr-2" />
+                    NGO Dashboard
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start text-orange-700 hover:bg-orange-50"
+                    onClick={() => window.location.href = '/donate'}
+                  >
+                    <Package className="h-4 w-4 mr-2" />
+                    Request Donations
+                  </Button>
+                </CardContent>
+              </Card>
+          </div>
+
+          {/* NGO Stats Sidebar */}
+          <div className="space-y-6">
+            <Card className="border-orange-200">
+              <CardHeader className="bg-orange-50">
+                <CardTitle className="text-orange-900">NGO Statistics</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-orange-600">0</div>
+                  <p className="text-sm text-orange-600">Donations Received</p>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-green-600">0</div>
+                  <p className="text-sm text-orange-600">Donations Completed</p>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-blue-600">0</div>
+                  <p className="text-sm text-orange-600">Pending Requests</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-orange-200">
+              <CardHeader className="bg-orange-50">
+                <CardTitle className="text-orange-900">Quick Links</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-orange-700 hover:bg-orange-50"
+                  onClick={() => window.location.href = '/ngo-dashboard'}
+                >
+                  <HandHeart className="h-4 w-4 mr-2" />
+                  NGO Dashboard
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-orange-700 hover:bg-orange-50"
+                  onClick={() => window.location.href = '/donate'}
+                >
+                  <Package className="h-4 w-4 mr-2" />
+                  Request Donations
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      ) : (
+        /* Regular User Profile Section - Original content */
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main Profile Info */}
           <div className="lg:col-span-2 space-y-6">
@@ -346,9 +660,29 @@ const Profile = () => {
                       {userProfile?.displayName || user?.email?.split('@')[0]}
                     </h3>
                     <p className="text-muted-foreground">{user?.email}</p>
-                    <Badge variant="secondary" className="mt-1">
-                      Member since {new Date(user?.metadata.creationTime || '').getFullYear()}
-                    </Badge>
+                    <div className="flex gap-2 mt-1">
+                      <Badge variant="secondary">
+                        Member since {new Date(user?.metadata.creationTime || '').getFullYear()}
+                      </Badge>
+                      {/* Debug: Show NGO status */}
+                      {process.env.NODE_ENV === 'development' && (
+                        <Badge variant="outline" className="text-xs">
+                          Debug: NGO={isNGO ? 'Yes' : 'No'}, Verified={isNGOVerified ? 'Yes' : 'No'}
+                        </Badge>
+                      )}
+                      {isNGO && isNGOVerified && (
+                        <Badge className="bg-green-100 text-green-800 border-green-200">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          NGO Verified
+                        </Badge>
+                      )}
+                      {isNGO && !isNGOVerified && (
+                        <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                          <Building className="h-3 w-3 mr-1" />
+                          NGO Pending
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -374,8 +708,8 @@ const Profile = () => {
                       type="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      disabled={!isEditing}
-                      placeholder="Enter your email"
+                      disabled
+                      placeholder="Email address"
                     />
                   </div>
                   <div>
@@ -386,7 +720,7 @@ const Profile = () => {
                       value={formData.phone}
                       onChange={handleInputChange}
                       disabled={!isEditing}
-                      placeholder="Enter your phone number"
+                      placeholder="Enter phone number"
                     />
                   </div>
                   <div>
@@ -397,26 +731,20 @@ const Profile = () => {
                       value={formData.address}
                       onChange={handleInputChange}
                       disabled={!isEditing}
-                      placeholder="Enter your address"
+                      placeholder="Enter address"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="birthdate">Birth Date</Label>
+                    <Label htmlFor="birthdate">Date of Birth</Label>
                     <Input
                       id="birthdate"
                       name="birthdate"
                       type="date"
                       value={formData.birthdate}
                       onChange={handleInputChange}
-                      disabled={!isEditing || birthdateLocked}
-                      placeholder="Enter your birth date"
-                      max={new Date().toISOString().split('T')[0]} // Prevent future dates
+                      disabled={!isEditing}
+                      placeholder="Enter date of birth"
                     />
-                    {birthdateLocked && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Birth date can only be set once and cannot be changed
-                      </p>
-                    )}
                   </div>
                 </div>
               </CardContent>
@@ -540,6 +868,7 @@ const Profile = () => {
             </Card>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

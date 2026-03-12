@@ -31,20 +31,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('🔍 Auth State Changed - User:', user?.uid);
       setUser(user);
       
       if (user) {
         try {
+          console.log('🔍 Fetching user profile for:', user.uid);
           const profile = await getUserProfile(user.uid);
+          console.log('🔍 User profile fetched:', profile);
           setUserProfile(profile);
           
           if (profile) {
             await updateUserLastLogin(user.uid);
           }
         } catch (error) {
-          console.error('Error fetching user profile:', error);
+          console.error('❌ Error fetching user profile:', error);
         }
       } else {
+        console.log('🔍 User logged out, clearing profile');
         setUserProfile(null);
       }
       

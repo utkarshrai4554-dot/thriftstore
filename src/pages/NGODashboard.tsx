@@ -4,11 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { collection, query, where, getDocs, doc, updateDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, updateDoc, addDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Truck, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Truck, CheckCircle, XCircle, Clock, Plus, Package, HandHeart } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { getUserProfile } from "@/services/userService";
 
 interface Donation {
   id: string;
@@ -27,20 +32,34 @@ interface Donation {
 }
 
 const NGODashboard = () => {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [donations, setDonations] = useState<Donation[]>([]);
+  const [donationRequests, setDonationRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingRequests, setLoadingRequests] = useState(true);
   const [filter, setFilter] = useState<string>('all');
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [requestForm, setRequestForm] = useState({
+    title: '',
+    description: '',
+    items: '',
+    pickupAddress: '',
+    category: 'clothing',
+    urgency: 'normal'
+  });
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
 
   useEffect(() => {
     fetchDonations();
+    fetchDonationRequests();
   }, []);
 
   const fetchDonations = async () => {
     try {
+      // Fetch donations assigned to this NGO
       const q = query(
         collection(db, 'donations'),
-        where('status', 'in', ['pending', 'accepted', 'rejected', 'picked_up'])
+        where('assignedNGO', '==', user?.uid)
       );
       const querySnapshot = await getDocs(q);
       const data = querySnapshot.docs.map(doc => ({
@@ -56,13 +75,33 @@ const NGODashboard = () => {
     }
   };
 
+  const fetchDonationRequests = async () => {
+    try {
+      // Fetch donation requests made by this NGO
+      const q = query(
+        collection(db, 'donationRequests'),
+        where('ngoUID', '==', user?.uid)
+      );
+      const querySnapshot = await getDocs(q);
+      const data = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setDonationRequests(data);
+    } catch (error) {
+      console.error('Error fetching donation requests:', error);
+      toast.error('Failed to fetch donation requests');
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
+
   const handleAcceptDonation = async (donationId: string) => {
     try {
       await updateDoc(doc(db, 'donations', donationId), {
         status: 'accepted',
-        assignedNGO: user?.uid,
-        assignedNGOName: user?.displayName || 'Unknown NGO',
-        acceptedAt: new Date()
+        acceptedAt: new Date(),
+        acceptedBy: user?.uid
       });
       
       toast.success('Donation accepted successfully!');
@@ -77,9 +116,8 @@ const NGODashboard = () => {
     try {
       await updateDoc(doc(db, 'donations', donationId), {
         status: 'rejected',
-        assignedNGO: user?.uid,
-        assignedNGOName: user?.displayName || 'Unknown NGO',
-        rejectedAt: new Date()
+        rejectedAt: new Date(),
+        rejectedBy: user?.uid
       });
       
       toast.success('Donation rejected');
@@ -105,6 +143,53 @@ const NGODashboard = () => {
     }
   };
 
+  const handleRequestDonation = async () => {
+    if (!requestForm.title || !requestForm.items || !requestForm.pickupAddress) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
+    setIsSubmittingRequest(true);
+    
+    try {
+      const donationData = {
+        title: requestForm.title,
+        description: requestForm.description,
+        items: requestForm.items,
+        pickupAddress: requestForm.pickupAddress,
+        category: requestForm.category,
+        urgency: requestForm.urgency,
+        status: 'pending',
+        requestedBy: user?.uid,
+        requestedByNGO: user?.displayName || user?.email,
+        requestedAt: new Date(),
+        ngoEmail: user?.email,
+        ngoUID: user?.uid
+      };
+
+      await addDoc(collection(db, 'donationRequests'), donationData);
+      
+      toast.success('Donation request submitted successfully!');
+      setShowRequestModal(false);
+      setRequestForm({
+        title: '',
+        description: '',
+        items: '',
+        pickupAddress: '',
+        category: 'clothing',
+        urgency: 'normal'
+      });
+      
+      // Refresh donation requests list
+      fetchDonationRequests();
+    } catch (error) {
+      console.error('Error creating donation request:', error);
+      toast.error('Failed to submit donation request');
+    } finally {
+      setIsSubmittingRequest(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'accepted':
@@ -123,6 +208,14 @@ const NGODashboard = () => {
     return donation.status === filter;
   });
 
+  // Get NGO info from user profile or ngoRegistrations
+  const getNGOInfo = () => {
+    if (user?.displayName) {
+      return user.displayName;
+    }
+    return user?.email || 'NGO';
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -136,103 +229,387 @@ const NGODashboard = () => {
   }
 
   return (
-    <div className="min-h-screen py-8">
-      <div className="container mx-auto px-4 max-w-6xl">
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="container mx-auto px-4 max-w-7xl">
+        {/* Header */}
         <div className="mb-8">
-          <h1 className="font-display text-3xl font-bold mb-1">NGO Dashboard</h1>
-          <p className="text-muted-foreground">Manage donation requests and pickups</p>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+            <div>
+              <h1 className="font-display text-4xl font-bold mb-1 text-gray-900">NGO Dashboard</h1>
+              <p className="text-gray-600">Manage donation requests and pickups</p>
+              <p className="text-sm text-gray-500">Welcome, {getNGOInfo()}!</p>
+            </div>
+            <div className="flex items-center gap-4 mt-4 md:mt-0">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-gray-700">{donations.length}</div>
+                <div className="text-sm text-gray-600">Total Donations</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">{donations.filter(d => d.status === 'pending').length}</div>
+                <div className="text-sm text-gray-600">Pending Acceptance</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">{donations.filter(d => d.status === 'accepted').length}</div>
+                <div className="text-sm text-gray-600">Accepted</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-4 mb-6">
+            <Dialog open={showRequestModal} onOpenChange={setShowRequestModal}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Request Donation</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="title">Request Title</Label>
+                    <Input
+                      id="title"
+                      value={requestForm.title}
+                      onChange={(e) => setRequestForm({...requestForm, title: e.target.value})}
+                      placeholder="e.g., Winter Clothes Collection Drive"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={requestForm.description}
+                      onChange={(e) => setRequestForm({...requestForm, description: e.target.value})}
+                      placeholder="Describe what you need..."
+                      rows={3}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="items">Items Needed</Label>
+                    <Input
+                      id="items"
+                      value={requestForm.items}
+                      onChange={(e) => setRequestForm({...requestForm, items: e.target.value})}
+                      placeholder="e.g., Winter clothes, blankets, food items"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="pickupAddress">Pickup Address</Label>
+                    <Input
+                      id="pickupAddress"
+                      value={requestForm.pickupAddress}
+                      onChange={(e) => setRequestForm({...requestForm, pickupAddress: e.target.value})}
+                      placeholder="Enter pickup location"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="category">Category</Label>
+                      <Select value={requestForm.category} onValueChange={(value) => setRequestForm({...requestForm, category: value})}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="clothing">Clothing</SelectItem>
+                          <SelectItem value="food">Food</SelectItem>
+                          <SelectItem value="electronics">Electronics</SelectItem>
+                          <SelectItem value="furniture">Furniture</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="urgency">Urgency</Label>
+                      <Select value={requestForm.urgency} onValueChange={(value) => setRequestForm({...requestForm, urgency: value})}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select urgency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="normal">Normal</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="urgent">Urgent</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-3 pt-4">
+                    <Button variant="outline" onClick={() => setShowRequestModal(false)}>
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={handleRequestDonation}
+                      disabled={isSubmittingRequest}
+                      className="bg-orange-600 hover:bg-orange-700"
+                    >
+                      {isSubmittingRequest ? 'Submitting...' : 'Submit Request'}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Button
+              onClick={() => setShowRequestModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Request Donation
+            </Button>
+
+            <Select value={filter} onValueChange={setFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Donations</SelectItem>
+                <SelectItem value="pending">Pending Acceptance</SelectItem>
+                <SelectItem value="accepted">Accepted</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="picked_up">Picked Up</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        <div className="mb-6">
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Donations</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="accepted">Accepted</SelectItem>
-              <SelectItem value="rejected">Rejected</SelectItem>
-              <SelectItem value="picked_up">Picked Up</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <Card className="bg-gray-100 border-gray-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600">Total Donations</p>
+                  <p className="text-3xl font-bold text-gray-800">{donations.length}</p>
+                </div>
+                <Package className="h-8 w-8 text-gray-400" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-blue-50 border-blue-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-600">Pending Acceptance</p>
+                  <p className="text-3xl font-bold text-blue-800">{donations.filter(d => d.status === 'pending').length}</p>
+                </div>
+                <Clock className="h-8 w-8 text-blue-400" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-green-50 border-green-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-600">Accepted</p>
+                  <p className="text-3xl font-bold text-green-800">{donations.filter(d => d.status === 'accepted').length}</p>
+                </div>
+                <CheckCircle className="h-8 w-8 text-green-400" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-purple-50 border-purple-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-purple-600">Completed</p>
+                  <p className="text-3xl font-bold text-purple-800">{donations.filter(d => d.status === 'picked_up').length}</p>
+                </div>
+                <Truck className="h-8 w-8 text-purple-400" />
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Donation Requests</CardTitle>
+        {/* Main Table */}
+        <Card className="shadow-lg mb-8">
+          <CardHeader className="bg-gray-50 border-b">
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <HandHeart className="h-5 w-5 text-gray-600" />
+                Donation Requests Assigned to You
+              </span>
+              <span className="text-sm font-normal text-gray-600">
+                {filteredDonations.length} donation{filteredDonations.length !== 1 ? 's' : ''}
+              </span>
+            </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {loading ? (
-              <div className="text-center py-8">Loading donations...</div>
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p className="mt-2 text-blue-600">Loading donations...</p>
+              </div>
             ) : filteredDonations.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No donations found matching the current filter.
+              <div className="text-center py-12 text-gray-600">
+                <HandHeart className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                <p className="text-lg font-medium">No donations assigned to you</p>
+                <p className="text-sm">Request donations or wait for admin assignments</p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Donor</TableHead>
-                    <TableHead>Items</TableHead>
-                    <TableHead>Pickup Address</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Assigned To</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredDonations.map((donation) => (
-                    <TableRow key={donation.id}>
-                      <TableCell>{donation.donorName}</TableCell>
-                      <TableCell>{donation.items}</TableCell>
-                      <TableCell>{donation.pickupAddress}</TableCell>
-                      <TableCell>{getStatusBadge(donation.status)}</TableCell>
-                      <TableCell>{donation.assignedNGOName || 'Unassigned'}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          {donation.status === 'pending' && (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => handleAcceptDonation(donation.id)}
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Accept
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleRejectDonation(donation.id)}
-                              >
-                                <XCircle className="h-4 w-4 mr-1" />
-                                Reject
-                              </Button>
-                            </>
-                          )}
-                          {donation.status === 'accepted' && (
-                            <Button
-                              size="sm"
-                              onClick={() => handleMarkPickedUp(donation.id)}
-                              className="bg-blue-600 hover:bg-blue-700"
-                            >
-                              <Truck className="h-4 w-4 mr-1" />
-                              Mark Picked Up
-                            </Button>
-                          )}
-                          {donation.status === 'picked_up' && (
-                            <Badge className="bg-blue-100 text-blue-800">
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              Completed
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
+              <>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-gray-50">
+                      <TableRow>
+                        <TableHead className="font-semibold text-gray-900">Donor</TableHead>
+                        <TableHead className="font-semibold text-gray-900">Items</TableHead>
+                        <TableHead className="font-semibold text-gray-900">Pickup Address</TableHead>
+                        <TableHead className="font-semibold text-gray-900">Status</TableHead>
+                        <TableHead className="font-semibold text-gray-900 text-center">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredDonations.map((donation) => (
+                        <TableRow key={donation.id} className="hover:bg-gray-50 transition-colors">
+                          <TableCell className="font-medium">{donation.donorName}</TableCell>
+                          <TableCell>
+                            <div className="max-w-xs">
+                              <p className="truncate" title={donation.items}>
+                                {donation.items}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="max-w-xs">
+                              <p className="text-sm text-orange-600 truncate">
+                                {donation.pickupAddress}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>{getStatusBadge(donation.status)}</TableCell>
+                          <TableCell>
+                            <div className="flex justify-center">
+                              <div className="flex gap-2">
+                                {donation.status === 'pending' && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleAcceptDonation(donation.id)}
+                                      className="bg-green-600 hover:bg-green-700 text-white"
+                                    >
+                                      <CheckCircle className="h-4 w-4 mr-1" />
+                                      Accept
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => handleRejectDonation(donation.id)}
+                                    >
+                                      <XCircle className="h-4 w-4 mr-1" />
+                                      Reject
+                                    </Button>
+                                  </>
+                                )}
+                                {donation.status === 'accepted' && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleMarkPickedUp(donation.id)}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                                  >
+                                    <Truck className="h-4 w-4 mr-1" />
+                                    Mark Picked Up
+                                  </Button>
+                                )}
+                                {donation.status === 'picked_up' && (
+                                  <Badge className="bg-blue-100 text-blue-800">
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Completed
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* My Donation Requests Section */}
+        <Card className="shadow-lg">
+          <CardHeader className="bg-blue-50 border-b">
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-blue-600" />
+                My Donation Requests
+              </span>
+              <span className="text-sm font-normal text-blue-600">
+                {donationRequests.length} request{donationRequests.length !== 1 ? 's' : ''}
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {loadingRequests ? (
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p className="mt-2 text-blue-600">Loading donation requests...</p>
+              </div>
+            ) : donationRequests.length === 0 ? (
+              <div className="text-center py-12 text-blue-600">
+                <Package className="h-12 w-12 mx-auto mb-4 text-blue-400" />
+                <p className="text-lg font-medium">No donation requests yet</p>
+                <p className="text-sm">Click "Request Donation" to create your first request</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-blue-50">
+                    <TableRow>
+                      <TableHead className="font-semibold text-blue-900">Request Title</TableHead>
+                      <TableHead className="font-semibold text-blue-900">Items Needed</TableHead>
+                      <TableHead className="font-semibold text-blue-900">Category</TableHead>
+                      <TableHead className="font-semibold text-blue-900">Urgency</TableHead>
+                      <TableHead className="font-semibold text-blue-900">Status</TableHead>
+                      <TableHead className="font-semibold text-blue-900">Requested At</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {donationRequests.map((request) => (
+                      <TableRow key={request.id} className="hover:bg-blue-50 transition-colors">
+                        <TableCell className="font-medium">{request.title}</TableCell>
+                        <TableCell>
+                          <div className="max-w-xs">
+                            <p className="truncate" title={request.items}>
+                              {request.items}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {request.category}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={
+                            request.urgency === 'urgent' ? 'bg-red-100 text-red-800' :
+                            request.urgency === 'high' ? 'bg-orange-100 text-orange-800' :
+                            request.urgency === 'low' ? 'bg-gray-100 text-gray-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }>
+                            {request.urgency}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className="bg-yellow-100 text-yellow-800">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {request.status || 'pending'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm text-blue-600">
+                            {request.requestedAt?.toDate ? 
+                              new Date(request.requestedAt.toDate()).toLocaleDateString() : 
+                              'Just now'
+                            }
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
