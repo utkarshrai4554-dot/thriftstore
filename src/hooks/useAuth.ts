@@ -1,7 +1,25 @@
 import React, { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { User, onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { getUserProfile, updateUserLastLogin } from '../services/userService';
+
+interface User {
+  uid: string;
+  email: string;
+  displayName: string;
+  role?: 'customer' | 'admin' | 'ngo' | 'seller';
+  photoURL?: string;
+  phoneNumber?: string;
+  lastLoginAt?: any;
+  rewardPoints?: number;
+  birthdayRewardPoints?: number;
+  birthdayRewardExpiry?: Date | Timestamp;
+  isEmailVerified: boolean;
+  isActive: boolean;
+  createdAt: Date | Timestamp;
+  updatedAt: Date | Timestamp;
+  lastLoginAt?: any;
+}
 
 interface AuthContextType {
   user: User | null;
@@ -36,19 +54,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       if (user) {
         try {
-          console.log('🔍 Fetching user profile for:', user.uid);
+          console.log('🔍 useAuth - Fetching user profile for:', user.uid);
           const profile = await getUserProfile(user.uid);
-          console.log('🔍 User profile fetched:', profile);
+          console.log('🔍 useAuth - User profile fetched:', profile);
           setUserProfile(profile);
           
           if (profile) {
             await updateUserLastLogin(user.uid);
           }
         } catch (error) {
-          console.error('❌ Error fetching user profile:', error);
+          console.error('Error fetching user profile:', error);
         }
       } else {
-        console.log('🔍 User logged out, clearing profile');
         setUserProfile(null);
       }
       

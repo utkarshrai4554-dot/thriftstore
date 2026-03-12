@@ -66,6 +66,10 @@ const NGODashboard = () => {
         id: doc.id,
         ...doc.data()
       })) as Donation[];
+      
+      console.log('🔍 NGO Dashboard - Fetched donations:', data);
+      console.log('🔍 NGO Dashboard - Donation data sample:', data[0]);
+      
       setDonations(data);
     } catch (error) {
       console.error('Error fetching donations:', error);
@@ -239,134 +243,6 @@ const NGODashboard = () => {
               <p className="text-gray-600">Manage donation requests and pickups</p>
               <p className="text-sm text-gray-500">Welcome, {getNGOInfo()}!</p>
             </div>
-            <div className="flex items-center gap-4 mt-4 md:mt-0">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-700">{donations.length}</div>
-                <div className="text-sm text-gray-600">Total Donations</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{donations.filter(d => d.status === 'pending').length}</div>
-                <div className="text-sm text-gray-600">Pending Acceptance</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{donations.filter(d => d.status === 'accepted').length}</div>
-                <div className="text-sm text-gray-600">Accepted</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-4 mb-6">
-            <Dialog open={showRequestModal} onOpenChange={setShowRequestModal}>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Request Donation</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="title">Request Title</Label>
-                    <Input
-                      id="title"
-                      value={requestForm.title}
-                      onChange={(e) => setRequestForm({...requestForm, title: e.target.value})}
-                      placeholder="e.g., Winter Clothes Collection Drive"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      value={requestForm.description}
-                      onChange={(e) => setRequestForm({...requestForm, description: e.target.value})}
-                      placeholder="Describe what you need..."
-                      rows={3}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="items">Items Needed</Label>
-                    <Input
-                      id="items"
-                      value={requestForm.items}
-                      onChange={(e) => setRequestForm({...requestForm, items: e.target.value})}
-                      placeholder="e.g., Winter clothes, blankets, food items"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="pickupAddress">Pickup Address</Label>
-                    <Input
-                      id="pickupAddress"
-                      value={requestForm.pickupAddress}
-                      onChange={(e) => setRequestForm({...requestForm, pickupAddress: e.target.value})}
-                      placeholder="Enter pickup location"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="category">Category</Label>
-                      <Select value={requestForm.category} onValueChange={(value) => setRequestForm({...requestForm, category: value})}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="clothing">Clothing</SelectItem>
-                          <SelectItem value="food">Food</SelectItem>
-                          <SelectItem value="electronics">Electronics</SelectItem>
-                          <SelectItem value="furniture">Furniture</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="urgency">Urgency</Label>
-                      <Select value={requestForm.urgency} onValueChange={(value) => setRequestForm({...requestForm, urgency: value})}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select urgency" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="low">Low</SelectItem>
-                          <SelectItem value="normal">Normal</SelectItem>
-                          <SelectItem value="high">High</SelectItem>
-                          <SelectItem value="urgent">Urgent</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-3 pt-4">
-                    <Button variant="outline" onClick={() => setShowRequestModal(false)}>
-                      Cancel
-                    </Button>
-                    <Button 
-                      onClick={handleRequestDonation}
-                      disabled={isSubmittingRequest}
-                      className="bg-orange-600 hover:bg-orange-700"
-                    >
-                      {isSubmittingRequest ? 'Submitting...' : 'Submit Request'}
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Button
-              onClick={() => setShowRequestModal(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Request Donation
-            </Button>
-
-            <Select value={filter} onValueChange={setFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Donations</SelectItem>
-                <SelectItem value="pending">Pending Acceptance</SelectItem>
-                <SelectItem value="accepted">Accepted</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-                <SelectItem value="picked_up">Picked Up</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </div>
 
@@ -418,6 +294,199 @@ const NGODashboard = () => {
           </Card>
         </div>
 
+        {/* Additional Services Section */}
+        <div className="space-y-6 mb-8">
+          {/* Top Services Row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {/* Earn Points */}
+            <Card className="shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-yellow-50 to-orange-50 border-b">
+                <CardTitle className="flex items-center gap-2 text-orange-800">
+                  <div className="w-8 h-8 bg-orange-200 rounded-full flex items-center justify-center">
+                    <span className="text-orange-800 font-bold text-sm">★</span>
+                  </div>
+                  Earn Points
+                </CardTitle>
+                <p className="text-sm text-orange-600">Get rewarded for your contributions</p>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-orange-600">250</p>
+                    <p className="text-sm text-gray-600">Current Points</p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Points from donations:</span>
+                      <span className="font-medium">+150</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Points from pickups:</span>
+                      <span className="font-medium">+100</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Points redeemed:</span>
+                      <span className="font-medium text-red-600">-50</span>
+                    </div>
+                  </div>
+                  <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white">
+                    View Rewards Store
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Free Pickup */}
+            <Card className="shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b">
+                <CardTitle className="flex items-center gap-2 text-blue-800">
+                  <Truck className="h-6 w-6 text-blue-600" />
+                  Free Pickup
+                </CardTitle>
+                <p className="text-sm text-blue-600">Schedule free donation pickups</p>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-blue-600">5</p>
+                    <p className="text-sm text-gray-600">Available This Month</p>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <span>Free for orders above 10 items</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <span>Same-day pickup available</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <span>Track pickup in real-time</span>
+                    </div>
+                  </div>
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                    Schedule Pickup
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+          </div>
+
+          {/* Make a Donation Form - Full Width Below */}
+          <Card className="shadow-lg">
+            <CardHeader className="bg-blue-50 border-b">
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="h-5 w-5 text-blue-600" />
+                Request New Donation
+              </CardTitle>
+              <p className="text-sm text-gray-600">Create a new donation request for donors</p>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-center">
+                <div className="w-full max-w-2xl">
+                  <p className="font-medium text-gray-900 mb-4 text-center">Need donations for your cause?</p>
+                  <p className="text-sm text-gray-600 mb-6 text-center">Create a request and donors will be able to fulfill it</p>
+                  <Dialog open={showRequestModal} onOpenChange={setShowRequestModal}>
+                    <DialogTrigger asChild>
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Request Donation
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Request Donation</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="title">Request Title</Label>
+                          <Input
+                            id="title"
+                            value={requestForm.title}
+                            onChange={(e) => setRequestForm({...requestForm, title: e.target.value})}
+                            placeholder="e.g., Winter Clothes Collection Drive"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="description">Description</Label>
+                          <Textarea
+                            id="description"
+                            value={requestForm.description}
+                            onChange={(e) => setRequestForm({...requestForm, description: e.target.value})}
+                            placeholder="Describe what you need..."
+                            rows={3}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="items">Items Needed</Label>
+                          <Input
+                            id="items"
+                            value={requestForm.items}
+                            onChange={(e) => setRequestForm({...requestForm, items: e.target.value})}
+                            placeholder="e.g., Winter clothes, blankets, food items"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="pickupAddress">Pickup Address</Label>
+                          <Input
+                            id="pickupAddress"
+                            value={requestForm.pickupAddress}
+                            onChange={(e) => setRequestForm({...requestForm, pickupAddress: e.target.value})}
+                            placeholder="Enter pickup location"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="category">Category</Label>
+                            <Select value={requestForm.category} onValueChange={(value) => setRequestForm({...requestForm, category: value})}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="clothing">Clothing</SelectItem>
+                                <SelectItem value="food">Food</SelectItem>
+                                <SelectItem value="books">Books</SelectItem>
+                                <SelectItem value="toys">Toys</SelectItem>
+                                <SelectItem value="electronics">Electronics</SelectItem>
+                                <SelectItem value="furniture">Furniture</SelectItem>
+                                <SelectItem value="other">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="urgency">Urgency</Label>
+                            <Select value={requestForm.urgency} onValueChange={(value) => setRequestForm({...requestForm, urgency: value})}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="low">Low</SelectItem>
+                                <SelectItem value="normal">Normal</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
+                                <SelectItem value="urgent">Urgent</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <Button 
+                          type="submit" 
+                          onClick={handleSubmitRequest}
+                          disabled={isSubmittingRequest}
+                          className="w-full"
+                        >
+                          {isSubmittingRequest ? 'Submitting...' : 'Submit Request'}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Main Table */}
         <Card className="shadow-lg mb-8">
           <CardHeader className="bg-gray-50 border-b">
@@ -459,62 +528,46 @@ const NGODashboard = () => {
                     <TableBody>
                       {filteredDonations.map((donation) => (
                         <TableRow key={donation.id} className="hover:bg-gray-50 transition-colors">
-                          <TableCell className="font-medium">{donation.donorName}</TableCell>
+                          <TableCell className="font-medium">{donation.donorName || 'N/A'}</TableCell>
                           <TableCell>
-                            <div className="max-w-xs">
-                              <p className="truncate" title={donation.items}>
-                                {donation.items}
-                              </p>
+                            <div className="max-w-xs truncate" title={donation.items}>
+                              {donation.items || 'N/A'}
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="max-w-xs">
-                              <p className="text-sm text-orange-600 truncate">
-                                {donation.pickupAddress}
-                              </p>
+                            <div className="max-w-xs truncate" title={donation.pickupAddress}>
+                              {donation.pickupAddress || 'N/A'}
                             </div>
                           </TableCell>
                           <TableCell>{getStatusBadge(donation.status)}</TableCell>
                           <TableCell>
-                            <div className="flex justify-center">
-                              <div className="flex gap-2">
-                                {donation.status === 'pending' && (
-                                  <>
-                                    <Button
-                                      size="sm"
-                                      onClick={() => handleAcceptDonation(donation.id)}
-                                      className="bg-green-600 hover:bg-green-700 text-white"
-                                    >
-                                      <CheckCircle className="h-4 w-4 mr-1" />
-                                      Accept
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="destructive"
-                                      onClick={() => handleRejectDonation(donation.id)}
-                                    >
-                                      <XCircle className="h-4 w-4 mr-1" />
-                                      Reject
-                                    </Button>
-                                  </>
-                                )}
-                                {donation.status === 'accepted' && (
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleMarkPickedUp(donation.id)}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                                  >
-                                    <Truck className="h-4 w-4 mr-1" />
-                                    Mark Picked Up
-                                  </Button>
-                                )}
+                            <div className="flex gap-2 justify-center">
+                              {donation.status === 'pending' && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleAcceptDonation(donation.id)}
+                                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Accept
+                                </Button>
+                              )}
+                              {donation.status === 'accepted' && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleMarkPickedUp(donation.id)}
+                                  className="bg-green-600 hover:bg-green-700 text-white"
+                                >
+                                  <Truck className="h-4 w-4 mr-1" />
+                                  Mark Picked Up
+                                </Button>
+                              )}
                                 {donation.status === 'picked_up' && (
                                   <Badge className="bg-blue-100 text-blue-800">
                                     <CheckCircle className="h-4 w-4 mr-1" />
                                     Completed
                                   </Badge>
                                 )}
-                              </div>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -601,8 +654,7 @@ const NGODashboard = () => {
                           <div className="text-sm text-blue-600">
                             {request.requestedAt?.toDate ? 
                               new Date(request.requestedAt.toDate()).toLocaleDateString() : 
-                              'Just now'
-                            }
+                              'Just now'}
                           </div>
                         </TableCell>
                       </TableRow>

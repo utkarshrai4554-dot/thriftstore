@@ -29,14 +29,14 @@ import FreeLocationPicker from "@/components/FreeLocationPicker";
 import AddressInput from "@/components/AddressInput";
 
 const Donate = () => {
-  const [selectedCause, setSelectedCause] = useState("");
   const { user } = useAuth();
+  const [activeSection, setActiveSection] = useState<'requests' | 'donate'>('requests');
+  const [selectedCause, setSelectedCause] = useState("");
   const [donationImages, setDonationImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [donationRequests, setDonationRequests] = useState<any[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
-  const [activeSection, setActiveSection] = useState<'requests' | 'donate'>('requests');
   const [address, setAddress] = useState<{
     streetAddress: string;
     apartment: string;
@@ -56,6 +56,7 @@ const Donate = () => {
     country: 'India'
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     fetchDonationRequests();
@@ -120,14 +121,23 @@ const Donate = () => {
     const files = Array.from(e.target.files || []);
     const validFiles = files.filter(file => file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024);
     
+    console.log('🔍 Donate.tsx - Image upload started:', files.length, 'files');
+    console.log('🔍 Donate.tsx - Valid files:', validFiles.length, 'validFiles');
+    console.log('🔍 Donate.tsx - Current donationImages state:', donationImages.length);
+    
     if (validFiles.length !== files.length) {
       toast.error('Some files were invalid. Please upload only images under 5MB.');
+      return;
     }
 
+    console.log('🔍 Donate.tsx - Setting donationImages:', validFiles);
     setDonationImages(prev => [...prev, ...validFiles]);
     
     const previews = validFiles.map(file => URL.createObjectURL(file));
+    console.log('🔍 Donate.tsx - Setting imagePreviews:', previews.length);
     setImagePreviews(prev => [...prev, ...previews]);
+    
+    console.log('🔍 Donate.tsx - Final donationImages state:', donationImages.length);
   };
 
   const removeImage = (index: number) => {
@@ -139,14 +149,28 @@ const Donate = () => {
     e.preventDefault();
     setIsSubmitting(true);
     
+    // Get the form element from the event target or use the ref
+    const formElement = formRef.current || e.currentTarget;
+    
+    // Ensure we have a valid form element
+    if (!formElement || !('reset' in formElement)) {
+      console.error('Form element is not available for reset');
+      toast.error('Form submission error. Please try again.');
+      setIsSubmitting(false);
+      return;
+    }
+    
     try {
-      const formData = new FormData(e.currentTarget);
+      const formData = new FormData(formElement);
       const donationData = {
         userId: user.uid,
         cause: selectedCause,
         description: formData.get('description') as string,
         pickupAddress: address.fullAddress || '',
         addressDetails: address,
+        items: formData.get('items') as string,
+        category: formData.get('category') as string,
+        urgency: formData.get('urgency') as string,
         images: donationImages.map(file => ({
           name: file.name,
           size: file.size,
@@ -155,26 +179,41 @@ const Donate = () => {
         })),
         status: 'pending',
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
+        // Automatically assign to NGO if user is admin, otherwise assign to current user
+        assignedNGO: user?.role === 'admin' ? user?.uid : user?.uid,
+        assignedNGOName: user?.role === 'admin' ? 'System Admin' : (user?.displayName || user?.email?.split('@')[0] || 'Anonymous Donor')
       };
-
+      
       const donationRef = doc(db, 'donations', `${Date.now()}_${user.uid}`);
       await setDoc(donationRef, donationData);
-
+      
+      console.log('🔍 Donate.tsx - Donation created:', donationData);
+      console.log('🔍 Donate.tsx - Assigned to NGO:', user.uid);
+      console.log('🔍 Donate.tsx - Assigned NGO Name:', user.displayName);
+      
       toast.success('Donation submitted successfully! We\'ll arrange a free pickup and send you a certificate.');
       
-      e.currentTarget.reset();
-      setDonationImages([]);
-      setImagePreviews([]);
-      setSelectedCause('');
-      setAddress({
-        streetAddress: '',
-        apartment: '',
-        city: '',
-        state: '',
-        postalCode: '',
-        country: 'India'
-      });
+      // Reset form safely
+      try {
+        if (formElement.reset) {
+          formElement.reset();
+        }
+      } catch (resetError) {
+        console.warn('Form reset method not available:', resetError);
+        // Fallback reset - manually clear all form fields
+        setSelectedCause('');
+        setDonationImages([]);
+        setImagePreviews([]);
+        setAddress({
+          streetAddress: '',
+          apartment: '',
+          city: '',
+          state: '',
+          postalCode: '',
+          country: 'India'
+        });
+      }
       
     } catch (error) {
       console.error('Error submitting donation:', error);
@@ -342,7 +381,7 @@ const Donate = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  <form onSubmit={handleSubmit} className="space-y-6">
+                  <form onSubmit={handleSubmit} className="space-y-6" ref={formRef}>
                     <div>
                       <Label className="mb-3 block">Select a Cause</Label>
                       <div className="grid grid-cols-2 gap-3">

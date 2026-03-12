@@ -148,6 +148,7 @@ const SellProduct = () => {
         sellingPrice: parseFloat(formData.get('price') as string),
         description: formData.get('description') as string,
         images: imagePreviews,
+        quantity: parseInt(formData.get('quantity') as string) || 1, // Add quantity field
         sellerId: user.uid,
         status: 'pending',
         views: 0,
@@ -344,6 +345,17 @@ const SellProduct = () => {
               </div>
             )}
           </div>
+
+          <div className="space-y-2">
+              <Label>Quantity</Label>
+              <Input 
+                name="quantity" 
+                type="number" 
+                min="1" 
+                placeholder="Enter quantity" 
+                required 
+              />
+            </div>
 
           <div className="space-y-3">
             <Label>Original Bill (Optional)</Label>
