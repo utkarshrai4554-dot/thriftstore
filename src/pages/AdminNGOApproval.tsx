@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { CheckCircle, XCircle, Eye } from "lucide-react";
+import { CheckCircle, XCircle, Eye, AlertCircle } from "lucide-react";
 
 interface NGORegistration {
   id: string;
@@ -27,27 +27,68 @@ interface NGORegistration {
   approvedAt?: any;
   holdReason?: string;
   deleteReason?: string;
-  putOnHoldAt?: any;
+  deletedBy?: string;
   deletedAt?: any;
+  putOnHoldAt?: any;
+  putOnHoldBy?: string;
 }
 
 const AdminNGOApproval = () => {
   const { user, userProfile } = useAuth();
   const [registrations, setRegistrations] = useState<NGORegistration[]>([]);
   const [approvedNGOs, setApprovedNGOs] = useState<NGORegistration[]>([]);
+  const [deletedNGOs, setDeletedNGOs] = useState<NGORegistration[]>([]);
+  const [onHoldNGOs, setOnHoldNGOs] = useState<NGORegistration[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedNGO, setSelectedNGO] = useState<NGORegistration | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'pending' | 'approved'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'blacklist' | 'onhold'>('pending');
   const [showHoldModal, setShowHoldModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDeleteReasonModal, setShowDeleteReasonModal] = useState(false);
+  const [showHoldReasonModal, setShowHoldReasonModal] = useState(false);
   const [holdReason, setHoldReason] = useState('');
   const [deleteReason, setDeleteReason] = useState('');
 
   useEffect(() => {
     fetchRegistrations();
     fetchApprovedNGOs();
+    fetchDeletedNGOs();
+    fetchOnHoldNGOs();
   }, []);
+
+  const fetchDeletedNGOs = async () => {
+    try {
+      // Fetch from both collections for deleted NGOs
+      const approvedQuery = query(collection(db, 'approvedNGOs'), where('status', '==', 'deleted'));
+      const registrationQuery = query(collection(db, 'ngoRegistrations'), where('status', '==', 'deleted'));
+      
+      const [approvedSnapshot, registrationSnapshot] = await Promise.all([
+        getDocs(approvedQuery),
+        getDocs(registrationQuery)
+      ]);
+      
+      const approvedData = approvedSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as NGORegistration[];
+      
+      const registrationData = registrationSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as NGORegistration[];
+      
+      // Merge and remove duplicates
+      const allDeleted = [...approvedData, ...registrationData];
+      const uniqueDeleted = allDeleted.filter((ngo, index, self) => 
+        index === self.findIndex((n) => n.id === ngo.id)
+      );
+      
+      setDeletedNGOs(uniqueDeleted);
+    } catch (error) {
+      console.error('Error fetching deleted NGOs:', error);
+    }
+  };
 
   const fetchRegistrations = async () => {
     try {
@@ -67,7 +108,7 @@ const AdminNGOApproval = () => {
 
   const fetchApprovedNGOs = async () => {
     try {
-      const q = query(collection(db, 'approvedNGOs'));
+      const q = query(collection(db, 'approvedNGOs'), where('status', '==', 'approved'));
       const querySnapshot = await getDocs(q);
       const data = querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -76,6 +117,39 @@ const AdminNGOApproval = () => {
       setApprovedNGOs(data);
     } catch (error) {
       console.error('Error fetching approved NGOs:', error);
+    }
+  };
+
+  const fetchOnHoldNGOs = async () => {
+    try {
+      // Fetch from both collections for on-hold NGOs
+      const approvedQuery = query(collection(db, 'approvedNGOs'), where('status', '==', 'on-hold'));
+      const registrationQuery = query(collection(db, 'ngoRegistrations'), where('status', '==', 'on-hold'));
+      
+      const [approvedSnapshot, registrationSnapshot] = await Promise.all([
+        getDocs(approvedQuery),
+        getDocs(registrationQuery)
+      ]);
+      
+      const approvedData = approvedSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as NGORegistration[];
+      
+      const registrationData = registrationSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as NGORegistration[];
+      
+      // Combine and remove duplicates
+      const allOnHoldNGOs = [...approvedData, ...registrationData];
+      const uniqueOnHoldNGOs = allOnHoldNGOs.filter((ngo, index, self) => 
+        index === self.findIndex((t) => t.id === ngo.id)
+      );
+      
+      setOnHoldNGOs(uniqueOnHoldNGOs);
+    } catch (error) {
+      console.error('Error fetching on-hold NGOs:', error);
     }
   };
 
@@ -130,6 +204,15 @@ const AdminNGOApproval = () => {
       await updateDoc(doc(db, 'approvedNGOs', id), {
         status: 'on-hold',
         holdReason: holdReason,
+        putOnHoldBy: user?.email || 'Unknown',
+        putOnHoldAt: new Date()
+      });
+      
+      // Also update original registration if it exists
+      await updateDoc(doc(db, 'ngoRegistrations', id), {
+        status: 'on-hold',
+        holdReason: holdReason,
+        putOnHoldBy: user?.email || 'Unknown',
         putOnHoldAt: new Date()
       });
       
@@ -137,6 +220,7 @@ const AdminNGOApproval = () => {
       setHoldReason('');
       setShowHoldModal(false);
       fetchApprovedNGOs();
+      fetchOnHoldNGOs();
     } catch (error) {
       console.error('Error putting NGO on hold:', error);
       toast.error('Failed to put NGO on hold');
@@ -154,6 +238,7 @@ const AdminNGOApproval = () => {
       await updateDoc(doc(db, 'approvedNGOs', id), {
         status: 'deleted',
         deleteReason: deleteReason,
+        deletedBy: user?.email || 'Unknown',
         deletedAt: new Date()
       });
       
@@ -161,6 +246,7 @@ const AdminNGOApproval = () => {
       await updateDoc(doc(db, 'ngoRegistrations', id), {
         status: 'deleted',
         deleteReason: deleteReason,
+        deletedBy: user?.email || 'Unknown',
         deletedAt: new Date()
       });
       
@@ -169,9 +255,67 @@ const AdminNGOApproval = () => {
       setShowDeleteModal(false);
       fetchApprovedNGOs();
       fetchRegistrations();
+      fetchDeletedNGOs();
     } catch (error) {
       console.error('Error deleting NGO:', error);
       toast.error('Failed to delete NGO');
+    }
+  };
+
+  const handleRemoveFromBlacklist = async (id: string) => {
+    try {
+      // Update status back to approved in both collections
+      await updateDoc(doc(db, 'approvedNGOs', id), {
+        status: 'approved',
+        deleteReason: null,
+        deletedBy: null,
+        deletedAt: null
+      });
+      
+      // Also update original registration if it exists
+      await updateDoc(doc(db, 'ngoRegistrations', id), {
+        status: 'approved',
+        deleteReason: null,
+        deletedBy: null,
+        deletedAt: null
+      });
+      
+      toast.success('NGO removed from blacklist successfully!');
+      setShowDeleteReasonModal(false);
+      fetchApprovedNGOs();
+      fetchRegistrations();
+      fetchDeletedNGOs();
+    } catch (error) {
+      console.error('Error removing NGO from blacklist:', error);
+      toast.error('Failed to remove NGO from blacklist');
+    }
+  };
+
+  const handleRemoveFromHold = async (id: string) => {
+    try {
+      // Update status back to approved in both collections
+      await updateDoc(doc(db, 'approvedNGOs', id), {
+        status: 'approved',
+        holdReason: null,
+        putOnHoldBy: null,
+        putOnHoldAt: null
+      });
+      
+      // Also update original registration if it exists
+      await updateDoc(doc(db, 'ngoRegistrations', id), {
+        status: 'approved',
+        holdReason: null,
+        putOnHoldBy: null,
+        putOnHoldAt: null
+      });
+      
+      toast.success('NGO removed from hold successfully!');
+      setShowHoldReasonModal(false);
+      fetchApprovedNGOs();
+      fetchOnHoldNGOs();
+    } catch (error) {
+      console.error('Error removing NGO from hold:', error);
+      toast.error('Failed to remove NGO from hold');
     }
   };
 
@@ -239,6 +383,30 @@ const AdminNGOApproval = () => {
             {approvedNGOs.length > 0 && (
               <Badge variant="secondary" className="ml-2">
                 {approvedNGOs.length}
+              </Badge>
+            )}
+          </Button>
+          <Button
+            variant={activeTab === 'onhold' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('onhold')}
+            className="flex items-center gap-2"
+          >
+            <span>On Hold</span>
+            {onHoldNGOs.length > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {onHoldNGOs.length}
+              </Badge>
+            )}
+          </Button>
+          <Button
+            variant={activeTab === 'blacklist' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('blacklist')}
+            className="flex items-center gap-2"
+          >
+            <span>Blacklist</span>
+            {deletedNGOs.length > 0 && (
+              <Badge variant="destructive" className="ml-2">
+                {deletedNGOs.length}
               </Badge>
             )}
           </Button>
@@ -320,7 +488,7 @@ const AdminNGOApproval = () => {
               )}
             </CardContent>
           </Card>
-        ) : (
+        ) : activeTab === 'approved' ? (
           <Card>
             <CardHeader>
               <CardTitle>Approved NGOs</CardTitle>
@@ -397,7 +565,141 @@ const AdminNGOApproval = () => {
               )}
             </CardContent>
           </Card>
-        )}
+        ) : activeTab === 'onhold' ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-orange-600">On Hold NGOs</CardTitle>
+              <p className="text-sm text-muted-foreground">NGOs that are temporarily on hold pending review</p>
+            </CardHeader>
+            <CardContent>
+              {onHoldNGOs.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No NGOs on hold.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>NGO Name</TableHead>
+                      <TableHead>Contact Person</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>City</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Hold Reason</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {onHoldNGOs.map((ngo) => (
+                      <TableRow key={ngo.id}>
+                        <TableCell className="font-medium text-orange-700">{ngo.name}</TableCell>
+                        <TableCell>{ngo.contactPerson}</TableCell>
+                        <TableCell>{ngo.email}</TableCell>
+                        <TableCell>{ngo.phone}</TableCell>
+                        <TableCell>{ngo.city}</TableCell>
+                        <TableCell>{getStatusBadge(ngo.status)}</TableCell>
+                        <TableCell>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedNGO(ngo);
+                              setShowHoldReasonModal(true);
+                            }}
+                          >
+                            <AlertCircle className="h-4 w-4 mr-1" />
+                            View Reason
+                          </Button>
+                        </TableCell>
+                        <TableCell>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedNGO(ngo);
+                              setShowDetailsModal(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View Details
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        ) : activeTab === 'blacklist' ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-red-600">Blacklisted NGOs</CardTitle>
+              <p className="text-sm text-muted-foreground">NGOs that have been deleted due to violations or suspicious activities</p>
+            </CardHeader>
+            <CardContent>
+              {deletedNGOs.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No blacklisted NGOs.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>NGO Name</TableHead>
+                      <TableHead>Contact Person</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>City</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Delete Reason</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {deletedNGOs.map((ngo) => (
+                      <TableRow key={ngo.id}>
+                        <TableCell className="font-medium text-red-700">{ngo.name}</TableCell>
+                        <TableCell>{ngo.contactPerson}</TableCell>
+                        <TableCell>{ngo.email}</TableCell>
+                        <TableCell>{ngo.phone}</TableCell>
+                        <TableCell>{ngo.city}</TableCell>
+                        <TableCell>{getStatusBadge(ngo.status)}</TableCell>
+                        <TableCell>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedNGO(ngo);
+                              setShowDeleteReasonModal(true);
+                            }}
+                          >
+                            <AlertCircle className="h-4 w-4 mr-1" />
+                            View Reason
+                          </Button>
+                        </TableCell>
+                        <TableCell>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedNGO(ngo);
+                              setShowDetailsModal(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View Details
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
 
       {/* NGO Details Modal */}
@@ -683,6 +985,102 @@ const AdminNGOApproval = () => {
               >
                 Delete NGO
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Reason Modal */}
+      {showDeleteReasonModal && selectedNGO && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-xl font-bold">Deletion Details</h2>
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteReasonModal(false)}
+              >
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium">NGO Name</Label>
+                <p className="text-sm text-gray-600">{selectedNGO.name}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Delete Reason</Label>
+                <p className="text-sm text-gray-600">{selectedNGO.deleteReason || 'No reason provided'}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Deleted By</Label>
+                <p className="text-sm text-gray-600">{selectedNGO.deletedBy || 'Unknown'}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Deleted Date</Label>
+                <p className="text-sm text-gray-600">
+                  {selectedNGO.deletedAt ? new Date(selectedNGO.deletedAt).toLocaleString() : 'Unknown'}
+                </p>
+              </div>
+              {selectedNGO.status === 'deleted' && (
+                <div className="pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => handleRemoveFromBlacklist(selectedNGO.id)}
+                  >
+                    Remove from Blacklist
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hold Reason Modal */}
+      {showHoldReasonModal && selectedNGO && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-xl font-bold">Hold Details</h2>
+              <Button
+                variant="outline"
+                onClick={() => setShowHoldReasonModal(false)}
+              >
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium">NGO Name</Label>
+                <p className="text-sm text-gray-600">{selectedNGO.name}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Hold Reason</Label>
+                <p className="text-sm text-gray-600">{selectedNGO.holdReason || 'No reason provided'}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Put On Hold By</Label>
+                <p className="text-sm text-gray-600">{selectedNGO.putOnHoldBy || 'Unknown'}</p>
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Put On Hold Date</Label>
+                <p className="text-sm text-gray-600">
+                  {selectedNGO.putOnHoldAt ? new Date(selectedNGO.putOnHoldAt).toLocaleString() : 'Unknown'}
+                </p>
+              </div>
+              {selectedNGO.status === 'on-hold' && (
+                <div className="pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => handleRemoveFromHold(selectedNGO.id)}
+                  >
+                    Remove from Hold
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>
