@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { CheckCircle, XCircle, Eye } from "lucide-react";
@@ -20,9 +22,13 @@ interface NGORegistration {
   description: string;
   website?: string;
   contactPerson: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'on-hold' | 'deleted';
   submittedAt: any;
   approvedAt?: any;
+  holdReason?: string;
+  deleteReason?: string;
+  putOnHoldAt?: any;
+  deletedAt?: any;
 }
 
 const AdminNGOApproval = () => {
@@ -32,6 +38,11 @@ const AdminNGOApproval = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedNGO, setSelectedNGO] = useState<NGORegistration | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'pending' | 'approved'>('pending');
+  const [showHoldModal, setShowHoldModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [holdReason, setHoldReason] = useState('');
+  const [deleteReason, setDeleteReason] = useState('');
 
   useEffect(() => {
     fetchRegistrations();
@@ -98,15 +109,69 @@ const AdminNGOApproval = () => {
   const handleReject = async (id: string) => {
     try {
       await updateDoc(doc(db, 'ngoRegistrations', id), {
-        status: 'rejected',
-        rejectedAt: new Date()
+        status: 'rejected'
       });
       
-      toast.success('NGO rejected');
+      toast.success('NGO rejected successfully!');
       fetchRegistrations();
     } catch (error) {
       console.error('Error rejecting NGO:', error);
       toast.error('Failed to reject NGO');
+    }
+  };
+
+  const handleHold = async (id: string) => {
+    if (!holdReason.trim()) {
+      toast.error('Please provide a reason for putting the NGO on hold');
+      return;
+    }
+
+    try {
+      await updateDoc(doc(db, 'approvedNGOs', id), {
+        status: 'on-hold',
+        holdReason: holdReason,
+        putOnHoldAt: new Date()
+      });
+      
+      toast.success('NGO put on hold successfully!');
+      setHoldReason('');
+      setShowHoldModal(false);
+      fetchApprovedNGOs();
+    } catch (error) {
+      console.error('Error putting NGO on hold:', error);
+      toast.error('Failed to put NGO on hold');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!deleteReason.trim()) {
+      toast.error('Please provide a reason for deleting the NGO');
+      return;
+    }
+
+    try {
+      // Delete from both collections
+      await updateDoc(doc(db, 'approvedNGOs', id), {
+        status: 'deleted',
+        deleteReason: deleteReason,
+        deletedAt: new Date()
+      });
+      
+      // Also update original registration if it exists
+      await updateDoc(doc(db, 'ngoRegistrations', id), {
+        status: 'deleted',
+        deleteReason: deleteReason,
+        deletedAt: new Date()
+      });
+      
+      toast.success('NGO deleted successfully!');
+      setDeleteReason('');
+      setShowDeleteModal(false);
+      fetchApprovedNGOs();
+      fetchRegistrations();
+    } catch (error) {
+      console.error('Error deleting NGO:', error);
+      toast.error('Failed to delete NGO');
     }
   };
 
@@ -116,6 +181,10 @@ const AdminNGOApproval = () => {
         return <Badge className="bg-green-100 text-green-800">Approved</Badge>;
       case 'rejected':
         return <Badge className="bg-red-100 text-red-800">Rejected</Badge>;
+      case 'on-hold':
+        return <Badge className="bg-orange-100 text-orange-800">On Hold</Badge>;
+      case 'deleted':
+        return <Badge className="bg-gray-100 text-gray-800">Deleted</Badge>;
       default:
         return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
     }
@@ -147,8 +216,36 @@ const AdminNGOApproval = () => {
           <p className="text-muted-foreground">Review and approve NGO registration applications</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Pending Registrations */}
+        {/* Toggle Buttons */}
+        <div className="flex gap-4 mb-6">
+          <Button
+            variant={activeTab === 'pending' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('pending')}
+            className="flex items-center gap-2"
+          >
+            <span>Pending Registrations</span>
+            {registrations.filter(r => r.status === 'pending').length > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {registrations.filter(r => r.status === 'pending').length}
+              </Badge>
+            )}
+          </Button>
+          <Button
+            variant={activeTab === 'approved' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('approved')}
+            className="flex items-center gap-2"
+          >
+            <span>Approved NGOs</span>
+            {approvedNGOs.length > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {approvedNGOs.length}
+              </Badge>
+            )}
+          </Button>
+        </div>
+
+        {/* Content based on active tab */}
+        {activeTab === 'pending' ? (
           <Card>
             <CardHeader>
               <CardTitle>Pending Registrations</CardTitle>
@@ -223,8 +320,7 @@ const AdminNGOApproval = () => {
               )}
             </CardContent>
           </Card>
-
-          {/* Approved NGOs */}
+        ) : (
           <Card>
             <CardHeader>
               <CardTitle>Approved NGOs</CardTitle>
@@ -257,10 +353,42 @@ const AdminNGOApproval = () => {
                         <TableCell>{ngo.city}</TableCell>
                         <TableCell>{getStatusBadge(ngo.status)}</TableCell>
                         <TableCell>
-                          <Button size="sm" variant="outline">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedNGO(ngo);
+                              setShowDetailsModal(true);
+                            }}
+                            className="mr-2"
+                          >
                             <Eye className="h-4 w-4 mr-1" />
                             View Details
                           </Button>
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => {
+                                setSelectedNGO(ngo);
+                                setShowHoldModal(true);
+                              }}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Hold
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => {
+                                setSelectedNGO(ngo);
+                                setShowDeleteModal(true);
+                              }}
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Delete
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -269,7 +397,7 @@ const AdminNGOApproval = () => {
               )}
             </CardContent>
           </Card>
-        </div>
+        )}
       </div>
 
       {/* NGO Details Modal */}
@@ -285,6 +413,21 @@ const AdminNGOApproval = () => {
                 ✕
               </Button>
             </div>
+
+            {/* Hold Alert Box */}
+            {selectedNGO.status === 'on-hold' && selectedNGO.holdReason && (
+              <div className="bg-red-50 border border-red-200 p-4 rounded-lg mb-6">
+                <div className="flex items-center gap-2">
+                  <span className="text-red-600 font-semibold">⚠️ NGO ON HOLD</span>
+                </div>
+                <p className="text-red-700 font-medium mt-2">{selectedNGO.holdReason}</p>
+                {selectedNGO.putOnHoldAt && (
+                  <p className="text-red-600 text-sm mt-1">
+                    Put on hold: {new Date(selectedNGO.putOnHoldAt.toDate()).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Basic Information */}
@@ -340,6 +483,21 @@ const AdminNGOApproval = () => {
                 </div>
               </div>
             </div>
+
+            {/* Hold Reason Section */}
+            {selectedNGO.status === 'on-hold' && selectedNGO.holdReason && (
+              <div className="mt-6">
+                <h3 className="font-semibold text-lg border-b pb-2 text-red-600">Hold Reason</h3>
+                <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
+                  <p className="text-red-700 font-medium">{selectedNGO.holdReason}</p>
+                  {selectedNGO.putOnHoldAt && (
+                    <p className="text-red-600 text-sm mt-2">
+                      Put on hold: {new Date(selectedNGO.putOnHoldAt.toDate()).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Description */}
             <div className="mt-6">
@@ -423,6 +581,107 @@ const AdminNGOApproval = () => {
               >
                 <XCircle className="h-4 w-4 mr-2" />
                 Reject NGO
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hold Modal */}
+      {showHoldModal && selectedNGO && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-lg font-semibold">Put NGO on Hold</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowHoldModal(false)}
+              >
+                ✕
+              </Button>
+            </div>
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">
+                NGO: <strong>{selectedNGO.name}</strong>
+              </p>
+              <Label htmlFor="holdReason">Reason for putting on hold:</Label>
+              <Textarea
+                id="holdReason"
+                value={holdReason}
+                onChange={(e) => setHoldReason(e.target.value)}
+                placeholder="Please provide a reason for putting this NGO on hold (e.g., suspicious activity, verification needed, etc.)"
+                rows={4}
+                className="mt-2"
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowHoldModal(false);
+                  setHoldReason('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => handleHold(selectedNGO.id)}
+              >
+                Put on Hold
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Modal */}
+      {showDeleteModal && selectedNGO && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-lg font-semibold">Delete NGO</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDeleteModal(false)}
+              >
+                ✕
+              </Button>
+            </div>
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">
+                NGO: <strong>{selectedNGO.name}</strong>
+              </p>
+              <Label htmlFor="deleteReason">Reason for deletion:</Label>
+              <Textarea
+                id="deleteReason"
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                placeholder="Please provide a reason for deleting this NGO (e.g., fraudulent activity, violation of terms, etc.)"
+                rows={4}
+                className="mt-2"
+              />
+              <p className="text-xs text-red-600 mt-2">
+                ⚠️ This action cannot be undone. The NGO will be marked as deleted and removed from the approved list.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteReason('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => handleDelete(selectedNGO.id)}
+              >
+                Delete NGO
               </Button>
             </div>
           </div>
