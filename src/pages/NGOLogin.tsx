@@ -65,7 +65,7 @@ const NGOLogin = () => {
       }));
       
       // Redirect to NGO dashboard
-      navigate('/ngo-dashboard');
+      navigate('/ngo/dashboard');
     } catch (error: any) {
       console.error('NGO login error:', error);
       let errorMessage = 'Login failed. Please try again.';

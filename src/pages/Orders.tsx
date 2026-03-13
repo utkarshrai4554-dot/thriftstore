@@ -25,7 +25,7 @@ import { toast } from "sonner";
 import { Timestamp } from "firebase/firestore";
 
 const Orders = () => {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -366,6 +366,12 @@ const Orders = () => {
                               <span className="font-bold text-blue-700">{order.pointsUsed} pts</span>
                             </div>
                           )}
+                          {userProfile?.rewardPoints && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-green-600">Available Points:</span>
+                              <span className="font-bold text-green-700">{userProfile.rewardPoints} pts</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -511,6 +517,12 @@ const Orders = () => {
                     <div className="flex justify-between text-blue-600">
                       <span>Points Used:</span>
                       <span>{selectedOrder.pointsUsed} pts</span>
+                    </div>
+                  )}
+                  {userProfile?.rewardPoints && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Current Points Balance:</span>
+                      <span>{userProfile.rewardPoints} pts</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-lg">

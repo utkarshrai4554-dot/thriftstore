@@ -148,13 +148,17 @@ const SellProduct = () => {
         sellingPrice: parseFloat(formData.get('price') as string),
         description: formData.get('description') as string,
         images: imagePreviews,
-        quantity: parseInt(formData.get('quantity') as string) || 1, // Add quantity field
+        quantity: parseInt(formData.get('quantity') as string) || 1,
         sellerId: user.uid,
         status: 'pending',
         views: 0,
         likes: 0,
         address: address.fullAddress || '',
-        addressDetails: address,
+        addressDetails: {
+          ...address,
+          latitude: address.latitude || null,
+          longitude: address.longitude || null
+        },
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };

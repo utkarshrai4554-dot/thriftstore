@@ -125,21 +125,36 @@ const AppContent = () => {
             </AdminRoute>
           } 
         />
-        <Route path="*" element={<NotFound />} />
         <Route 
-          path="/admin" 
+          path="/ngo/register" 
+          element={<NGORegister />} 
+        />
+        <Route 
+          path="/ngo/login" 
+          element={<NGOLogin />} 
+        />
+        <Route 
+          path="/ngo/dashboard" 
           element={
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
+            <ProtectedRoute>
+              <NGODashboard />
+            </ProtectedRoute>
           } 
         />
         <Route 
-          path="/delivery" 
+          path="/ngo-accepted-orders" 
           element={
-            <AdminRoute>
-              <DeliveryDashboard />
-            </AdminRoute>
+            <ProtectedRoute>
+              <NGOAcceptedOrders />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/ngo-requested-orders" 
+          element={
+            <ProtectedRoute>
+              <NGORequestedOrders />
+            </ProtectedRoute>
           } 
         />
         <Route path="*" element={<NotFound />} />
