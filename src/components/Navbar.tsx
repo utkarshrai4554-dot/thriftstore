@@ -10,7 +10,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 const navLinks = [
   { to: "/products", label: "Shop" },
   { to: "/sell", label: "Sell" },
-  { to: "/donate", label: "Donate" },
+  { to: "/donate", label: "Donate", icon: Heart },
   { to: "/orders", label: "Orders", icon: Package },
   { to: "/admin", label: "Admin", icon: BarChart3 },
   { to: "/delivery", label: "Delivery", icon: Package }
@@ -41,7 +41,7 @@ const Navbar = () => {
 
   // NGO-specific navigation links
   const ngoNavLinks = [
-    { to: "/ngo-dashboard", label: "Dashboard", icon: BarChart3 },
+    { to: "/ngo/dashboard", label: "Dashboard", icon: BarChart3 },
     { to: "/ngo-accepted-orders", label: "Accepted Orders", icon: Package },
     { to: "/ngo-requested-orders", label: "Requested Orders", icon: ShoppingCart }
   ];

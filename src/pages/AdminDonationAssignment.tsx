@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, query, where, getDocs, doc, updateDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, updateDoc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,7 @@ const AdminDonationAssignment = () => {
   const [donations, setDonations] = useState<Donation[]>([]);
   const [approvedNGOs, setApprovedNGOs] = useState<NGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string>('all');
+  const [filter, setFilter] = useState<string>('pending');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -93,12 +93,49 @@ const AdminDonationAssignment = () => {
 
   const handleAssignNGO = async (donationId: string, ngoId: string, ngoName: string, ngoUid: string) => {
     try {
+      // First, get the donation details
+      const donationDoc = await getDoc(doc(db, 'donations', donationId));
+      const donationData = donationDoc.data();
+      
+      if (!donationData) {
+        toast.error('Donation not found');
+        return;
+      }
+      
+      // Update the donation status
       await updateDoc(doc(db, 'donations', donationId), {
         status: 'pending',
         assignedNGO: ngoUid,
         assignedNGOName: ngoName,
         assignedBy: user?.uid,
         assignedAt: new Date()
+      });
+      
+      // Create a record in ngoAcceptedOrders for leaderboard tracking
+      await setDoc(doc(db, 'ngoAcceptedOrders', `${donationId}_${ngoId}`), {
+        donationId: donationId,
+        ngoId: ngoId,
+        ngoName: ngoName,
+        ngoUid: ngoUid,
+        donorId: donationData.userId || donationData.donorId,
+        donorName: donationData.donorName,
+        donorEmail: donationData.donorEmail,
+        items: donationData.items,
+        quantity: donationData.quantity,
+        cause: donationData.cause,
+        pickupAddress: donationData.pickupAddress,
+        status: 'assigned',
+        assignedBy: user?.uid,
+        assignedAt: serverTimestamp(),
+        createdAt: serverTimestamp()
+      });
+      
+      console.log('🤝 NGO Assignment created:', {
+        donationId,
+        ngoId,
+        ngoName,
+        donorId: donationData.userId || donationData.donorId,
+        donorName: donationData.donorName
       });
       
       toast.success(`Donation assigned to ${ngoName}!`);

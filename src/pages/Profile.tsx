@@ -512,7 +512,7 @@ const Profile = () => {
                 <CardContent className="space-y-4">
                   <div className="grid md:grid-cols-2 gap-4">
                     <Button 
-                      onClick={() => window.location.href = '/ngo-dashboard'}
+                      onClick={() => window.location.href = '/ngo/dashboard'}
                       className="bg-orange-600 hover:bg-orange-700 text-white"
                     >
                       <HandHeart className="h-4 w-4 mr-2" />
@@ -570,7 +570,7 @@ const Profile = () => {
                   <Button 
                     variant="ghost" 
                     className="w-full justify-start text-orange-700 hover:bg-orange-50"
-                    onClick={() => window.location.href = '/ngo-dashboard'}
+                    onClick={() => window.location.href = '/ngo/dashboard'}
                   >
                     <HandHeart className="h-4 w-4 mr-2" />
                     NGO Dashboard
@@ -617,7 +617,7 @@ const Profile = () => {
                 <Button 
                   variant="ghost" 
                   className="w-full justify-start text-orange-700 hover:bg-orange-50"
-                  onClick={() => window.location.href = '/ngo-dashboard'}
+                  onClick={() => window.location.href = '/ngo/dashboard'}
                 >
                   <HandHeart className="h-4 w-4 mr-2" />
                   NGO Dashboard

@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/contexts/CartContext";
@@ -35,9 +35,11 @@ import NotFound from "./pages/NotFound";
 import NGOAcceptedOrders from "./pages/NGOAcceptedOrders";
 import NGORequestedOrders from "./pages/NGORequestedOrders";
 import AdminDonationAssignment from "./pages/AdminDonationAssignment";
+import Leaderboard from "./pages/Leaderboard";
 import TestAuth from "./pages/TestAuth";
 import NGODashboard from "./pages/NGODashboard";
 import NGORegister from "./pages/NGORegister";
+import DonateHub from "./pages/DonateHub";
 import NGOLogin from "./pages/NGOLogin";
 
 const queryClient = new QueryClient();
@@ -75,11 +77,15 @@ const AppContent = () => {
         />
         <Route 
           path="/donate" 
-          element={
-            <ProtectedRoute>
-              <Donate />
-            </ProtectedRoute>
-          } 
+          element={<DonateHub />} 
+        />
+        <Route 
+          path="/leaderboard" 
+          element={<Leaderboard />} 
+        />
+        <Route 
+          path="/donate-requests" 
+          element={<Navigate to="/donate" replace />} 
         />
         <Route 
           path="/orders" 
@@ -109,11 +115,19 @@ const AppContent = () => {
             </AdminRoute>
           } 
         />
-                <Route 
+        <Route 
           path="/admin" 
           element={
             <AdminRoute>
               <AdminDashboard />
+            </AdminRoute>
+          } 
+        />
+        <Route 
+          path="/admin/donation-assignment" 
+          element={
+            <AdminRoute>
+              <AdminDonationAssignment />
             </AdminRoute>
           } 
         />
@@ -138,6 +152,14 @@ const AppContent = () => {
           element={
             <ProtectedRoute>
               <NGODashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/ngo-dashboard" 
+          element={
+            <ProtectedRoute>
+              <Navigate to="/ngo/dashboard" replace />
             </ProtectedRoute>
           } 
         />

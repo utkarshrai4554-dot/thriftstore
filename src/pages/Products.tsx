@@ -33,6 +33,7 @@ interface Product {
 }
 
 const Products = () => {
+  console.log('🚀 Products component mounted!');
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [condition, setCondition] = useState("All");
@@ -43,46 +44,52 @@ const Products = () => {
 
   useEffect(() => {
     const fetchProducts = async () => {
+      console.log('🚀 fetchProducts called!');
       try {
         setLoading(true);
         const productsRef = collection(db, 'products');
-        const q = query(
-          productsRef,
-          where('status', '==', 'approved')
-        );
         
-        // Sort in JavaScript instead of Firestore query to avoid index requirement
-        const querySnapshot = await getDocs(q);
+        // Get all products and filter in JavaScript to avoid index requirement
+        const querySnapshot = await getDocs(productsRef);
+        console.log(`📊 Total documents in products collection: ${querySnapshot.docs.length}`);
+        
         const sortedProducts = querySnapshot.docs.sort((a, b) => 
           (b.data().createdAt?.toMillis() || 0) - (a.data().createdAt?.toMillis() || 0)
         );
+        
+        console.log('📊 Sample raw data:', sortedProducts[0]?.data());
         const fetchedProducts: Product[] = [];
         
         sortedProducts.forEach((doc) => {
           const data = doc.data();
-          fetchedProducts.push({
-            id: doc.id,
-            title: data.title || '',
-            brand: data.brand || '',
-            category: data.category || '',
-            color: data.color,
-            size: data.size,
-            condition: data.condition || 'Good',
-            originalPrice: data.originalPrice,
-            sellingPrice: data.sellingPrice || 0,
-            description: data.description || '',
-            images: data.images || [],
-            sellerId: data.sellerId || '',
-            status: data.status || 'approved',
-            quantity: data.quantity || 1,
-            soldQuantity: data.soldQuantity || 0,
-            views: data.views || 0,
-            likes: data.likes || 0,
-            createdAt: data.createdAt?.toDate() || new Date(),
-            updatedAt: data.updatedAt?.toDate() || new Date()
-          });
+          // Only include approved products
+          if (data.status === 'approved') {
+            fetchedProducts.push({
+              id: doc.id,
+              title: data.title || '',
+              brand: data.brand || '',
+              category: data.category || '',
+              color: data.color,
+              size: data.size,
+              condition: data.condition || 'Good',
+              originalPrice: data.originalPrice,
+              sellingPrice: data.sellingPrice || 0,
+              description: data.description || '',
+              images: data.images || [],
+              sellerId: data.sellerId || '',
+              status: data.status || 'approved',
+              quantity: data.quantity || 1,
+              soldQuantity: data.soldQuantity || 0,
+              views: data.views || 0,
+              likes: data.likes || 0,
+              createdAt: data.createdAt?.toDate() || new Date(),
+              updatedAt: data.updatedAt?.toDate() || new Date()
+            });
+          }
         });
         
+        console.log(`📊 Products fetched: ${fetchedProducts.length}`);
+        console.log('📊 Sample product data:', fetchedProducts[0]);
         setProducts(fetchedProducts);
       } catch (error) {
         console.error('Error fetching products:', error);

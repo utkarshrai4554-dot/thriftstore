@@ -23,12 +23,33 @@ interface Donation {
   pickupAddress: string;
   items: string;
   description: string;
+  quantity: number;
   status: 'pending' | 'accepted' | 'rejected' | 'picked_up';
   assignedNGO?: string;
   assignedNGOName?: string;
+  requestId?: string; // Link to donation request
   createdAt: any;
   acceptedAt?: any;
   pickedUpAt?: any;
+}
+
+interface DonationRequest {
+  id: string;
+  title: string;
+  description: string;
+  items: string;
+  quantity: number;
+  fulfilledQuantity: number;
+  pickupAddress: string;
+  category: string;
+  urgency: string;
+  status: string;
+  requestedBy: string;
+  requestedByNGO: string;
+  requestedAt: any;
+  ngoEmail: string;
+  ngoUID: string;
+  donations?: Donation[]; // List of donations fulfilling this request
 }
 
 const NGODashboard = () => {
@@ -43,6 +64,7 @@ const NGODashboard = () => {
     title: '',
     description: '',
     items: '',
+    quantity: 1,
     pickupAddress: '',
     category: 'clothing',
     urgency: 'normal'
@@ -148,8 +170,8 @@ const NGODashboard = () => {
   };
 
   const handleRequestDonation = async () => {
-    if (!requestForm.title || !requestForm.items || !requestForm.pickupAddress) {
-      toast.error('Please fill all required fields');
+    if (!requestForm.title || !requestForm.items || !requestForm.pickupAddress || requestForm.quantity < 1) {
+      toast.error('Please fill all required fields and set a valid quantity');
       return;
     }
 
@@ -160,6 +182,8 @@ const NGODashboard = () => {
         title: requestForm.title,
         description: requestForm.description,
         items: requestForm.items,
+        quantity: requestForm.quantity,
+        fulfilledQuantity: 0, // Start with 0 fulfilled
         pickupAddress: requestForm.pickupAddress,
         category: requestForm.category,
         urgency: requestForm.urgency,
@@ -179,6 +203,7 @@ const NGODashboard = () => {
         title: '',
         description: '',
         items: '',
+        quantity: 1,
         pickupAddress: '',
         category: 'clothing',
         urgency: 'normal'
@@ -429,6 +454,17 @@ const NGODashboard = () => {
                           />
                         </div>
                         <div>
+                          <Label htmlFor="quantity">Quantity Needed</Label>
+                          <Input
+                            id="quantity"
+                            type="number"
+                            min="1"
+                            value={requestForm.quantity}
+                            onChange={(e) => setRequestForm({...requestForm, quantity: parseInt(e.target.value) || 1})}
+                            placeholder="e.g., 100"
+                          />
+                        </div>
+                        <div>
                           <Label htmlFor="pickupAddress">Pickup Address</Label>
                           <Input
                             id="pickupAddress"
@@ -472,7 +508,7 @@ const NGODashboard = () => {
                         </div>
                         <Button 
                           type="submit" 
-                          onClick={handleSubmitRequest}
+                          onClick={handleRequestDonation}
                           disabled={isSubmittingRequest}
                           className="w-full"
                         >
@@ -612,6 +648,7 @@ const NGODashboard = () => {
                     <TableRow>
                       <TableHead className="font-semibold text-blue-900">Request Title</TableHead>
                       <TableHead className="font-semibold text-blue-900">Items Needed</TableHead>
+                      <TableHead className="font-semibold text-blue-900">Progress</TableHead>
                       <TableHead className="font-semibold text-blue-900">Category</TableHead>
                       <TableHead className="font-semibold text-blue-900">Urgency</TableHead>
                       <TableHead className="font-semibold text-blue-900">Status</TableHead>
@@ -627,6 +664,31 @@ const NGODashboard = () => {
                             <p className="truncate" title={request.items}>
                               {request.items}
                             </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="font-medium">
+                                {request.fulfilledQuantity || 0} / {request.quantity || 1}
+                              </span>
+                              <span className="text-gray-500">
+                                {Math.round(((request.fulfilledQuantity || 0) / (request.quantity || 1)) * 100)}%
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                style={{
+                                  width: `${Math.min(((request.fulfilledQuantity || 0) / (request.quantity || 1)) * 100, 100)}%`
+                                }}
+                              />
+                            </div>
+                            {(request.quantity || 1) - (request.fulfilledQuantity || 0) > 0 && (
+                              <p className="text-xs text-green-600">
+                                {(request.quantity || 1) - (request.fulfilledQuantity || 0)} items still needed
+                              </p>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>

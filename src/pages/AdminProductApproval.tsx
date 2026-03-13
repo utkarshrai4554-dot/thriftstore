@@ -46,12 +46,35 @@ interface ProductRequest {
   updatedAt: Date;
 }
 
+interface DonationRequest {
+  id: string;
+  title: string;
+  type: 'product' | 'donation';
+  donorName: string;
+  donorEmail: string;
+  donorPhone: string;
+  pickupAddress: string;
+  items: string;
+  description: string;
+  cause: string;
+  category: string;
+  urgency: string;
+  quantity: number;
+  images: any[];
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+type PendingItem = ProductRequest | DonationRequest;
+
 const AdminProductApproval = () => {
   const { user } = useAuth();
   const [productRequests, setProductRequests] = useState<ProductRequest[]>([]);
+  const [donationRequests, setDonationRequests] = useState<DonationRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
-  const [selectedProduct, setSelectedProduct] = useState<ProductRequest | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<ProductRequest | DonationRequest | null>(null);
   
   // Tab counts for efficiency
   const [pendingCount, setPendingCount] = useState(0);
@@ -157,22 +180,18 @@ const AdminProductApproval = () => {
   const loadProductRequests = async () => {
     try {
       setLoading(true);
-      console.log(`🔍 Loading product requests for filter: ${filter}...`);
+      console.log(`🔍 Loading pending requests for filter: ${filter}...`);
       
       let products: ProductRequest[] = [];
+      let donations: DonationRequest[] = [];
       
-      if (filter === 'pending') {
-        // Fetch from sellProducts collection
+      if (filter === 'pending' || filter === 'all') {
+        // Fetch pending products from sellProducts collection
         const productsRef = collection(db, 'sellProducts');
-        const q = query(productsRef, where('status', '==', 'pending'));
-        const querySnapshot = await getDocs(q);
+        const productsQuery = query(productsRef, where('status', '==', 'pending'));
+        const productsSnapshot = await getDocs(productsQuery);
         
-        // Sort in JavaScript instead of Firestore to avoid index requirement
-        const sortedDocs = querySnapshot.docs.sort((a, b) => 
-          (b.data().createdAt?.toMillis() || 0) - (a.data().createdAt?.toMillis() || 0)
-        );
-        
-        for (const doc of sortedDocs) {
+        for (const doc of productsSnapshot.docs) {
           const productData = doc.data();
           // Get seller information
           let sellerInfo = undefined;
@@ -191,17 +210,17 @@ const AdminProductApproval = () => {
           
           products.push({
             id: doc.id,
-            title: productData.title || '',
-            brand: productData.brand || '',
-            category: productData.category || '',
+            title: productData.title || 'Unknown Product',
+            brand: productData.brand || 'Unknown',
+            category: productData.category || 'Other',
             color: productData.color,
             size: productData.size,
             condition: productData.condition || 'Good',
             originalPrice: productData.originalPrice,
-            sellingPrice: productData.sellingPrice || 0,
+            sellingPrice: productData.sellingPrice,
             description: productData.description || '',
             images: productData.images || [],
-            sellerId: productData.sellerId || '',
+            sellerId: productData.sellerId,
             sellerInfo,
             status: productData.status || 'pending',
             views: productData.views || 0,
@@ -210,54 +229,13 @@ const AdminProductApproval = () => {
             updatedAt: productData.updatedAt?.toDate() || new Date()
           });
         }
-      } else if (filter === 'approved') {
-        // Fetch from products collection
-        const productsRef = collection(db, 'products');
-        const querySnapshot = await getDocs(productsRef);
         
-        // Sort in JavaScript by approvedAt
-        const sortedDocs = querySnapshot.docs.sort((a, b) => 
-          (b.data().approvedAt?.toMillis() || 0) - (a.data().approvedAt?.toMillis() || 0)
-        );
+        // Fetch pending donations from donations collection
+        const donationsRef = collection(db, 'donations');
+        const donationsQuery = query(donationsRef, where('status', '==', 'pending'));
+        const donationsSnapshot = await getDocs(donationsQuery);
         
-        for (const doc of sortedDocs) {
-          const productData = doc.data();
-          // Get seller information
-          let sellerInfo = undefined;
-          try {
-            const sellerDoc = await getDoc(documentRef(db, 'users', productData.sellerId));
-            if (sellerDoc.exists()) {
-              const sellerData = sellerDoc.data() as any;
-              sellerInfo = {
-                displayName: sellerData?.displayName || 'Unknown',
-                email: sellerData?.email || 'Unknown'
-              };
-            }
-          } catch (error) {
-            console.error('Error fetching seller info:', error);
-          }
-          
-          products.push({
-            id: doc.id,
-            title: productData.title || '',
-            brand: productData.brand || '',
-            category: productData.category || '',
-            color: productData.color,
-            size: productData.size,
-            condition: productData.condition || 'Good',
-            originalPrice: productData.originalPrice,
-            sellingPrice: productData.sellingPrice || 0,
-            description: productData.description || '',
-            images: productData.images || [],
-            sellerId: productData.sellerId || '',
-            sellerInfo,
-            status: 'approved',
-            views: productData.views || 0,
-            likes: productData.likes || 0,
-            createdAt: productData.createdAt?.toDate() || new Date(),
-            updatedAt: productData.updatedAt?.toDate() || new Date()
-          });
-        }
+        // Removed problematic loop
       } else if (filter === 'rejected') {
         // Fetch from rejectedProducts collection
         const productsRef = collection(db, 'rejectedProducts');
@@ -267,6 +245,8 @@ const AdminProductApproval = () => {
         const sortedDocs = querySnapshot.docs.sort((a, b) => 
           (b.data().rejectedAt?.toMillis() || 0) - (a.data().rejectedAt?.toMillis() || 0)
         );
+        
+        // Process donations - removed for now
         
         for (const doc of sortedDocs) {
           const productData = doc.data();

@@ -9,24 +9,38 @@ import {
   BarChart3, Users, Package, Gift, Truck, TrendingUp,
   CheckCircle, XCircle, DollarSign, ShoppingBag, Eye
 } from "lucide-react";
-import { collection, query, where, orderBy, getDocs, getDoc, doc as docRef, setDoc, deleteDoc, getCountFromServer } from "firebase/firestore";
+import { collection, query, where, orderBy, getDocs, getDoc, doc as docRef, setDoc, deleteDoc, updateDoc, getCountFromServer, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
 
-interface PendingProduct {
+interface PendingItem {
   id: string;
   title: string;
+  type: 'product' | 'donation';
   sellerInfo?: {
     displayName: string;
     email: string;
   };
+  donorInfo?: {
+    displayName: string;
+    email: string;
+    phone?: string;
+  };
   status: string;
+  items?: string;
+  cause?: string;
+  category?: string;
+  urgency?: string;
+  quantity?: number;
+  pickupAddress?: string;
+  images?: any[];
+  description?: string;
   createdAt: Date;
 }
 
 const AdminDashboard = () => {
   const { user } = useAuth();
-  const [pendingProducts, setPendingProducts] = useState<PendingProduct[]>([]);
+  const [pendingItems, setPendingItems] = useState<PendingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState([
     { label: "Total Sales", value: "₹0", icon: DollarSign, change: "+0%" },
@@ -54,73 +68,95 @@ const AdminDashboard = () => {
     { name: "Tom W.", status: "offline", deliveries: 31 },
   ];
 
-  const handleApproveProduct = async (productId: string) => {
-    console.log('🟢 Approve button clicked for product:', productId);
+  const handleApproveProduct = async (itemId: string) => {
+    console.log('🟢 Approve button clicked for item:', itemId);
     console.log('👤 Current user:', user);
     
     if (!user) {
       console.error('❌ No user logged in');
-      toast.error('Please login to approve products');
+      toast.error('Please login to approve items');
       return;
     }
     
     try {
-      // Get product from sellProducts collection
-      const sellProductRef = docRef(db, 'sellProducts', productId);
-      const sellProductDoc = await getDoc(sellProductRef);
-      
-      if (!sellProductDoc.exists()) {
-        console.error('❌ Product not found in sellProducts');
-        toast.error('Product not found');
+      // Find the item in pendingItems to determine its type
+      const item = pendingItems.find(p => p.id === itemId);
+      if (!item) {
+        console.error('❌ Item not found in pendingItems');
+        toast.error('Item not found');
         return;
       }
       
-      const productData = sellProductDoc.data();
-      console.log('📦 Product data found:', productData);
+      console.log('📦 Item found:', item);
       
-      // Move to products collection with approved status
-      console.log('🔄 Moving to products collection...');
-      const approvedProductRef = docRef(db, 'products', productId);
-      await setDoc(approvedProductRef, {
-        ...productData,
-        status: 'approved',
-        approvedAt: new Date(),
-        updatedAt: new Date()
-      });
-      console.log('✅ Successfully added to products collection');
-      
-      // Move to acceptedProducts collection
-      console.log('🔄 Moving to acceptedProducts collection...');
-      try {
-        const acceptedProductRef = docRef(db, 'acceptedProducts', productId);
-        await setDoc(acceptedProductRef, {
+      if (item.type === 'product') {
+        // Handle product approval
+        console.log('🔄 Approving product...');
+        
+        // Get product from sellProducts collection
+        const sellProductRef = docRef(db, 'sellProducts', itemId);
+        const sellProductDoc = await getDoc(sellProductRef);
+        
+        if (!sellProductDoc.exists()) {
+          console.error('❌ Product not found in sellProducts');
+          toast.error('Product not found');
+          return;
+        }
+        
+        const productData = sellProductDoc.data();
+        console.log('📦 Product data found:', productData);
+        
+        // Move to products collection with approved status
+        const approvedProductRef = docRef(db, 'products', itemId);
+        await setDoc(approvedProductRef, {
           ...productData,
           status: 'approved',
-          approvedAt: new Date(),
-          updatedAt: new Date()
+          approvedBy: user.uid,
+          approvedAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
         });
-        console.log('✅ Successfully added to acceptedProducts collection');
-      } catch (acceptedProductsError) {
-        console.warn('⚠️ Failed to add to acceptedProducts collection:', acceptedProductsError);
-        // Continue with the process even if acceptedProducts fails
+        
+        // Delete from sellProducts
+        await deleteDoc(sellProductRef);
+        
+        console.log('✅ Product approved successfully');
+        toast.success('Product approved successfully!');
+        
+      } else if (item.type === 'donation') {
+        // Handle donation approval
+        console.log('🔄 Approving donation...');
+        
+        // Get donation from donations collection
+        const donationRef = docRef(db, 'donations', itemId);
+        const donationDoc = await getDoc(donationRef);
+        
+        if (!donationDoc.exists()) {
+          console.error('❌ Donation not found in donations');
+          toast.error('Donation not found');
+          return;
+        }
+        
+        const donationData = donationDoc.data();
+        console.log('📦 Donation data found:', donationData);
+        
+        // Update donation status to approved
+        await updateDoc(donationRef, {
+          status: 'approved',
+          approvedBy: user.uid,
+          approvedAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+        
+        console.log('✅ Donation approved successfully');
+        toast.success('Donation approved successfully!');
       }
       
-      // Delete from sellProducts collection
-      console.log('🗑️ Deleting from sellProducts collection...');
-      await deleteDoc(sellProductRef);
-      console.log('✅ Successfully deleted from sellProducts');
+      // Refresh pending items
+      await fetchPendingItemsFunction();
       
-      toast.success('Product approved and moved to shop');
-      
-      // Refresh the pending products list
-      const updatedProducts = pendingProducts.filter(p => p.id !== productId);
-      setPendingProducts(updatedProducts);
-      
-      // Refresh stats to update product count
-      fetchStats();
     } catch (error) {
-      console.error('❌ Error approving product:', error);
-      toast.error(`Failed to approve product: ${error.message}`);
+      console.error('❌ Error approving item:', error);
+      toast.error('Failed to approve item');
     }
   };
 
@@ -152,8 +188,8 @@ const AdminDashboard = () => {
       toast.success('Product rejected and moved to rejected collection');
       
       // Refresh the pending products list
-      const updatedProducts = pendingProducts.filter(p => p.id !== productId);
-      setPendingProducts(updatedProducts);
+      const updatedProducts = pendingItems.filter(p => p.id !== productId);
+      setPendingItems(updatedProducts);
       
       // Refresh stats to update product count
       fetchStats();
@@ -245,71 +281,95 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchPendingItemsFunction = async () => {
+    try {
+      setLoading(true);
+      console.log('🔍 AdminDashboard: Loading pending items...');
+      
+      // Fetch pending products
+      const productsRef = collection(db, 'sellProducts');
+      const productsQuery = query(
+        productsRef,
+        where('status', '==', 'pending')
+      );
+      const productsSnapshot = await getDocs(productsQuery);
+      
+      // Fetch pending donations
+      const donationsRef = collection(db, 'donations');
+      const donationsQuery = query(
+        donationsRef,
+        where('status', '==', 'pending')
+      );
+      const donationsSnapshot = await getDocs(donationsQuery);
+      
+      // Combine and sort all pending items
+      const allItems: PendingItem[] = [];
+      
+      // Process products
+      productsSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        allItems.push({
+          id: doc.id,
+          title: data.title || 'Unknown Product',
+          type: 'product',
+          sellerInfo: {
+            displayName: data.sellerName || 'Unknown Seller',
+            email: data.sellerEmail || 'N/A'
+          },
+          status: data.status || 'pending',
+          createdAt: data.createdAt?.toDate() || new Date()
+        });
+      });
+      
+      // Process donations
+      donationsSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        allItems.push({
+          id: doc.id,
+          title: data.items || 'Donation Items',
+          type: 'donation',
+          donorInfo: {
+            displayName: data.donorName || 'Anonymous Donor',
+            email: data.donorEmail || 'N/A',
+            phone: data.donorPhone || 'N/A'
+          },
+          status: data.status || 'pending',
+          items: data.items,
+          cause: data.cause,
+          category: data.category,
+          urgency: data.urgency,
+          quantity: data.quantity,
+          pickupAddress: data.pickupAddress,
+          images: data.images,
+          description: data.description,
+          createdAt: data.createdAt?.toDate() || new Date()
+        });
+      });
+      
+      // Sort by creation date (newest first)
+      const sortedItems = allItems.sort((a, b) => 
+        b.createdAt.getTime() - a.createdAt.getTime()
+      );
+      
+      console.log(`📊 AdminDashboard: Found ${sortedItems.length} pending items (${productsSnapshot.docs.length} products, ${donationsSnapshot.docs.length} donations)`);
+      
+      setPendingItems(sortedItems);
+    } catch (error) {
+      console.error('Error fetching pending items:', error);
+      toast.error('Failed to fetch pending items');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchStats();
   }, []);
 
   useEffect(() => {
-    const fetchPendingProducts = async () => {
-      try {
-        setLoading(true);
-        console.log('🔍 AdminDashboard: Loading from sellProducts...');
-        
-        const productsRef = collection(db, 'sellProducts');
-        const q = query(
-          productsRef,
-          where('status', '==', 'pending')
-        );
-        
-        // Sort in JavaScript instead of Firestore query to avoid index requirement
-        const querySnapshot = await getDocs(q);
-        const sortedProducts = querySnapshot.docs.sort((a, b) => 
-          (b.data().createdAt?.toMillis() || 0) - (a.data().createdAt?.toMillis() || 0)
-        );
-        console.log(`📊 AdminDashboard: Found ${sortedProducts.length} pending products`);
-        
-        const products: PendingProduct[] = [];
-        
-        for (const doc of sortedProducts) {
-          const data = doc.data();
-          console.log('📦 AdminDashboard: Product data:', data);
-          
-          // Get seller information
-          let sellerInfo = undefined;
-          try {
-            const sellerDoc = await getDoc(docRef(db, 'users', data.sellerId));
-            if (sellerDoc.exists()) {
-              const sellerData = sellerDoc.data() as any;
-              sellerInfo = {
-                displayName: sellerData?.displayName || 'Unknown',
-                email: sellerData?.email || 'Unknown'
-              };
-            }
-          } catch (error) {
-            console.error('Error fetching seller info:', error);
-          }
-          
-          products.push({
-            id: doc.id,
-            title: data.title || 'Unknown Product',
-            sellerInfo,
-            status: data.status || 'pending',
-            createdAt: data.createdAt?.toDate() || new Date()
-          });
-        }
-        
-        console.log(`✅ AdminDashboard: Processed ${products.length} products`);
-        setPendingProducts(products);
-      } catch (error) {
-        console.error('Error fetching pending products:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPendingProducts();
-    fetchStats();
+    fetchPendingItemsFunction();
   }, []);
+
   return (
     <div className="min-h-screen py-8">
       <div className="container mx-auto px-4">
@@ -347,30 +407,45 @@ const AdminDashboard = () => {
           <TabsContent value="products" className="mt-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Products Awaiting Review</CardTitle>
+                <CardTitle className="text-lg">Items Awaiting Review</CardTitle>
               </CardHeader>
               <CardContent>
                 {loading ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
-                    <p className="text-muted-foreground mt-2 text-sm">Loading pending products...</p>
+                    <p className="text-muted-foreground mt-2 text-sm">Loading pending items...</p>
                   </div>
-                ) : pendingProducts.length === 0 ? (
+                ) : pendingItems.length === 0 ? (
                   <div className="text-center py-8">
                     <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="font-semibold text-lg mb-2">No Pending Products</h3>
-                    <p className="text-muted-foreground text-sm">All products have been reviewed.</p>
+                    <h3 className="font-semibold text-lg mb-2">No Pending Items</h3>
+                    <p className="text-muted-foreground text-sm">All items have been reviewed.</p>
                   </div>
                 ) : (
                   <>
                     <div className="divide-y">
-                      {pendingProducts.map((p) => (
+                      {pendingItems.map((p) => (
                         <div key={p.id} className="flex items-center justify-between py-3">
                           <div>
-                            <p className="font-medium text-sm">{p.title}</p>
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium text-sm">{p.title}</p>
+                              {p.type === 'donation' ? (
+                                <Badge className="bg-green-100 text-green-800 text-xs">Donation</Badge>
+                              ) : (
+                                <Badge className="bg-blue-100 text-blue-800 text-xs">Product</Badge>
+                              )}
+                            </div>
                             <p className="text-xs text-muted-foreground">
-                              by {p.sellerInfo?.displayName || 'Unknown Seller'}
+                              {p.type === 'donation' 
+                                ? `by ${p.donorInfo?.displayName || 'Anonymous Donor'}`
+                                : `by ${p.sellerInfo?.displayName || 'Unknown Seller'}`
+                              }
                             </p>
+                            {p.type === 'donation' && p.cause && (
+                              <p className="text-xs text-muted-foreground">
+                                Cause: {p.cause}
+                              </p>
+                            )}
                             <p className="text-xs text-muted-foreground">
                               {p.createdAt.toLocaleDateString()}
                             </p>
@@ -397,10 +472,10 @@ const AdminDashboard = () => {
                       ))}
                     </div>
                     <div className="mt-4 pt-4 border-t">
-                      <Link to="/admin/products">
+                      <Link to="/admin/donation-assignment">
                         <Button className="w-full">
                           <Eye className="h-4 w-4 mr-2" />
-                          View All Product Requests ({pendingProducts.length})
+                          View All Pending Items ({pendingItems.length})
                         </Button>
                       </Link>
                     </div>
