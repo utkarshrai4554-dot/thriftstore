@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, ShoppingBag, Heart, User, Package, BarChart3, ShoppingCart, Moon, Sun } from "lucide-react";
+import { Menu, X, ShoppingBag, Heart, User, Package, BarChart3, ShoppingCart, Moon, Sun, Palette, Eye, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/contexts/CartContext";
@@ -13,7 +13,9 @@ const navLinks = [
   { to: "/donate", label: "Donate", icon: Heart },
   { to: "/orders", label: "Orders", icon: Package },
   { to: "/admin", label: "Admin", icon: BarChart3 },
-  { to: "/delivery", label: "Delivery", icon: Package }
+  { to: "/delivery", label: "Delivery", icon: Package },
+  { to: "/admin/donation-review", label: "Review", icon: Eye },
+  { to: "/delivery-agent", label: "Agent", icon: Truck }
 ];
 
 const Navbar = () => {
@@ -29,8 +31,11 @@ const Navbar = () => {
 
   // Filter navLinks based on user role
   const filteredNavLinks = navLinks.filter(link => {
-    if (link.to === "/admin" || link.to === "/delivery") {
-      return userProfile?.role === 'admin';  // Only admin and delivery for admins
+    if (link.to === "/admin" || link.to === "/delivery" || link.to === "/admin/donation-review") {
+      return userProfile?.role === 'admin';  // Only admin for admin routes
+    }
+    if (link.to === "/delivery-agent") {
+      return userProfile?.role === 'delivery';  // Only delivery agent for agent routes
     }
     // Restrict Shop, Sell, and Donate for NGO users
     if (userProfile?.role === 'ngo' && (link.to === "/products" || link.to === "/sell" || link.to === "/donate")) {
@@ -47,22 +52,22 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 bg-card/80 backdrop-blur-md border-b">
+    <nav className="sticky top-0 z-50 bg-card/90 backdrop-blur-lg border-b shadow-sm transition-all duration-300">
       <div className="container mx-auto flex items-center justify-between h-16 px-4">
-        <Link to="/" className="font-display text-2xl font-bold text-primary tracking-tight">
+        <Link to="/" className="font-display text-2xl font-bold text-primary tracking-tight hover:scale-105 transition-transform duration-200">
           StyleEase
         </Link>
 
         {/* Desktop */}
-        <div className="hidden md:flex items-center gap-6">
+        <div className="hidden md:flex items-center gap-8">
           {/* Show NGO-specific navigation for NGO users */}
           {userProfile?.role === 'ngo' ? (
             ngoNavLinks.map((l) => (
               <Link
                 key={l.to}
                 to={l.to}
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  location.pathname === l.to ? "text-primary" : "text-muted-foreground"
+                className={`text-sm font-medium transition-all duration-200 hover:text-primary hover:scale-105 px-2 py-1 rounded-md ${
+                  location.pathname === l.to ? "text-primary bg-primary/10" : "text-muted-foreground"
                 }`}
               >
                 {l.label}
@@ -73,8 +78,8 @@ const Navbar = () => {
               <Link
                 key={l.to}
                 to={l.to}
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  location.pathname === l.to ? "text-primary" : "text-muted-foreground"
+                className={`text-sm font-medium transition-all duration-200 hover:text-primary hover:scale-105 px-2 py-1 rounded-md ${
+                  location.pathname === l.to ? "text-primary bg-primary/10" : "text-muted-foreground"
                 }`}
               >
                 {l.label}
@@ -118,7 +123,7 @@ const Navbar = () => {
         <div className="hidden md:flex items-center gap-2">
           {/* Cart Icon */}
           <Link to="/cart">
-            <Button variant="ghost" size="sm" className={`relative ${theme === 'dark' ? 'text-card-foreground hover:bg-warm/10' : 'text-foreground hover:bg-muted'}`}>
+            <Button variant="ghost" size="sm" className={`relative transform transition-all duration-200 hover:scale-110 ${theme === 'dark' ? 'text-card-foreground hover:bg-warm/10' : 'text-foreground hover:bg-muted'}`}>
               <ShoppingCart className="h-5 w-5" />
               {cartCount > 0 && (
                 <span className={`absolute -top-1 -right-1 text-xs rounded-full h-5 w-5 flex items-center justify-center ${theme === 'dark' ? 'bg-warm text-warm-foreground' : 'bg-primary text-primary-foreground'}`}>
@@ -130,7 +135,7 @@ const Navbar = () => {
 
           {/* Wishlist Icon */}
           <Link to="/wishlist">
-            <Button variant="ghost" size="sm" className={`relative ${theme === 'dark' ? 'text-card-foreground hover:bg-warm/10' : 'text-foreground hover:bg-muted'}`}>
+            <Button variant="ghost" size="sm" className={`relative transform transition-all duration-200 hover:scale-110 ${theme === 'dark' ? 'text-card-foreground hover:bg-warm/10' : 'text-foreground hover:bg-muted'}`}>
               <Heart className="h-5 w-5" />
               {wishlistCount > 0 && (
                 <span className={`absolute -top-1 -right-1 text-xs rounded-full h-5 w-5 flex items-center justify-center ${theme === 'dark' ? 'bg-warm text-warm-foreground' : 'bg-primary text-primary-foreground'}`}>
@@ -145,7 +150,11 @@ const Navbar = () => {
             variant="ghost"
             size="sm"
             onClick={toggleTheme}
-            className={`relative ${theme === 'dark' ? 'text-card-foreground hover:bg-warm/10' : 'text-foreground hover:bg-muted'}`}
+            className={`relative transform transition-all duration-200 hover:scale-110 hover:rotate-180 ${
+              theme === 'dark' 
+                ? 'text-card-foreground hover:bg-warm/10 border-warm hover:border-warm-foreground' 
+                : 'text-foreground hover:bg-muted'
+            }`}
             title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
           >
             {theme === 'dark' ? (

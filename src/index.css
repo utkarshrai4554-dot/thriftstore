@@ -58,69 +58,329 @@
   }
 
   .dark {
-    /* ========== DARK MODE – BROWN & BEIGE MINIMALIST ========== */
+    /* ========== DARK MODE – ENHANCED BROWN & BEIGE PALETTE ========== */
     
-    /* Base Background */
-    --background: 24 18% 12%;           /* Lighter mocha brown */
-    --foreground: 38 28% 86%;           /* Soft warm beige text */
+    /* Base Background - Richer brown */
+    --background: 25 20% 12%;           /* Deep mocha brown background */
+    --foreground: 42 32% 88%;           /* Warm cream text */
     
-    /* Surfaces */
-    --card: 24 18% 16%;                 /* Darker mocha for contrast */
-    --card-foreground: 38 28% 86%;
-    --popover: 24 18% 16%;
-    --popover-foreground: 38 28% 86%;
+    /* Surfaces - Richer brown tones */
+    --card: 28 22% 18%;                 /* Darker brown for cards */
+    --card-foreground: 42 32% 88%;
+    --popover: 28 22% 18%;
+    --popover-foreground: 42 32% 88%;
     
     /* Primary (Main brand brown) */
-    --primary: 28 35% 38%;              /* Rich cocoa brown */
-    --primary-foreground: 38 30% 92%;   /* Light beige */
+    --primary: 38 28% 35%;              /* Deep chocolate brown */
+    --primary-foreground: 42 34% 94%;   /* Light beige for contrast */
     
     /* Secondary (Soft contrast brown) */
-    --secondary: 30 20% 18%;            /* Muted dark brown */
-    --secondary-foreground: 38 28% 86%;
+    --secondary: 30 20% 16%;            /* Muted brown - darker */
+    --secondary-foreground: 42 32% 88%;
     
-    /* Muted */
-    --muted: 28 15% 16%;
-    --muted-foreground: 35 18% 65%;     /* Dusty beige */
+    /* Muted - Richer brown */
+    --muted: 26 18% 16%;                /* Darker muted brown */
+    --muted-foreground: 38 25% 70%;     /* Dusty beige */
     
     /* Accent (Warm sand highlight) */
-    --accent: 34 40% 45%;               /* Caramel */
-    --accent-foreground: 38 30% 94%;
+    --accent: 40 35% 45%;               /* Golden caramel */
+    --accent-foreground: 42 34% 94%;
     
     /* Destructive */
-    --destructive: 8 50% 45%;           /* Brick red */
-    --destructive-foreground: 38 30% 94%;
+    --destructive: 12 45% 40%;          /* Warm brick red */
+    --destructive-foreground: 42 34% 94%;
     
     /* Success */
-    --success: 32 35% 40%;              /* Earthy brown-green feel */
-    --success-foreground: 38 30% 94%;
+    --success: 36 32% 38%;              /* Earthy brown-green */
+    --success-foreground: 42 34% 94%;
     
-    /* Borders & Inputs */
-    --border: 28 15% 20%;
-    --input: 28 15% 16%;
-    --ring: 34 40% 45%;
+    /* Borders & Inputs - Richer brown */
+    --border: 28 20% 22%;               /* Darker borders */
+    --input: 26 18% 16%;                /* Darker inputs */
+    --ring: 40 35% 45%;
     
-    /* Sidebar */
-    --sidebar-background: 24 18% 12%;
-    --sidebar-foreground: 38 28% 86%;
-    --sidebar-primary: 28 35% 38%;
-    --sidebar-primary-foreground: 38 30% 92%;
-    --sidebar-accent: 34 40% 45%;
-    --sidebar-accent-foreground: 38 30% 94%;
-    --sidebar-border: 28 15% 20%;
-    --sidebar-ring: 34 40% 45%;
+    /* Sidebar - Richer brown */
+    --sidebar-background: 25 20% 12%;
+    --sidebar-foreground: 42 32% 88%;
+    --sidebar-primary: 38 28% 35%;
+    --sidebar-primary-foreground: 42 34% 94%;
+    --sidebar-accent: 40 35% 45%;
+    --sidebar-accent-foreground: 42 34% 94%;
+    --sidebar-border: 28 20% 22%;
+    --sidebar-ring: 40 35% 45%;
     
     /* Warm */
-    --warm: 32 45% 42%;                 /* Deep caramel */
-    --warm-foreground: 38 30% 94%;
+    --warm: 42 38% 42%;                 /* Rich caramel */
+    --warm-foreground: 42 34% 94%;
     
     /* Dark Brown Text */
-    --dark-brown: 20 35% 30%;           /* Dark brown text for better readability */
+    --dark-brown: 25 30% 28%;           /* Dark brown text for better readability */
     
     /* Vintage */
-    --vintage: 22 25% 22%;              /* Antique wood */
+    --vintage: 28 30% 25%;              /* Antique wood */
     
     /* Cream adaptation */
-    --cream: 38 28% 88%;                /* Soft beige */
+    --cream: 42 34% 92%;                /* Soft beige */
+  }
+
+  /* Fix any remaining white backgrounds in dark mode */
+  .dark * {
+    background-color: transparent !important;
+  }
+
+  .dark .bg-white {
+    background-color: hsl(var(--card)) !important;
+  }
+
+  .dark .bg-gray-50,
+  .dark .bg-gray-100,
+  .dark .bg-gray-200,
+  .dark .bg-gray-300 {
+    background-color: hsl(var(--muted)) !important;
+  }
+
+  .dark .bg-slate-50,
+  .dark .bg-slate-100,
+  .dark .bg-slate-200 {
+    background-color: hsl(var(--card)) !important;
+  }
+
+  .dark .bg-stone-50,
+  .dark .bg-stone-100,
+  .dark .bg-stone-200 {
+    background-color: hsl(var(--card)) !important;
+  }
+
+  .dark .bg-amber-50,
+  .dark .bg-amber-100 {
+    background-color: hsl(var(--warm)) !important;
+  }
+
+  .dark .bg-orange-50,
+  .dark .bg-orange-100 {
+    background-color: hsl(var(--accent)) !important;
+  }
+
+  .dark .bg-blue-50,
+  .dark .bg-blue-100 {
+    background-color: hsl(var(--card)) !important;
+  }
+
+  .dark .bg-green-50,
+  .dark .bg-green-100 {
+    background-color: hsl(var(--success)) !important;
+  }
+
+  .dark .bg-purple-50,
+  .dark .bg-purple-100 {
+    background-color: hsl(var(--card)) !important;
+  }
+
+  /* Fix any remaining light backgrounds - make them darker */
+  .dark [class*="bg-white"],
+  .dark [class*="bg-gray"],
+  .dark [class*="bg-slate"],
+  .dark [class*="bg-zinc"],
+  .dark [class*="bg-neutral"],
+  .dark [class*="bg-stone"]:not(.bg-stone-50):not(.bg-stone-100):not(.bg-stone-200) {
+    background-color: hsl(var(--muted)) !important;
+  }
+
+  .dark .text-white {
+    color: hsl(var(--card-foreground)) !important;
+  }
+
+  .dark .text-gray-500,
+  .dark .text-gray-600,
+  .dark .text-gray-700,
+  .dark .text-gray-800,
+  .dark .text-gray-900 {
+    color: hsl(var(--muted-foreground)) !important;
+  }
+
+  .dark .text-stone-600,
+  .dark .text-stone-700,
+  .dark .text-stone-800,
+  .dark .text-stone-900 {
+    color: hsl(var(--muted-foreground)) !important;
+  }
+
+  .dark .text-amber-700,
+  .dark .text-amber-800,
+  .dark .text-amber-900 {
+    color: hsl(var(--warm-foreground)) !important;
+  }
+
+  .dark .text-orange-600,
+  .dark .text-orange-700 {
+    color: hsl(var(--accent-foreground)) !important;
+  }
+
+  .dark .border-gray-200,
+  .dark .border-gray-300,
+  .dark .border-gray-400 {
+    border-color: hsl(var(--border)) !important;
+  }
+
+  .dark .border-stone-200,
+  .dark .border-stone-300 {
+    border-color: hsl(var(--border)) !important;
+  }
+
+  .dark .border-amber-200,
+  .dark .border-amber-300 {
+    border-color: hsl(var(--warm)) !important;
+  }
+
+  .dark .border-orange-200 {
+    border-color: hsl(var(--accent)) !important;
+  }
+
+  .dark .shadow-lg,
+  .dark .shadow-xl,
+  .dark .shadow-2xl {
+    box-shadow: 0 10px 15px -3px hsl(var(--border) / 0.3), 0 4px 6px -2px hsl(var(--border) / 0.2) !important;
+  }
+
+  /* Fix specific component backgrounds */
+  .dark .dialog,
+  .dark .modal,
+  .dark .dropdown-menu {
+    background-color: hsl(var(--card)) !important;
+  }
+
+  .dark .popover-content {
+    background-color: hsl(var(--popover)) !important;
+  }
+
+  .dark .select-content {
+    background-color: hsl(var(--popover)) !important;
+  }
+
+  .dark .toast {
+    background-color: hsl(var(--card)) !important;
+  }
+
+  .dark .alert {
+    background-color: hsl(var(--card)) !important;
+  }
+
+  /* Fix form elements */
+  .dark input,
+  .dark textarea,
+  .dark select {
+    background-color: hsl(var(--input)) !important;
+    color: hsl(var(--card-foreground)) !important;
+    border-color: hsl(var(--border)) !important;
+  }
+
+  /* Fix buttons */
+  .dark button:not([class*="bg-gradient"]):not([class*="bg-"]):not([class*="text-"]) {
+    background-color: hsl(var(--card)) !important;
+    color: hsl(var(--card-foreground)) !important;
+    border-color: hsl(var(--border)) !important;
+  }
+
+  /* Fix badges */
+  .dark .badge {
+    background-color: hsl(var(--muted)) !important;
+    color: hsl(var(--muted-foreground)) !important;
+  }
+
+  /* Fix any remaining white/gray backgrounds */
+  .dark [class*="bg-white"],
+  .dark [class*="bg-gray"],
+  .dark [class*="bg-slate"],
+  .dark [class*="bg-zinc"],
+  .dark [class*="bg-neutral"] {
+    background-color: hsl(var(--muted)) !important;
+  }
+
+  /* Fix any remaining white/gray text */
+  .dark [class*="text-white"],
+  .dark [class*="text-gray"],
+  .dark [class*="text-slate"],
+  .dark [class*="text-zinc"],
+  .dark [class*="text-neutral"] {
+    color: hsl(var(--card-foreground)) !important;
+  }
+
+  /* Fix any remaining white/gray borders */
+  .dark [class*="border-white"],
+  .dark [class*="border-gray"],
+  .dark [class*="border-slate"],
+  .dark [class*="border-zinc"],
+  .dark [class*="border-neutral"] {
+    border-color: hsl(var(--border)) !important;
+  }
+
+  /* Ensure all shadcn components follow dark theme */
+  .dark .bg-background,
+  .dark .bg-card,
+  .dark .bg-popover,
+  .dark .bg-muted {
+    background-color: hsl(var(--background)) !important;
+  }
+
+  /* Force dark mode for all common patterns */
+  .dark div,
+  .dark section,
+  .dark article,
+  .dark main,
+  .dark aside,
+  .dark nav,
+  .dark header,
+  .dark footer {
+    background-color: transparent !important;
+  }
+
+  /* Specific fixes for common white backgrounds */
+  .dark .bg-white\/10,
+  .dark .bg-white\/20,
+  .dark .bg-white\/30,
+  .dark .bg-white\/40,
+  .dark .bg-white\/50,
+  .dark .bg-white\/60,
+  .dark .bg-white\/70,
+  .dark .bg-white\/80,
+  .dark .bg-white\/90 {
+    background-color: hsl(var(--card)) !important;
+  }
+
+  /* Fix backdrop blur backgrounds */
+  .dark .backdrop-blur-sm,
+  .dark .backdrop-blur,
+  .dark .backdrop-blur-md,
+  .dark .backdrop-blur-lg,
+  .dark .backdrop-blur-xl {
+    background-color: hsl(var(--card)) !important;
+  }
+
+  /* Additional fixes for any remaining light colors */
+  .dark .bg-blue-50,
+  .dark .bg-indigo-50,
+  .dark .bg-purple-50,
+  .dark .bg-pink-50,
+  .dark .bg-red-50,
+  .dark .bg-yellow-50,
+  .dark .bg-green-50,
+  .dark .bg-teal-50,
+  .dark .bg-cyan-50,
+  .dark .bg-emerald-50 {
+    background-color: hsl(var(--muted)) !important;
+  }
+
+  .dark .bg-blue-100,
+  .dark .bg-indigo-100,
+  .dark .bg-purple-100,
+  .dark .bg-pink-100,
+  .dark .bg-red-100,
+  .dark .bg-yellow-100,
+  .dark .bg-green-100,
+  .dark .bg-teal-100,
+  .dark .bg-cyan-100,
+  .dark .bg-emerald-100 {
+    background-color: hsl(var(--card)) !important;
   }
 }
 
@@ -130,6 +390,7 @@
   }
   body {
     @apply bg-background text-foreground font-sans;
+    padding-top: 0; /* No padding needed since we have fixed positioning */
   }
   h1, h2, h3 {
     font-family: 'Playfair Display', serif;
@@ -153,6 +414,17 @@
     font-size: 1.5rem;
     font-weight: 600;
     color: hsl(var(--primary-foreground));
+  }
+}
+
+/* Add spacing for fixed theme toggle button */
+@layer utilities {
+  .theme-toggle-spacing {
+    padding-top: 3rem; /* Add space to account for fixed button */
+  }
+  
+  .no-theme-spacing {
+    padding-top: 0; /* No spacing needed for pages without navbar */
   }
 }
 
@@ -192,6 +464,12 @@
   
   /* Error toast styles */
   .toast-error {
+    background: hsl(var(--destructive));
+    color: hsl(var(--destructive-foreground));
+    border-color: hsl(var(--destructive));
+  }
+  
+  .dark .toast-error {
     background: hsl(var(--destructive));
     color: hsl(var(--destructive-foreground));
     border-color: hsl(var(--destructive));

@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { collection, query, where, getDocs, doc, updateDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/contexts/ThemeContext";
 import { toast } from "sonner";
 import { Heart, Package, MapPin, Users, Clock, TrendingUp, Award, Target, HandHelping, Gift, ImagePlus, X, Building, Trophy, Calendar } from "lucide-react";
 import AddressInput from "@/components/AddressInput";
@@ -36,12 +37,21 @@ interface DonationRequest {
   pickupAddress: string;
   category: string;
   urgency: string;
-  status: string;
+  status: 'pending' | 'admin_review' | 'approved' | 'assigned' | 'quality_check' | 'accepted' | 'rejected' | 'delivered';
   requestedBy: string;
   requestedByNGO: string;
   requestedAt: any;
   ngoEmail: string;
   ngoUID: string;
+  assignedTo?: string;
+  assignedAt?: any;
+  qualityChecked?: boolean;
+  qualityCheckedBy?: string;
+  qualityCheckedAt?: any;
+  qualityResult?: 'accepted' | 'rejected';
+  deliveryAgent?: string;
+  deliveredAt?: any;
+  adminNotes?: string;
 }
 
 interface DonationImpact {
@@ -54,6 +64,7 @@ interface DonationImpact {
 
 const DonateHub = () => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState("requests");
   const [requests, setRequests] = useState<DonationRequest[]>([]);
   const [impact, setImpact] = useState<DonationImpact>({
@@ -331,14 +342,25 @@ const DonateHub = () => {
 
       await addDoc(collection(db, 'donations'), donationData);
 
-      // Update the donation request
+      // Update the donation request status to pending admin review
       const newFulfilledQuantity = (selectedRequest.fulfilledQuantity || 0) + donateForm.quantity;
       await updateDoc(doc(db, 'donationRequests', selectedRequest.id), {
         fulfilledQuantity: newFulfilledQuantity,
-        status: newFulfilledQuantity >= selectedRequest.quantity ? 'fulfilled' : 'pending'
+        status: 'admin_review',
+        adminNotes: `Donated ${donateForm.quantity} ${selectedRequest.items} by ${user?.email || 'Anonymous'}`
       });
 
-      toast.success(`Thank you for donating ${donateForm.quantity} ${selectedRequest.items}!`);
+      // Create notification for admin
+      await addDoc(collection(db, 'adminNotifications'), {
+        type: 'donation_review',
+        title: `New Donation to Review - ${selectedRequest.title}`,
+        message: `Donor: ${user?.email || 'Anonymous'} donated ${donateForm.quantity} ${selectedRequest.items}`,
+        requestId: selectedRequest.id,
+        createdAt: serverTimestamp(),
+        status: 'pending'
+      });
+
+      toast.success(`Thank you for donating ${donateForm.quantity} ${selectedRequest.items}! Your donation is now pending admin review.`);
       setShowDonateModal(false);
       setDonateForm({ quantity: 1, message: '', pickupAddress: '' });
       setSelectedRequest(null);
@@ -497,57 +519,160 @@ const DonateHub = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className={`min-h-screen py-8 ${
+      theme === 'dark' 
+        ? 'bg-gradient-to-br from-background via-card to-muted' 
+        : 'bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50'
+    }`}>
       <div className="container mx-auto px-4 max-w-7xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Donation Hub</h1>
-          <p className="text-lg text-gray-600">Make a difference through donations</p>
+          <div className="inline-flex items-center gap-3 mb-4">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center animate-pulse ${
+              theme === 'dark' 
+                ? 'bg-gradient-to-r from-warm to-accent' 
+                : 'bg-gradient-to-r from-emerald-500 to-teal-500'
+            }`}>
+              <Heart className={`h-6 w-6 ${theme === 'dark' ? 'text-warm-foreground' : 'text-white'}`} />
+            </div>
+            <h1 className={`text-4xl md:text-5xl font-bold bg-clip-text text-transparent ${
+              theme === 'dark' 
+                ? 'bg-gradient-to-r from-warm to-accent' 
+                : 'bg-gradient-to-r from-emerald-600 to-teal-600'
+            }`}>
+              Donation Hub
+            </h1>
+          </div>
+          <p className={`text-lg max-w-2xl mx-auto ${
+            theme === 'dark' ? 'text-muted-foreground' : 'text-gray-600'
+          }`}>
+            Make a difference through donations and help those in need
+          </p>
         </div>
 
         {/* Impact Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card className="bg-blue-50 border-blue-200">
+          <Card className={`shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] border-0 ${
+            theme === 'dark' 
+              ? 'bg-gradient-to-br from-card to-muted border-warm/20' 
+              : 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200'
+          }`}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-blue-600">Total Donations</p>
-                  <p className="text-3xl font-bold text-blue-800">{impact.totalDonations}</p>
+                  <p className={`font-semibold ${
+                    theme === 'dark' ? 'text-warm-foreground' : 'text-emerald-600'
+                  }`}>
+                    Total Donations
+                  </p>
+                  <p className={`text-3xl font-bold ${
+                    theme === 'dark' ? 'text-foreground' : 'text-emerald-800'
+                  }`}>
+                    {impact.totalDonations}
+                  </p>
                 </div>
-                <Heart className="h-8 w-8 text-blue-400" />
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                  theme === 'dark' 
+                    ? 'bg-warm/20' 
+                    : 'bg-emerald-100'
+                }`}>
+                  <Heart className={`h-6 w-6 ${
+                    theme === 'dark' ? 'text-warm-foreground' : 'text-emerald-500'
+                  }`} />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-green-50 border-green-200">
+          <Card className={`shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] border-0 ${
+            theme === 'dark' 
+              ? 'bg-gradient-to-br from-card to-muted border-accent/20' 
+              : 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200'
+          }`}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-green-600">Items Donated</p>
-                  <p className="text-3xl font-bold text-green-800">{impact.itemsDonated}</p>
+                  <p className={`font-semibold ${
+                    theme === 'dark' ? 'text-accent-foreground' : 'text-blue-600'
+                  }`}>
+                    Items Donated
+                  </p>
+                  <p className={`text-3xl font-bold ${
+                    theme === 'dark' ? 'text-foreground' : 'text-blue-800'
+                  }`}>
+                    {impact.itemsDonated}
+                  </p>
                 </div>
-                <Package className="h-8 w-8 text-green-400" />
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                  theme === 'dark' 
+                    ? 'bg-accent/20' 
+                    : 'bg-blue-100'
+                }`}>
+                  <Package className={`h-6 w-6 ${
+                    theme === 'dark' ? 'text-accent-foreground' : 'text-blue-500'
+                  }`} />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-purple-50 border-purple-200">
+          <Card className={`shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] border-0 ${
+            theme === 'dark' 
+              ? 'bg-gradient-to-br from-card to-muted border-warm/20' 
+              : 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200'
+          }`}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-purple-600">NGOs Helped</p>
-                  <p className="text-3xl font-bold text-purple-800">{impact.ngosHelped}</p>
+                  <p className={`font-semibold ${
+                    theme === 'dark' ? 'text-warm-foreground' : 'text-purple-600'
+                  }`}>
+                    NGOs Helped
+                  </p>
+                  <p className={`text-3xl font-bold ${
+                    theme === 'dark' ? 'text-foreground' : 'text-purple-800'
+                  }`}>
+                    {impact.ngosHelped}
+                  </p>
                 </div>
-                <Users className="h-8 w-8 text-purple-400" />
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                  theme === 'dark' 
+                    ? 'bg-warm/20' 
+                    : 'bg-purple-100'
+                }`}>
+                  <Users className={`h-6 w-6 ${
+                    theme === 'dark' ? 'text-warm-foreground' : 'text-purple-500'
+                  }`} />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-orange-50 border-orange-200">
+          <Card className={`shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] border-0 ${
+            theme === 'dark' 
+              ? 'bg-gradient-to-br from-card to-muted border-warm/20' 
+              : 'bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200'
+          }`}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-orange-600">Requests Fulfilled</p>
-                  <p className="text-3xl font-bold text-orange-800">{impact.requestsFulfilled}</p>
+                  <p className={`font-semibold ${
+                    theme === 'dark' ? 'text-warm-foreground' : 'text-orange-600'
+                  }`}>
+                    Requests Fulfilled
+                  </p>
+                  <p className={`text-3xl font-bold ${
+                    theme === 'dark' ? 'text-foreground' : 'text-orange-800'
+                  }`}>
+                    {impact.requestsFulfilled}
+                  </p>
                 </div>
-                <Target className="h-8 w-8 text-orange-400" />
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                  theme === 'dark' 
+                    ? 'bg-warm/20' 
+                    : 'bg-orange-100'
+                }`}>
+                  <Target className={`h-6 w-6 ${
+                    theme === 'dark' ? 'text-warm-foreground' : 'text-orange-500'
+                  }`} />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -555,16 +680,32 @@ const DonateHub = () => {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="requests" className="flex items-center gap-2">
+          <TabsList className={`grid w-full grid-cols-3 shadow-lg ${
+            theme === 'dark' 
+              ? 'bg-card/90 backdrop-blur-sm border border-warm/30' 
+              : 'bg-white/80 backdrop-blur-sm border border-emerald-200'
+          }`}>
+            <TabsTrigger value="requests" className={`flex items-center gap-2 transition-all duration-200 ${
+              theme === 'dark' 
+                ? 'data-[state=active]:bg-warm data-[state=active]:text-warm-foreground hover:bg-warm/20' 
+                : 'data-[state=active]:bg-emerald-500 data-[state=active]:text-white hover:bg-emerald-50'
+            }`}>
               <Target className="h-4 w-4" />
               Fulfill NGO Requests
             </TabsTrigger>
-            <TabsTrigger value="general" className="flex items-center gap-2">
+            <TabsTrigger value="general" className={`flex items-center gap-2 transition-all duration-200 ${
+              theme === 'dark' 
+                ? 'data-[state=active]:bg-accent data-[state=active]:text-accent-foreground hover:bg-accent/20' 
+                : 'data-[state=active]:bg-emerald-500 data-[state=active]:text-white hover:bg-emerald-50'
+            }`}>
               <Package className="h-4 w-4" />
               General Donations
             </TabsTrigger>
-            <TabsTrigger value="impact" className="flex items-center gap-2">
+            <TabsTrigger value="impact" className={`flex items-center gap-2 transition-all duration-200 ${
+              theme === 'dark' 
+                ? 'data-[state=active]:bg-warm data-[state=active]:text-warm-foreground hover:bg-warm/20' 
+                : 'data-[state=active]:bg-emerald-500 data-[state=active]:text-white hover:bg-emerald-50'
+            }`}>
               <TrendingUp className="h-4 w-4" />
               Track Impact
             </TabsTrigger>
@@ -573,15 +714,37 @@ const DonateHub = () => {
           {/* Fulfill NGO Requests Tab */}
           <TabsContent value="requests" className="space-y-6">
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Fulfill NGO Requests</h2>
-              <p className="text-gray-600">Help NGOs meet their specific needs</p>
+              <h2 className={`text-3xl font-bold bg-clip-text text-transparent mb-2 ${
+                theme === 'dark' 
+                  ? 'bg-gradient-to-r from-warm to-accent' 
+                  : 'bg-gradient-to-r from-emerald-600 to-teal-600'
+              }`}>
+                Fulfill NGO Requests
+              </h2>
+              <p className={theme === 'dark' ? 'text-muted-foreground' : 'text-gray-600'}>
+                Help NGOs meet their specific needs
+              </p>
             </div>
 
             {requests.length === 0 ? (
               <div className="text-center py-12">
-                <HandHelping className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-xl font-medium text-gray-900 mb-2">No active requests</h3>
-                <p className="text-gray-600">Check back later for new opportunities to help</p>
+                <div className={`inline-flex items-center justify-center w-24 h-24 rounded-full mb-4 ${
+                  theme === 'dark' 
+                    ? 'bg-gradient-to-br from-warm/20 to-accent/20' 
+                    : 'bg-gradient-to-br from-emerald-100 to-teal-100'
+                }`}>
+                  <HandHelping className={`h-12 w-12 ${
+                    theme === 'dark' ? 'text-warm-foreground' : 'text-emerald-500'
+                  }`} />
+                </div>
+                <h3 className={`text-xl font-semibold mb-2 ${
+                  theme === 'dark' ? 'text-foreground' : 'text-gray-900'
+                }`}>
+                  No active requests
+                </h3>
+                <p className={theme === 'dark' ? 'text-muted-foreground' : 'text-gray-600'}>
+                  Check back later for new opportunities to help
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -591,14 +754,14 @@ const DonateHub = () => {
                   const isFullyFulfilled = remainingNeeded <= 0;
 
                   return (
-                    <Card key={request.id} className={`shadow-lg hover:shadow-xl transition-shadow ${isFullyFulfilled ? 'opacity-75' : ''}`}>
-                      <CardHeader className="pb-4">
+                    <Card key={request.id} className={`shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] border-0 ${isFullyFulfilled ? 'opacity-75' : ''}`}>
+                      <CardHeader className="pb-4 bg-gradient-to-r from-emerald-50 to-teal-50">
                         <div className="flex items-start justify-between">
-                          <CardTitle className="text-lg line-clamp-2">{request.title}</CardTitle>
+                          <CardTitle className="text-lg line-clamp-2 text-gray-900">{request.title}</CardTitle>
                           {getUrgencyBadge(request.urgency)}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Package className="h-4 w-4" />
+                          <Package className="h-4 w-4 text-emerald-500" />
                           <span className="capitalize">{request.category}</span>
                         </div>
                       </CardHeader>
@@ -607,17 +770,17 @@ const DonateHub = () => {
 
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">{request.items}</span>
+                            <span className="text-sm font-medium text-gray-900">{request.items}</span>
                             <span className="text-sm text-gray-500">
                               {request.fulfilledQuantity || 0} / {request.quantity}
                             </span>
                           </div>
                           
                           <div className="space-y-2">
-                            <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div className="w-full bg-gray-200 rounded-full h-3">
                               <div 
-                                className={`h-2 rounded-full transition-all duration-300 ${
-                                  progressPercentage >= 100 ? 'bg-green-600' : 'bg-blue-600'
+                                className={`h-3 rounded-full transition-all duration-500 ${
+                                  progressPercentage >= 100 ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : 'bg-gradient-to-r from-blue-500 to-indigo-500'
                                 }`}
                                 style={{ width: `${Math.min(progressPercentage, 100)}%` }}
                               />
@@ -625,7 +788,7 @@ const DonateHub = () => {
                             <div className="flex items-center justify-between text-xs">
                               <span className="text-gray-500">{progressPercentage}% fulfilled</span>
                               {!isFullyFulfilled && (
-                                <span className="text-green-600 font-medium">
+                                <span className="text-emerald-600 font-semibold">
                                   {remainingNeeded} still needed
                                 </span>
                               )}
@@ -635,11 +798,11 @@ const DonateHub = () => {
 
                         <div className="space-y-2">
                           <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Users className="h-4 w-4" />
+                            <Users className="h-4 w-4 text-purple-500" />
                             <span>{request.requestedByNGO}</span>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <MapPin className="h-4 w-4" />
+                            <MapPin className="h-4 w-4 text-orange-500" />
                             <span className="line-clamp-1">{request.pickupAddress}</span>
                           </div>
                         </div>
@@ -647,20 +810,20 @@ const DonateHub = () => {
                         <Dialog open={showDonateModal && selectedRequest?.id === request.id} onOpenChange={setShowDonateModal}>
                           <DialogTrigger asChild>
                             <Button 
-                              className="w-full" 
+                              className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]" 
                               onClick={() => openDonateModal(request)}
                               disabled={isFullyFulfilled || !user}
                             >
                               {isFullyFulfilled ? 'Request Fulfilled' : user ? 'Donate Items' : 'Login to Donate'}
                             </Button>
                           </DialogTrigger>
-                          <DialogContent className="max-w-md">
+                          <DialogContent className="max-w-md border-emerald-200">
                             <DialogHeader>
-                              <DialogTitle>Donate to {selectedRequest?.title}</DialogTitle>
+                              <DialogTitle className="text-gray-900">Donate to {selectedRequest?.title}</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-4">
                               <div>
-                                <Label htmlFor="quantity">Quantity to Donate</Label>
+                                <Label htmlFor="quantity" className="text-gray-700">Quantity to Donate</Label>
                                 <Input
                                   id="quantity"
                                   type="number"
@@ -669,34 +832,37 @@ const DonateHub = () => {
                                   value={donateForm.quantity}
                                   onChange={(e) => setDonateForm({...donateForm, quantity: parseInt(e.target.value) || 1})}
                                   placeholder={`Max: ${remainingNeeded} items`}
+                                  className="border-emerald-200 focus:border-emerald-500"
                                 />
                                 <p className="text-xs text-gray-500 mt-1">
                                   {remainingNeeded} items still needed
                                 </p>
                               </div>
                               <div>
-                                <Label htmlFor="message">Message (Optional)</Label>
+                                <Label htmlFor="message" className="text-gray-700">Message (Optional)</Label>
                                 <Textarea
                                   id="message"
                                   value={donateForm.message}
                                   onChange={(e) => setDonateForm({...donateForm, message: e.target.value})}
                                   placeholder="Add a message for the NGO..."
                                   rows={3}
+                                  className="border-emerald-200 focus:border-emerald-500"
                                 />
                               </div>
                               <div>
-                                <Label htmlFor="pickupAddress">Your Pickup Address</Label>
+                                <Label htmlFor="pickupAddress" className="text-gray-700">Your Pickup Address</Label>
                                 <Input
                                   id="pickupAddress"
                                   value={donateForm.pickupAddress}
                                   onChange={(e) => setDonateForm({...donateForm, pickupAddress: e.target.value})}
                                   placeholder="Where can items be picked up?"
+                                  className="border-emerald-200 focus:border-emerald-500"
                                 />
                               </div>
                               <Button 
                                 onClick={handleDonateToRequest}
                                 disabled={isSubmitting || !user}
-                                className="w-full"
+                                className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
                               >
                                 {isSubmitting ? 'Submitting...' : `Donate ${donateForm.quantity} ${selectedRequest?.items}`}
                               </Button>
@@ -714,7 +880,7 @@ const DonateHub = () => {
           {/* General Donations Tab */}
           <TabsContent value="general" className="space-y-6">
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">General Donations</h2>
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">General Donations</h2>
               <p className="text-gray-600">Donate any items to help those in need</p>
             </div>
 
@@ -722,13 +888,15 @@ const DonateHub = () => {
             <div className="mb-8">
               <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto">
                 {[
-                  { icon: Award, label: "Earn Points" },
-                  { icon: Package, label: "Free Pickup" },
-                  { icon: Gift, label: "Get Certificate" },
+                  { icon: Award, label: "Earn Points", color: "from-purple-500 to-pink-500" },
+                  { icon: Package, label: "Free Pickup", color: "from-blue-500 to-indigo-500" },
+                  { icon: Gift, label: "Get Certificate", color: "from-orange-500 to-amber-500" },
                 ].map((b, i) => (
-                  <div key={i} className="text-center p-6 bg-card border rounded-xl shadow-sm hover:shadow-md transition-shadow">
-                    <b.icon className="h-8 w-8 mx-auto mb-3 text-primary" />
-                    <p className="font-medium">{b.label}</p>
+                  <div key={i} className="text-center p-6 bg-white border-2 border-emerald-100 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
+                    <div className={`w-12 h-12 mx-auto mb-3 bg-gradient-to-r ${b.color} rounded-full flex items-center justify-center`}>
+                      <b.icon className="h-6 w-6 text-white" />
+                    </div>
+                    <p className="font-semibold text-gray-900">{b.label}</p>
                   </div>
                 ))}
               </div>
@@ -736,17 +904,17 @@ const DonateHub = () => {
 
             {/* Form Section - Full Width Below */}
             <div className="max-w-4xl mx-auto">
-              <Card className="shadow-lg">
-                <CardHeader className="bg-green-50 border-b">
-                  <CardTitle className="flex items-center gap-2 text-center">
-                    <Gift className="h-6 w-6 text-green-600" />
+              <Card className="shadow-2xl border-0 overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-b">
+                  <CardTitle className="flex items-center gap-2 text-center justify-center text-xl">
+                    <Gift className="h-6 w-6" />
                     Make a Donation
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-6">
+                <CardContent className="pt-6 bg-gradient-to-b from-white to-emerald-50">
                   <form onSubmit={handleGeneralDonation} className="space-y-6" ref={formRef}>
                     <div>
-                      <Label className="mb-3 block">Select a Cause</Label>
+                      <Label className="mb-3 block text-gray-700 font-semibold">Select a Cause</Label>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                         {donationCauses.map((cause) => {
                           const Icon = causeIcons[cause] || Heart;
@@ -755,14 +923,18 @@ const DonateHub = () => {
                               key={cause}
                               type="button"
                               onClick={() => setSelectedCause(cause)}
-                              className={`p-4 rounded-xl border-2 text-left transition-all ${
+                              className={`p-4 rounded-xl border-2 text-left transition-all hover:scale-[1.02] ${
                                 selectedCause === cause
-                                  ? "border-primary bg-primary/5"
-                                  : "border-border hover:border-primary/30"
+                                  ? "border-emerald-500 bg-gradient-to-r from-emerald-50 to-teal-50 shadow-lg"
+                                  : "border-gray-200 hover:border-emerald-300 bg-white"
                               }`}
                             >
-                              <Icon className={`h-5 w-5 mb-2 ${selectedCause === cause ? "text-primary" : "text-muted-foreground"}`} />
-                              <p className="font-medium text-sm">{cause}</p>
+                              <div className={`w-8 h-8 mb-2 rounded-full flex items-center justify-center ${
+                                selectedCause === cause ? "bg-emerald-500" : "bg-gray-200"
+                              }`}>
+                                <Icon className={`h-4 w-4 ${selectedCause === cause ? "text-white" : "text-gray-600"}`} />
+                              </div>
+                              <p className="font-medium text-sm text-gray-900">{cause}</p>
                             </button>
                           );
                         })}
@@ -770,7 +942,7 @@ const DonateHub = () => {
                     </div>
 
                     <div className="space-y-3">
-                      <Label>Donation Images *</Label>
+                      <Label className="text-gray-700 font-semibold">Donation Images *</Label>
                       <input
                         ref={fileInputRef}
                         type="file"
@@ -787,13 +959,13 @@ const DonateHub = () => {
                               <img
                                 src={preview}
                                 alt={`Donation image ${index + 1}`}
-                                className="w-full h-32 object-cover rounded-lg border"
+                                className="w-full h-32 object-cover rounded-lg border-2 border-emerald-200"
                               />
                               <Button
                                 type="button"
                                 variant="destructive"
                                 size="sm"
-                                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500 hover:bg-red-600"
                                 onClick={() => removeImage(index)}
                               >
                                 <X className="h-3 w-3" />
@@ -803,38 +975,39 @@ const DonateHub = () => {
                           {imagePreviews.length < 3 && (
                             <div
                               onClick={() => fileInputRef.current?.click()}
-                              className="border-2 border-dashed rounded-lg h-32 flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-colors"
+                              className="border-2 border-dashed border-emerald-300 rounded-lg h-32 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 transition-colors"
                             >
-                              <ImagePlus className="h-6 w-6 text-muted-foreground mb-1" />
-                              <span className="text-xs text-muted-foreground">Add Image</span>
+                              <ImagePlus className="h-6 w-6 text-emerald-500 mb-1" />
+                              <span className="text-xs text-emerald-600">Add Image</span>
                             </div>
                           )}
                         </div>
                       ) : (
                         <div
                           onClick={() => fileInputRef.current?.click()}
-                          className="border-2 border-dashed rounded-xl p-12 text-center hover:border-primary/50 transition-colors cursor-pointer"
+                          className="border-2 border-dashed border-emerald-300 rounded-xl p-12 text-center hover:border-emerald-500 hover:bg-emerald-50 transition-colors cursor-pointer bg-white"
                         >
-                          <ImagePlus className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-                          <p className="text-lg font-medium text-muted-foreground mb-2">Click to upload donation images</p>
-                          <p className="text-sm text-muted-foreground">PNG, JPG up to 5MB each (max 3 images)</p>
+                          <ImagePlus className="h-12 w-12 mx-auto mb-3 text-emerald-500" />
+                          <p className="text-lg font-medium text-gray-900 mb-2">Click to upload donation images</p>
+                          <p className="text-sm text-gray-600">PNG, JPG up to 5MB each (max 3 images)</p>
                         </div>
                       )}
                     </div>
                       
                       <div className="space-y-2">
-                        <Label>Item Description *</Label>
+                        <Label className="text-gray-700 font-semibold">Item Description *</Label>
                         <Textarea 
                           value={generalDonateForm.description}
                           onChange={(e) => setGeneralDonateForm({...generalDonateForm, description: e.target.value})}
                           placeholder="What are you donating? Please describe the items, their condition, size, etc." 
                           rows={4} 
                           required 
+                          className="border-emerald-200 focus:border-emerald-500 bg-white"
                         />
                       </div>
 
                       <div className="space-y-4">
-                        <Label>Pickup Location *</Label>
+                        <Label className="text-gray-700 font-semibold">Pickup Location *</Label>
                         <AddressInput
                           onAddressChange={(addr) => setAddress(addr)}
                           required={true}
@@ -844,7 +1017,7 @@ const DonateHub = () => {
                       <Button 
                         type="submit" 
                         size="lg" 
-                        className="w-full text-base py-4" 
+                        className="w-full text-base py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]" 
                         disabled={isSubmitting || !user}
                       >
                         <Gift className="mr-2 h-6 w-6" />
@@ -859,89 +1032,101 @@ const DonateHub = () => {
           {/* Track Impact Tab */}
           <TabsContent value="impact" className="space-y-6">
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Track Your Impact</h2>
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">Track Your Impact</h2>
               <p className="text-gray-600">See the difference you're making and your donation history</p>
             </div>
 
             {/* Personal Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-              <Card className="bg-blue-50 border-blue-200">
+              <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-blue-600">Total Donations</p>
-                      <p className="text-3xl font-bold text-blue-800">{userStats?.totalDonations || 0}</p>
+                      <p className="text-emerald-600 font-semibold">Total Donations</p>
+                      <p className="text-3xl font-bold text-emerald-800">{userStats?.totalDonations || 0}</p>
                     </div>
-                    <Heart className="h-8 w-8 text-blue-400" />
+                    <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                      <Heart className="h-6 w-6 text-emerald-500" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-green-50 border-green-200">
+              <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-green-600">Items Donated</p>
-                      <p className="text-3xl font-bold text-green-800">{userStats?.totalItems || 0}</p>
+                      <p className="text-blue-600 font-semibold">Items Donated</p>
+                      <p className="text-3xl font-bold text-blue-800">{userStats?.totalItems || 0}</p>
                     </div>
-                    <Package className="h-8 w-8 text-green-400" />
+                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Package className="h-6 w-6 text-blue-500" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-purple-50 border-purple-200">
+              <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-purple-600">Impact Score</p>
+                      <p className="text-purple-600 font-semibold">Impact Score</p>
                       <p className="text-3xl font-bold text-purple-800">{userStats?.impactScore || 0}</p>
                     </div>
-                    <TrendingUp className="h-8 w-8 text-purple-400" />
+                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                      <TrendingUp className="h-6 w-6 text-purple-500" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-              <Card className="bg-orange-50 border-orange-200">
+              <Card className="bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-orange-600">Badges Earned</p>
+                      <p className="text-orange-600 font-semibold">Badges Earned</p>
                       <p className="text-3xl font-bold text-orange-800">{userStats?.badges?.length || 0}</p>
                     </div>
-                    <Award className="h-8 w-8 text-orange-400" />
+                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                      <Award className="h-6 w-6 text-orange-500" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* My Donation History */}
-              <Card className="shadow-lg">
-                <CardHeader>
+              <Card className="shadow-xl border-0 overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white">
                   <CardTitle className="flex items-center gap-2">
-                    <Package className="h-5 w-5 text-blue-600" />
+                    <Package className="h-5 w-5" />
                     My Donation History
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-6 bg-gradient-to-b from-white to-emerald-50">
                   {user ? (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between mb-4">
                         <span className="text-sm text-gray-600">Your donation history will appear here</span>
-                        <Button variant="outline" size="sm" onClick={() => window.location.href = '/orders'}>
+                        <Button variant="outline" size="sm" onClick={() => window.location.href = '/orders'} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50">
                           View All Orders
                         </Button>
                       </div>
                       <div className="text-center py-8">
-                        <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-full mb-4">
+                          <Package className="h-8 w-8 text-emerald-500" />
+                        </div>
                         <p className="text-gray-600 mb-2">No donation history yet</p>
                         <p className="text-sm text-gray-500 mb-4">Start donating to see your impact grow!</p>
-                        <Button onClick={() => setActiveTab('general')} className="bg-blue-600 hover:bg-blue-700">
+                        <Button onClick={() => setActiveTab('general')} className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
                           Make Your First Donation
                         </Button>
                       </div>
                     </div>
                   ) : (
                     <div className="text-center py-8">
-                      <Heart className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                      <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full mb-4">
+                        <Heart className="h-8 w-8 text-gray-500" />
+                      </div>
                       <p className="text-gray-600 mb-4">Login to track your personal impact</p>
-                      <Button onClick={() => window.location.href = '/auth'}>
+                      <Button onClick={() => window.location.href = '/auth'} className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
                         Login to View History
                       </Button>
                     </div>
@@ -950,30 +1135,30 @@ const DonateHub = () => {
               </Card>
 
               {/* Community Impact */}
-              <Card className="shadow-lg">
-                <CardHeader>
+              <Card className="shadow-xl border-0 overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white">
                   <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-green-600" />
+                    <TrendingUp className="h-5 w-5" />
                     Community Impact
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="p-6 bg-gradient-to-b from-white to-blue-50 space-y-4">
                   <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Total Donors:</span>
-                      <span className="font-bold">{impact.totalDonations}</span>
+                    <div className="flex justify-between p-3 bg-white rounded-lg border border-blue-100">
+                      <span className="text-gray-700 font-medium">Total Donors:</span>
+                      <span className="font-bold text-blue-600">{impact.totalDonations}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Items Distributed:</span>
-                      <span className="font-bold">{impact.itemsDonated}</span>
+                    <div className="flex justify-between p-3 bg-white rounded-lg border border-blue-100">
+                      <span className="text-gray-700 font-medium">Items Distributed:</span>
+                      <span className="font-bold text-blue-600">{impact.itemsDonated}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">NGOs Partnered:</span>
-                      <span className="font-bold">{impact.ngosHelped}</span>
+                    <div className="flex justify-between p-3 bg-white rounded-lg border border-blue-100">
+                      <span className="text-gray-700 font-medium">NGOs Partnered:</span>
+                      <span className="font-bold text-blue-600">{impact.ngosHelped}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Requests Completed:</span>
-                      <span className="font-bold">{impact.requestsFulfilled}</span>
+                    <div className="flex justify-between p-3 bg-white rounded-lg border border-blue-100">
+                      <span className="text-gray-700 font-medium">Requests Completed:</span>
+                      <span className="font-bold text-blue-600">{impact.requestsFulfilled}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -981,16 +1166,44 @@ const DonateHub = () => {
             </div>
 
             {/* Recent Activity */}
-            <Card className="shadow-lg">
-              <CardHeader>
+            <Card className={`shadow-xl border-0 overflow-hidden ${
+              theme === 'dark' 
+                ? 'bg-card border-warm/20' 
+                : ''
+            }`}>
+              <CardHeader className={`${
+                theme === 'dark' 
+                  ? 'bg-gradient-to-r from-warm to-accent text-warm-foreground' 
+                  : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+              }`}>
                 <CardTitle>Recent Activity</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className={`p-6 ${
+                theme === 'dark' 
+                  ? 'bg-gradient-to-b from-card to-muted' 
+                  : 'bg-gradient-to-b from-white to-purple-50'
+              }`}>
                 {impact.recentActivity.length === 0 ? (
                   <div className="text-center py-8">
-                    <Clock className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                    <p className="text-gray-600 mb-2">No recent donation activity</p>
-                    <p className="text-sm text-gray-500">Be the first to make a donation!</p>
+                    <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-4 ${
+                      theme === 'dark' 
+                        ? 'bg-gradient-to-br from-warm/20 to-accent/20' 
+                        : 'bg-gradient-to-br from-purple-100 to-pink-100'
+                    }`}>
+                      <Clock className={`h-8 w-8 ${
+                        theme === 'dark' ? 'text-warm-foreground' : 'text-purple-500'
+                      }`} />
+                    </div>
+                    <p className={`mb-2 ${
+                      theme === 'dark' ? 'text-muted-foreground' : 'text-gray-600'
+                    }`}>
+                      No recent donation activity
+                    </p>
+                    <p className={`text-sm ${
+                      theme === 'dark' ? 'text-muted-foreground/70' : 'text-gray-500'
+                    }`}>
+                      Be the first to make a donation!
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -999,46 +1212,82 @@ const DonateHub = () => {
                       const isRecent = (Date.now() - donationDate.getTime()) < 24 * 60 * 60 * 1000; // Within 24 hours
                       
                       return (
-                        <div key={activity.id || index} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <div key={activity.id || index} className={`flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 hover:scale-[1.02] ${
+                          theme === 'dark' 
+                            ? 'bg-card border-warm/20 hover:shadow-lg hover:bg-muted' 
+                            : 'bg-white border border-purple-100 hover:shadow-lg'
+                        }`}>
                           <div className="flex-shrink-0">
                             {activity.images && activity.images.length > 0 ? (
                               <img
                                 src={activity.images[0].url}
                                 alt="Donation preview"
-                                className="w-12 h-12 object-cover rounded-lg border"
+                                className={`w-12 h-12 object-cover rounded-lg border ${
+                                  theme === 'dark' 
+                                    ? 'border-warm/30' 
+                                    : 'border-purple-200'
+                                }`}
                               />
                             ) : (
-                              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <Gift className="h-6 w-6 text-blue-600" />
+                              <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                                theme === 'dark' 
+                                  ? 'bg-gradient-to-br from-warm/20 to-accent/20' 
+                                  : 'bg-gradient-to-br from-purple-100 to-pink-100'
+                              }`}>
+                                <Gift className={`h-6 w-6 ${
+                                  theme === 'dark' ? 'text-warm-foreground' : 'text-purple-500'
+                                }`} />
                               </div>
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <p className="font-medium truncate">
+                              <p className={`font-medium truncate ${
+                                theme === 'dark' ? 'text-foreground' : 'text-gray-900'
+                              }`}>
                                 {activity.donorName || activity.userId?.slice(0, 8) + '...' || 'Anonymous'}
                               </p>
                               {isRecent && (
-                                <Badge className="bg-green-100 text-green-800 text-xs">New</Badge>
+                                <Badge className={`text-xs ${
+                                  theme === 'dark' 
+                                    ? 'bg-gradient-to-r from-success to-success/80 text-success-foreground' 
+                                    : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
+                                }`}>
+                                  New
+                                </Badge>
                               )}
                             </div>
-                            <p className="text-sm text-gray-600">
-                              Donated <span className="font-medium">{activity.quantity || 1}</span> {activity.items || 'items'}
+                            <p className={`text-sm ${
+                              theme === 'dark' ? 'text-muted-foreground' : 'text-gray-600'
+                            }`}>
+                              Donated <span className={`font-medium ${
+                                theme === 'dark' ? 'text-accent-foreground' : 'text-purple-600'
+                              }`}>
+                                {(activity as any).quantity || 1}
+                              </span> {(activity as any).items || 'items'}
                               {activity.cause && (
-                                <span className="text-gray-500"> for {activity.cause}</span>
+                                <span className={theme === 'dark' ? 'text-muted-foreground' : 'text-gray-500'}>
+                                  for {activity.cause}
+                                </span>
                               )}
                             </p>
                             {activity.description && (
-                              <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                              <p className={`text-xs mt-1 line-clamp-2 ${
+                                theme === 'dark' ? 'text-muted-foreground/80' : 'text-gray-500'
+                              }`}>
                                 {activity.description}
                               </p>
                             )}
                           </div>
                           <div className="flex-shrink-0 text-right">
-                            <p className="text-xs text-gray-500">
+                            <p className={`text-xs ${
+                              theme === 'dark' ? 'text-muted-foreground' : 'text-gray-500'
+                            }`}>
                               {donationDate.toLocaleDateString()}
                             </p>
-                            <p className="text-xs text-gray-400">
+                            <p className={`text-xs ${
+                              theme === 'dark' ? 'text-muted-foreground/70' : 'text-gray-400'
+                            }`}>
                               {donationDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </p>
                           </div>

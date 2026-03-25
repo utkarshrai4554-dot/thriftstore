@@ -1,13 +1,6 @@
-import { useState, useMemo, useEffect } from "react";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { useState, useEffect } from "react";
 import ProductCard from "@/components/ProductCard";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { BirthdayBonusAlert } from "@/components/BirthdayBonusAlert";
-import { categories, conditions } from "@/lib/mockData";
-import { useReviews } from "@/contexts/ReviewContext";
-import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface Product {
@@ -33,31 +26,22 @@ interface Product {
 }
 
 const Products = () => {
-  console.log('🚀 Products component mounted!');
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("All");
-  const [condition, setCondition] = useState("All");
-  const [showFilters, setShowFilters] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const { getProductAverageRating, getProductTotalReviews } = useReviews();
 
   useEffect(() => {
     const fetchProducts = async () => {
-      console.log('🚀 fetchProducts called!');
       try {
         setLoading(true);
         const productsRef = collection(db, 'products');
         
         // Get all products and filter in JavaScript to avoid index requirement
         const querySnapshot = await getDocs(productsRef);
-        console.log(`📊 Total documents in products collection: ${querySnapshot.docs.length}`);
         
         const sortedProducts = querySnapshot.docs.sort((a, b) => 
           (b.data().createdAt?.toMillis() || 0) - (a.data().createdAt?.toMillis() || 0)
         );
         
-        console.log('📊 Sample raw data:', sortedProducts[0]?.data());
         const fetchedProducts: Product[] = [];
         
         sortedProducts.forEach((doc) => {
@@ -88,8 +72,6 @@ const Products = () => {
           }
         });
         
-        console.log(`📊 Products fetched: ${fetchedProducts.length}`);
-        console.log('📊 Sample product data:', fetchedProducts[0]);
         setProducts(fetchedProducts);
       } catch (error) {
         console.error('Error fetching products:', error);
@@ -99,122 +81,51 @@ const Products = () => {
     };
 
     fetchProducts();
-    
-    // Set up interval to refresh products every 30 seconds
-    const interval = setInterval(fetchProducts, 30000);
-    return () => clearInterval(interval);
   }, []);
-
-  const filtered = products.filter((p) => {
-    const matchSearch = p.title.toLowerCase().includes(search.toLowerCase());
-    const matchCategory = category === "All" || p.category === category;
-    const matchCondition = condition === "All" || p.condition === condition;
-    const hasQuantity = (p.quantity - (p.soldQuantity || 0)) > 0;
-    return matchSearch && matchCategory && matchCondition && hasQuantity;
-  });
 
   return (
     <div className="min-h-screen py-8">
-      <BirthdayBonusAlert />
       <div className="container mx-auto px-4">
-        <div className="mb-8">
-          <h1 className="font-display text-3xl font-bold mb-2">Shop Pre-Loved</h1>
-          <p className="text-muted-foreground">Discover unique finds at great prices</p>
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="font-display text-3xl md:text-4xl font-bold text-primary mb-4">
+            Shop Products
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Discover unique pre-loved items at great prices
+          </p>
         </div>
 
-        {/* Categories */}
-        <div className="mb-6">
-          <p className="text-sm font-medium mb-3">Categories</p>
-          <div className="flex flex-wrap gap-2">
-            {categories.map((c) => (
-              <Badge
-                key={c}
-                variant={category === c ? "default" : "outline"}
-                className="cursor-pointer px-3 py-1"
-                onClick={() => setCategory(c)}
-              >
-                {c}
-              </Badge>
-            ))}
-          </div>
-        </div>
-
-        {/* Search & Filter */}
-        <div className="flex gap-3 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search products..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium hover:bg-muted transition-colors"
-          >
-            <SlidersHorizontal className="h-4 w-4" /> Filters
-          </button>
-        </div>
-
-        {showFilters && (
-          <div className="mb-6 p-4 bg-card rounded-xl border animate-fade-in">
-            <div>
-              <p className="text-sm font-medium mb-2">Condition</p>
-              <div className="flex flex-wrap gap-2">
-                {conditions.map((c) => (
-                  <Badge
-                    key={c}
-                    variant={condition === c ? "default" : "outline"}
-                    className="cursor-pointer capitalize"
-                    onClick={() => setCondition(c)}
-                  >
-                    {c}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Results */}
+        {/* Products Grid */}
         {loading ? (
           <div className="text-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="text-muted-foreground mt-2">Loading products...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading products...</p>
+          </div>
+        ) : products.length === 0 ? (
+          <div className="text-center py-20">
+            <h3 className="text-lg font-semibold text-foreground mb-2">No products available</h3>
+            <p className="text-muted-foreground">Check back soon for new arrivals!</p>
           </div>
         ) : (
-          <>
-            <p className="text-sm text-muted-foreground mb-4">{filtered.length} items found</p>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-              {filtered.map((p) => (
-                <ProductCard 
-                  key={p.id} 
-                  id={p.id}
-                  name={p.title}
-                  price={p.sellingPrice}
-                  category={p.category}
-                  condition={p.condition}
-                  image={p.images[0] || '/placeholder.jpg'}
-                  views={p.views}
-                  averageRating={getProductAverageRating(p.id)}
-                  totalReviews={getProductTotalReviews(p.id)}
-                  quantity={p.quantity}
-                  soldQuantity={p.soldQuantity}
-                />
-              ))}
-            </div>
-            {filtered.length === 0 && (
-              <div className="text-center py-20">
-                <p className="text-muted-foreground">
-                  {products.length === 0 
-                    ? "No approved products available yet. Check back soon!" 
-                    : "No products match your filters."}
-                </p>
-              </div>
-            )}
-          </>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {products.map((p) => (
+              <ProductCard 
+                key={p.id} 
+                id={p.id}
+                name={p.title}
+                price={p.sellingPrice}
+                category={p.category}
+                condition={p.condition}
+                image={p.images[0] || '/placeholder.jpg'}
+                views={p.views}
+                averageRating={0}
+                totalReviews={0}
+                quantity={p.quantity}
+                soldQuantity={p.soldQuantity}
+              />
+            ))}
+          </div>
         )}
       </div>
     </div>
