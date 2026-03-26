@@ -351,41 +351,23 @@ const Profile = () => {
   }
 
   return (
-    <div className={`min-h-screen py-8 ${
-      theme === 'dark' ? 'bg-background' : 'bg-background'
-    }`}>
+    <div className="min-h-screen py-8">
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <h1 className={`font-display text-3xl font-bold ${
-            theme === 'dark' ? 'text-foreground' : 'text-foreground'
-          }`}>
-            My Profile
-          </h1>
+          <h1 className="font-display text-3xl font-bold">My Profile</h1>
           <div className="flex gap-2">
             {!isEditing ? (
-              <Button onClick={() => setIsEditing(true)} variant="outline" className={`transition-all duration-200 hover:scale-105 ${
-                theme === 'dark' 
-                  ? 'border-warm/30 text-warm-foreground hover:bg-warm/20 hover:border-warm/50' 
-                  : 'border-primary text-primary hover:bg-primary/10'
-              }`}>
+              <Button onClick={() => setIsEditing(true)} variant="outline">
                 <Edit className="h-4 w-4 mr-2" />
                 Edit Profile
               </Button>
             ) : (
               <>
-                <Button onClick={handleSave} className={`transition-all duration-200 hover:scale-105 ${
-                  theme === 'dark' 
-                    ? 'bg-gradient-to-r from-warm to-accent hover:from-warm/90 hover:to-accent/90 text-warm-foreground border-0' 
-                    : 'bg-green-600 hover:bg-green-700 text-white border-0'
-                }`}>
+                <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700">
                   Save Changes
                 </Button>
-                <Button onClick={() => setIsEditing(false)} variant="outline" className={`transition-all duration-200 hover:scale-105 ${
-                  theme === 'dark' 
-                    ? 'border-warm/30 text-warm-foreground hover:bg-warm/20 hover:border-warm/50' 
-                    : 'border-primary text-primary hover:bg-primary/10'
-                }`}>
+                <Button onClick={() => setIsEditing(false)} variant="outline">
                   Cancel
                 </Button>
               </>
@@ -405,68 +387,38 @@ const Profile = () => {
             {/* NGO Main Info */}
             <div className="lg:col-span-2 space-y-6">
               {/* NGO Information */}
-              <Card className={`transition-all duration-300 hover:shadow-lg ${
-                theme === 'dark' 
-                  ? 'border-warm/30 bg-card' 
-                  : 'border-orange-200'
-              }`}>
-                <CardHeader className={
-                  theme === 'dark' 
-                    ? 'bg-gradient-to-r from-warm/20 to-accent/20 border-b border-warm/20' 
-                    : 'bg-orange-50'
-                }>
-                  <CardTitle className={`flex items-center gap-2 ${
-                    theme === 'dark' ? 'text-warm-foreground' : 'text-orange-900'
-                  }`}>
+              <Card className="border-orange-200">
+                <CardHeader className="bg-orange-50">
+                  <CardTitle className="flex items-center gap-2 text-orange-900">
                     <Building className="h-5 w-5" />
                     NGO Information
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center space-x-4">
-                    <Avatar className={`h-20 w-20 border-2 ${
-                      theme === 'dark' ? 'border-warm/40' : 'border-orange-200'
-                    }`}>
+                    <Avatar className="h-20 w-20 border-2 border-orange-200">
                       <AvatarImage src={userProfile?.photoURL} />
-                      <AvatarFallback className={`text-lg font-display ${
-                        theme === 'dark' 
-                          ? 'bg-warm/20 text-warm-foreground' 
-                          : 'bg-orange-100 text-orange-800'
-                      }`}>
+                      <AvatarFallback className="text-lg font-display bg-orange-100 text-orange-800">
                         {userProfile?.displayName?.[0] || user?.email?.[0] || 'N'}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                      <h3 className={`font-display text-xl font-semibold ${
-                        theme === 'dark' ? 'text-foreground' : 'text-orange-900'
-                      }`}>
+                      <h3 className="font-display text-xl font-semibold text-orange-900">
                         {userProfile?.displayName || user?.email?.split('@')[0]}
                       </h3>
-                      <p className={theme === 'dark' ? 'text-muted-foreground' : 'text-orange-700'}>
-                        {user?.email}
-                      </p>
+                      <p className="text-orange-700">{user?.email}</p>
                       <div className="flex gap-2 mt-1">
-                        <Badge variant="secondary" className={
-                          theme === 'dark' ? 'bg-warm/20 text-warm-foreground border-warm/30' : ''
-                        }>
-                          Member since {new Date((user as any)?.metadata?.creationTime || '').getFullYear()}
+                        <Badge variant="secondary">
+                          Member since {new Date(user?.metadata.creationTime || '').getFullYear()}
                         </Badge>
                         {isNGOVerified && (
-                          <Badge className={`${
-                            theme === 'dark' 
-                              ? 'bg-success/20 text-success-foreground border-success/30' 
-                              : 'bg-green-100 text-green-800 border-green-200'
-                          }`}>
+                          <Badge className="bg-green-100 text-green-800 border-green-200">
                             <CheckCircle className="h-3 w-3 mr-1" />
                             NGO Verified
                           </Badge>
                         )}
                         {!isNGOVerified && (
-                          <Badge className={`${
-                            theme === 'dark' 
-                              ? 'bg-warm/20 text-warm-foreground border-warm/30' 
-                              : 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                          }`}>
+                          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
                             <Building className="h-3 w-3 mr-1" />
                             NGO Pending Approval
                           </Badge>
@@ -475,13 +427,11 @@ const Profile = () => {
                     </div>
                   </div>
 
-                  <Separator className={theme === 'dark' ? 'bg-warm/20' : ''} />
+                  <Separator />
 
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="displayName" className={theme === 'dark' ? 'text-warm-foreground' : ''}>
-                        NGO Name
-                      </Label>
+                      <Label htmlFor="displayName">NGO Name</Label>
                       <Input
                         id="displayName"
                         name="displayName"
@@ -489,13 +439,10 @@ const Profile = () => {
                         onChange={handleInputChange}
                         disabled={!isEditing}
                         placeholder="Enter NGO name"
-                        className={theme === 'dark' ? 'bg-card border-warm/20' : ''}
                       />
                     </div>
                     <div>
-                      <Label htmlFor="email" className={theme === 'dark' ? 'text-warm-foreground' : ''}>
-                        Email Address
-                      </Label>
+                      <Label htmlFor="email">Email Address</Label>
                       <Input
                         id="email"
                         name="email"
@@ -504,13 +451,10 @@ const Profile = () => {
                         onChange={handleInputChange}
                         disabled
                         placeholder="Email address"
-                        className={theme === 'dark' ? 'bg-muted border-warm/20' : ''}
                       />
                     </div>
                     <div>
-                      <Label htmlFor="phone" className={theme === 'dark' ? 'text-warm-foreground' : ''}>
-                        Phone Number
-                      </Label>
+                      <Label htmlFor="phone">Phone Number</Label>
                       <Input
                         id="phone"
                         name="phone"
@@ -518,13 +462,10 @@ const Profile = () => {
                         onChange={handleInputChange}
                         disabled={!isEditing}
                         placeholder="Enter phone number"
-                        className={theme === 'dark' ? 'bg-card border-warm/20' : ''}
                       />
                     </div>
                     <div>
-                      <Label htmlFor="address" className={theme === 'dark' ? 'text-warm-foreground' : ''}>
-                        Address
-                      </Label>
+                      <Label htmlFor="address">Address</Label>
                       <Input
                         id="address"
                         name="address"
@@ -532,12 +473,11 @@ const Profile = () => {
                         onChange={handleInputChange}
                         disabled={!isEditing}
                         placeholder="Enter address"
-                        className={theme === 'dark' ? 'bg-card border-warm/20' : ''}
                       />
                     </div>
                   </div>
 
-                  <Separator className={theme === 'dark' ? 'bg-warm/20' : ''} />
+                  <Separator />
 
                   {/* NGO Status Information */}
                   <div className="bg-orange-50 p-4 rounded-lg">

@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
-import ThemeToggle from "@/components/ThemeToggle";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/contexts/CartContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
@@ -42,8 +41,6 @@ import NGODashboard from "./pages/NGODashboard";
 import NGORegister from "./pages/NGORegister";
 import DonateHub from "./pages/DonateHub";
 import NGOLogin from "./pages/NGOLogin";
-import AdminDonationReview from "./pages/AdminDonationReview";
-import DeliveryAgentDashboard from "./pages/DeliveryAgentDashboard";
 
 const queryClient = new QueryClient();
 
@@ -135,27 +132,11 @@ const AppContent = () => {
           } 
         />
         <Route 
-          path="/admin/donation-review" 
-          element={
-            <AdminRoute>
-              <AdminDonationReview />
-            </AdminRoute>
-          } 
-        />
-        <Route 
           path="/delivery" 
           element={
             <AdminRoute>
               <DeliveryDashboard />
             </AdminRoute>
-          } 
-        />
-        <Route 
-          path="/delivery-agent" 
-          element={
-            <ProtectedRoute>
-              <DeliveryAgentDashboard />
-            </ProtectedRoute>
           } 
         />
         <Route 

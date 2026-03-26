@@ -2,9 +2,8 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/contexts/CartContext";
-import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, Tag, Gift, Percent, CheckCircle, Sparkles, Shield, Truck } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, Tag, Gift, Percent, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { updateProductSoldQuantity } from "@/services/productService";
 import { createOrder } from "@/services/orderService";
@@ -209,24 +208,18 @@ const Cart = () => {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen py-8 bg-gradient-to-b from-background to-muted/20">
+      <div className="min-h-screen py-8">
         <div className="container mx-auto px-4">
-          <Link to="/products" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors duration-200 mb-6 group">
-            <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform duration-200" /> 
-            <span className="group-hover:text-primary">Back to Shop</span>
+          <Link to="/products" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6">
+            <ArrowLeft className="h-4 w-4" /> Back to Shop
           </Link>
           
           <div className="text-center py-16">
-            <div className="inline-flex items-center justify-center w-32 h-32 bg-muted rounded-full mb-6 hover:scale-105 transition-transform duration-300">
-              <ShoppingBag className="h-16 w-16 text-muted-foreground" />
-            </div>
-            <h2 className="font-display text-3xl font-bold mb-3 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">Your cart is empty</h2>
-            <p className="text-muted-foreground text-lg mb-8 max-w-md mx-auto">Looks like you haven't added any items to your cart yet. Start shopping to fill it up!</p>
+            <ShoppingBag className="h-24 w-24 mx-auto text-muted-foreground mb-4" />
+            <h2 className="font-display text-2xl font-bold mb-2">Your cart is empty</h2>
+            <p className="text-muted-foreground mb-6">Looks like you haven't added any items to your cart yet.</p>
             <Link to="/products">
-              <Button size="lg" className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary transform transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl">
-                <ShoppingBag className="mr-2 h-5 w-5" />
-                Continue Shopping
-              </Button>
+              <Button size="lg">Continue Shopping</Button>
             </Link>
           </div>
         </div>
@@ -235,98 +228,76 @@ const Cart = () => {
   }
 
   return (
-    <div className="min-h-screen py-8 bg-gradient-to-b from-background to-muted/20">
+    <div className="min-h-screen py-8">
       <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <Link to="/products" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors duration-200 mb-2 group">
-              <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform duration-200" /> 
-              <span className="group-hover:text-primary">Back to Shop</span>
-            </Link>
-            <h1 className="font-display text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              Your Cart ({items.length} {items.length === 1 ? 'item' : 'items'})
-            </h1>
-          </div>
-          <Button 
-            variant="outline" 
-            onClick={handleClearCart}
-            className="hover:bg-destructive/10 hover:border-destructive/50 hover:text-destructive transition-all duration-200 hover:scale-105"
-          >
+        <div className="flex items-center justify-between mb-6">
+          <Link to="/products" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" /> Back to Shop
+          </Link>
+          <Button variant="outline" onClick={handleClearCart}>
             <Trash2 className="mr-2 h-4 w-4" /> Clear Cart
           </Button>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
-            {items.map((item, index) => (
-              <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-all duration-300 border-muted-foreground/10">
+            <h1 className="font-display text-3xl font-bold mb-6">Your Cart ({items.length} items)</h1>
+            
+            {items.map((item) => (
+              <Card key={item.id}>
                 <CardContent className="p-6">
-                  <div className="flex gap-6">
-                    <div className="w-28 h-28 rounded-xl bg-muted overflow-hidden flex-shrink-0 group">
-                      <img 
-                        src={item.image} 
-                        alt={item.name} 
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
-                      />
+                  <div className="flex gap-4">
+                    <div className="w-24 h-24 rounded-lg bg-muted overflow-hidden flex-shrink-0">
+                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-lg mb-1 hover:text-primary transition-colors duration-200">{item.name}</h3>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="secondary" className="text-xs capitalize">
-                              {item.category}
-                            </Badge>
-                            <Badge variant="outline" className="text-xs capitalize">
-                              {item.condition}
-                            </Badge>
-                          </div>
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h3 className="font-medium text-lg truncate">{item.name}</h3>
+                          <p className="text-sm text-muted-foreground capitalize">{item.category} • {item.condition}</p>
                         </div>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => removeFromCart(item.id)}
-                          className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200 hover:scale-110"
+                          className="text-muted-foreground hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                       
-                      <div className="flex justify-between items-end">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center border rounded-lg overflow-hidden">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                              className="h-8 w-8 p-0 rounded-none hover:bg-muted transition-colors duration-200"
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <Input
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
-                              className="w-14 text-center h-8 border-0 rounded-none focus:ring-0"
-                              min="1"
-                              readOnly
-                            />
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                              className="h-8 w-8 p-0 rounded-none hover:bg-muted transition-colors duration-200"
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <Input
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
+                            className="w-16 text-center h-8"
+                            min="1"
+                            max="1"
+                            readOnly
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
                         </div>
                         
                         <div className="text-right">
-                          <p className="font-display font-semibold text-xl text-primary">₹{item.price}</p>
+                          <p className="font-display font-semibold text-lg">₹{item.price}</p>
                           <p className="text-sm text-muted-foreground">₹{item.price * item.quantity} total</p>
                         </div>
                       </div>
@@ -337,17 +308,13 @@ const Cart = () => {
             ))}
           </div>
 
-          {/* Order Summary */}
           <div className="lg:col-span-1">
-            <Card className="sticky top-8 shadow-xl border-muted-foreground/10 hover:shadow-2xl transition-all duration-300">
+            <Card className="sticky top-8">
               <CardContent className="p-6">
-                <div className="flex items-center gap-2 mb-6">
-                  <Sparkles className="h-5 w-5 text-primary animate-pulse" />
-                  <h2 className="font-display text-xl font-bold">Order Summary</h2>
-                </div>
+                <h2 className="font-display text-xl font-bold mb-4">Order Summary</h2>
                 
                 {/* Coupon Section */}
-                <div className="space-y-3 mb-6 p-4 bg-gradient-to-r from-muted/50 to-muted rounded-xl border border-muted-foreground/10">
+                <div className="space-y-3 mb-6 p-4 bg-card rounded-lg border shadow-sm">
                   <div className="flex items-center gap-2 mb-3">
                     <Tag className="h-5 w-5 text-primary" />
                     <h3 className="font-semibold text-foreground">Coupon Code</h3>
@@ -358,11 +325,11 @@ const Cart = () => {
                         placeholder="Enter coupon code"
                         value={couponCode}
                         onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                        className="pr-10 border-muted-foreground/20 focus:border-primary transition-colors duration-200"
+                        className="pr-10 border-input focus:ring-primary"
                       />
                       {couponCode && (
                         <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                          <Percent className="h-4 w-4 text-green-500 animate-pulse" />
+                          <Percent className="h-4 w-4 text-green-500" />
                         </div>
                       )}
                     </div>
@@ -371,13 +338,13 @@ const Cart = () => {
                       onClick={handleApplyCoupon}
                       disabled={!couponCode.trim()}
                       size="sm"
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground transform transition-all duration-200 hover:scale-105"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       Apply
                     </Button>
                   </div>
                   {couponCode && (
-                    <div className="mt-2 p-2 bg-green-50 rounded-lg border border-green-200 animate-fade-in">
+                    <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
                       <div className="flex items-center gap-2 text-green-700">
                         <CheckCircle className="h-4 w-4" />
                         <span className="text-sm font-medium">Coupon applied!</span>
@@ -387,14 +354,14 @@ const Cart = () => {
                 </div>
 
                 {/* Points Section */}
-                <div className="space-y-3 mb-6 p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl border border-primary/20">
+                <div className="space-y-3 mb-6 p-4 bg-card rounded-lg border shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Gift className="h-5 w-5 text-primary" />
                       <h3 className="font-semibold text-foreground">Loyalty Points</h3>
                     </div>
                     {userPoints && (
-                      <div className="bg-gradient-to-r from-primary/20 to-primary/10 text-primary px-3 py-1 rounded-full text-xs font-medium border border-primary/30">
+                      <div className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs font-medium">
                         🎁 {userPoints.points} pts
                       </div>
                     )}
@@ -416,35 +383,19 @@ const Cart = () => {
                       value={pointsToUse}
                       onChange={(e) => handlePointsChange(parseInt(e.target.value) || 0)}
                       disabled={!usePoints}
-                      className="flex-1 h-10 border-muted-foreground/20 focus:border-primary transition-colors duration-200"
+                      className="flex-1 h-10 border-input focus:ring-primary"
                       min="0"
                       max={userPoints?.points || 0}
                     />
                   </div>
                   {usePoints && pointsToUse > 0 && (
-                    <div className="mt-2 p-2 bg-primary/10 rounded-lg border border-primary/30 animate-fade-in">
+                    <div className="mt-2 p-2 bg-primary/10 rounded border">
                       <div className="flex items-center justify-between text-primary">
                         <span className="text-xs">You'll save:</span>
                         <span className="font-bold">₹{pointsToUse}</span>
                       </div>
                     </div>
                   )}
-                </div>
-
-                {/* Trust Badges */}
-                <div className="grid grid-cols-3 gap-2 mb-6">
-                  <div className="text-center p-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors duration-200">
-                    <Truck className="h-4 w-4 text-primary mx-auto mb-1" />
-                    <p className="text-xs text-muted-foreground">Free Shipping</p>
-                  </div>
-                  <div className="text-center p-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors duration-200">
-                    <Shield className="h-4 w-4 text-primary mx-auto mb-1" />
-                    <p className="text-xs text-muted-foreground">Secure Payment</p>
-                  </div>
-                  <div className="text-center p-2 bg-muted/50 rounded-lg hover:bg-muted transition-colors duration-200">
-                    <Sparkles className="h-4 w-4 text-primary mx-auto mb-1" />
-                    <p className="text-xs text-muted-foreground">Rewards</p>
-                  </div>
                 </div>
 
                 <div className="space-y-2 mb-6">
