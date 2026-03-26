@@ -8,6 +8,19 @@ const AdminOrders = () => {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [deliveryPartners] = useState([
+    { id: 'partner1', name: 'Stylease Express', phone: '+1234567890', email: 'express@stylease.com' },
+    { id: 'partner2', name: 'QuickShip Logistics', phone: '+0987654321', email: 'quickship@stylease.com' },
+    { id: 'partner3', name: 'Local Delivery Co', phone: '+1122334455', email: 'local@stylease.com' },
+    { id: 'partner4', name: 'Speedy Delivery', phone: '+9998887777', email: 'speedy@stylease.com' }
+  ]);
+  const [deliveryAgents, setDeliveryAgents] = useState([
+    { id: 'agent1', name: 'John Smith', phone: '+1234567890', status: 'online', deliveries: 45 },
+    { id: 'agent2', name: 'Sarah Johnson', phone: '+0987654321', status: 'offline', deliveries: 32 },
+    { id: 'agent3', name: 'Mike Wilson', phone: '+1122334455', status: 'online', deliveries: 28 }
+  ]);
+  const [selectedPartner, setSelectedPartner] = useState('');
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -91,6 +104,52 @@ const AdminOrders = () => {
     } catch (error) {
       console.error('Error rejecting order:', error);
       toast.error('Failed to reject order');
+    }
+  };
+
+  const handleAssignDelivery = async (orderId) => {
+    try {
+      const orderRef = doc(db, 'orders', orderId);
+      await updateDoc(orderRef, {
+        deliveryPartner: selectedPartner,
+        deliveryPartnerName: deliveryPartners.find(p => p.id === selectedPartner)?.name,
+        assignedAt: new Date(),
+        updatedAt: new Date()
+      });
+
+      toast.success('Delivery partner assigned successfully!');
+      setShowAssignModal(false);
+    } catch (error) {
+      console.error('Error assigning delivery partner:', error);
+      toast.error('Failed to assign delivery partner');
+    }
+  };
+
+  const handleAddAgent = async (agent) => {
+    try {
+      const newAgent = {
+        ...agent,
+        id: Date.now().toString(),
+        createdAt: new Date()
+      };
+      
+      setDeliveryAgents([...deliveryAgents, newAgent]);
+      toast.success('Delivery agent added successfully!');
+    } catch (error) {
+      console.error('Error adding delivery agent:', error);
+      toast.error('Failed to add delivery agent');
+    }
+  };
+
+  const handleUpdateAgentStatus = async (agentId, status) => {
+    try {
+      setDeliveryAgents(deliveryAgents.map(agent => 
+        agent.id === agentId ? { ...agent, status } : agent
+      ));
+      toast.success(`Agent status updated to ${status}`);
+    } catch (error) {
+      console.error('Error updating agent status:', error);
+      toast.error('Failed to update agent status');
     }
   };
 
@@ -194,6 +253,99 @@ const AdminOrders = () => {
         </div>
       </div>
 
+      {/* Delivery Partners Management */}
+      <div className="bg-white rounded-lg shadow overflow-hidden mb-8">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Delivery Partners</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Partners List */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-800 mb-3">Available Partners</h3>
+              <div className="space-y-2">
+                {deliveryPartners.map((partner) => (
+                  <div key={partner.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-900">{partner.name}</p>
+                      <p className="text-sm text-gray-600">{partner.phone}</p>
+                      <p className="text-sm text-gray-600">{partner.email}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleAssignDelivery(selectedOrder.id)}
+                        disabled={!selectedOrder}
+                        className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                      >
+                        Assign to Order
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Delivery Agents */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-800 mb-3">Delivery Agents</h3>
+              <div className="space-y-2">
+                {deliveryAgents.map((agent) => (
+                  <div key={agent.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-900">{agent.name}</p>
+                      <p className="text-sm text-gray-600">{agent.phone}</p>
+                      <p className="text-sm text-gray-600">{agent.deliveries} deliveries</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={agent.status === 'online' ? 'default' : 'outline'}>
+                        {agent.status}
+                      </Badge>
+                      <button
+                        onClick={() => handleUpdateAgentStatus(agent.id, agent.status === 'online' ? 'offline' : 'online')}
+                        className="px-2 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm"
+                      >
+                        {agent.status === 'online' ? 'Go Offline' : 'Go Online'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Add New Agent */}
+        <div className="px-6 py-4">
+          <h3 className="text-lg font-medium text-gray-800 mb-3">Add New Agent</h3>
+          <div className="flex gap-4">
+            <input
+              type="text"
+              placeholder="Agent Name"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+              id="newAgentName"
+            />
+            <input
+              type="tel"
+              placeholder="Phone Number"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+              id="newAgentPhone"
+            />
+            <button
+              onClick={() => {
+                const name = document.getElementById('newAgentName')?.value;
+                const phone = document.getElementById('newAgentPhone')?.value;
+                if (name && phone) {
+                  handleAddAgent({ name, phone });
+                  document.getElementById('newAgentName').value = '';
+                  document.getElementById('newAgentPhone').value = '';
+                }
+              }}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            >
+              Add Agent
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Orders List */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
@@ -222,6 +374,9 @@ const AdminOrders = () => {
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Delivery Partner
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -242,47 +397,52 @@ const AdminOrders = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ₹{order.totalPrice?.toFixed(2) || '0.00'}
+                      ₹{order.totalPrice?.toFixed(2)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(order.status)}`}>
                         {getStatusText(order.status)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {order.createdAt?.toLocaleDateString()}
+                      {order.deliveryPartnerName || 'Not assigned'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {order.createdAt.toDate().toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="flex items-center space-x-2">
                         <button
                           onClick={() => openOrderDetails(order)}
-                          className="text-green-600 hover:text-green-900"
+                          className="text-blue-600 hover:text-blue-900"
                         >
-                          View
+                          View Details
                         </button>
-                        
+                        {order.status === 'pending' && order.paymentStatus === 'paid' ? (
+                          <button
+                            onClick={() => {
+                              setSelectedOrder(order);
+                              setShowAssignModal(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            Assign Delivery
+                          </button>
+                        ) : null}
                         {order.status === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => handleAcceptOrder(order.id)}
-                              className="text-green-600 hover:text-green-900"
-                            >
-                              Accept
-                            </button>
-                            <button
-                              onClick={() => {
-                                const reason = prompt('Reason for rejection:');
-                                if (reason) {
-                                  handleRejectOrder(order.id, reason);
-                                }
-                              }}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              Reject
-                            </button>
-                          </>
+                          <button
+                            onClick={() => {
+                              const reason = prompt('Reason for rejection:');
+                              if (reason) {
+                                handleRejectOrder(order.id, reason);
+                                setShowDetails(false);
+                              }
+                            }}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Reject
+                          </button>
                         )}
-                        
                         {order.status === 'accepted' && (
                           <button
                             onClick={() => handleMarkAsDelivered(order.id)}
@@ -429,6 +589,69 @@ const AdminOrders = () => {
       )}
     </div>
   );
+
+  {/* Delivery Assignment Modal */}
+  {showAssignModal && selectedOrder && (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Assign Delivery Partner</h3>
+            <button
+              onClick={() => setShowAssignModal(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Select Delivery Partner:</label>
+            <select
+              value={selectedPartner}
+              onChange={(e) => setSelectedPartner(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Choose a partner...</option>
+              {deliveryPartners.map((partner) => (
+                <option key={partner.id} value={partner.id}>
+                  {partner.name} - {partner.phone} ({partner.email})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Order Details:</label>
+            <div className="bg-gray-50 p-3 rounded-lg text-sm">
+              <p><strong>Order ID:</strong> #{selectedOrder.id.slice(-8)}</p>
+              <p><strong>Customer:</strong> {selectedOrder.customerName}</p>
+              <p><strong>Total:</strong> ₹{selectedOrder.totalPrice?.toFixed(2) || '0.00'}</p>
+              <p><strong>Status:</strong> <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">{getStatusText(selectedOrder.status)}</span></p>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={() => setShowAssignModal(false)}
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => handleAssignDelivery(selectedOrder.id)}
+              disabled={!selectedPartner}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Assign Partner
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
 };
 
 export default AdminOrders;

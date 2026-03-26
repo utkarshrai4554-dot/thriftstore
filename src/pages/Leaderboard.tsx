@@ -312,7 +312,7 @@ const Leaderboard = () => {
         ) : (
           <>
             {/* Top 3 Podium */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16 items-start">
               {/* 2nd Place */}
               {topDonors[1] && (
                 <div className="text-center">
@@ -353,7 +353,7 @@ const Leaderboard = () => {
               
               {/* 1st Place */}
               {topDonors[0] && (
-                <div className="text-center md:transform md:scale-110">
+                <div className="text-center md:order-first md:col-start-2">
                   <div className="bg-gradient-to-br from-primary to-secondary rounded-2xl p-8 shadow-xl transform transition-all duration-300 hover:scale-105 relative">
                     <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                       <div className="bg-gradient-to-r from-primary to-secondary text-primary-foreground px-6 py-2 rounded-full text-sm font-bold">
