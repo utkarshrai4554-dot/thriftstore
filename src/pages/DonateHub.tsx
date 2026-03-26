@@ -487,67 +487,67 @@ const DonateHub = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-2 text-blue-600">Loading Donation Hub...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="mt-2 text-primary">Loading Donation Hub...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-background py-8">
       <div className="container mx-auto px-4 max-w-7xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Donation Hub</h1>
-          <p className="text-lg text-gray-600">Make a difference through donations</p>
+          <h1 className="text-4xl font-bold text-foreground mb-4">Donation Hub</h1>
+          <p className="text-lg text-muted-foreground">Make a difference through donations</p>
         </div>
 
         {/* Impact Overview */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card className="bg-blue-50 border-blue-200">
+          <Card className="bg-card border-border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-blue-600">Total Donations</p>
-                  <p className="text-3xl font-bold text-blue-800">{impact.totalDonations}</p>
+                  <p className="text-primary">Total Donations</p>
+                  <p className="text-3xl font-bold text-primary-foreground">{impact.totalDonations}</p>
                 </div>
-                <Heart className="h-8 w-8 text-blue-400" />
+                <Heart className="h-8 w-8 text-primary" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-green-50 border-green-200">
+          <Card className="bg-card border-border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-green-600">Items Donated</p>
-                  <p className="text-3xl font-bold text-green-800">{impact.itemsDonated}</p>
+                  <p className="text-success">Items Donated</p>
+                  <p className="text-3xl font-bold text-success-foreground">{impact.itemsDonated}</p>
                 </div>
-                <Package className="h-8 w-8 text-green-400" />
+                <Package className="h-8 w-8 text-success" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-purple-50 border-purple-200">
+          <Card className="bg-card border-border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-purple-600">NGOs Helped</p>
-                  <p className="text-3xl font-bold text-purple-800">{impact.ngosHelped}</p>
+                  <p className="text-warm">NGOs Helped</p>
+                  <p className="text-3xl font-bold text-warm-foreground">{impact.ngosHelped}</p>
                 </div>
-                <Users className="h-8 w-8 text-purple-400" />
+                <Users className="h-8 w-8 text-warm" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-orange-50 border-orange-200">
+          <Card className="bg-card border-border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-orange-600">Requests Fulfilled</p>
-                  <p className="text-3xl font-bold text-orange-800">{impact.requestsFulfilled}</p>
+                  <p className="text-accent">Requests Fulfilled</p>
+                  <p className="text-3xl font-bold text-accent-foreground">{impact.requestsFulfilled}</p>
                 </div>
-                <Target className="h-8 w-8 text-orange-400" />
+                <Target className="h-8 w-8 text-accent" />
               </div>
             </CardContent>
           </Card>
@@ -573,15 +573,15 @@ const DonateHub = () => {
           {/* Fulfill NGO Requests Tab */}
           <TabsContent value="requests" className="space-y-6">
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Fulfill NGO Requests</h2>
-              <p className="text-gray-600">Help NGOs meet their specific needs</p>
+              <h2 className="text-2xl font-bold text-foreground mb-2">Fulfill NGO Requests</h2>
+              <p className="text-muted-foreground">Help NGOs meet their specific needs</p>
             </div>
 
             {requests.length === 0 ? (
               <div className="text-center py-12">
-                <HandHelping className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-xl font-medium text-gray-900 mb-2">No active requests</h3>
-                <p className="text-gray-600">Check back later for new opportunities to help</p>
+                <HandHelping className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-xl font-medium text-foreground mb-2">No active requests</h3>
+                <p className="text-muted-foreground">Check back later for new opportunities to help</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -597,35 +597,35 @@ const DonateHub = () => {
                           <CardTitle className="text-lg line-clamp-2">{request.title}</CardTitle>
                           {getUrgencyBadge(request.urgency)}
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Package className="h-4 w-4" />
                           <span className="capitalize">{request.category}</span>
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <p className="text-sm text-gray-600 line-clamp-3">{request.description}</p>
+                        <p className="text-sm text-muted-foreground line-clamp-3">{request.description}</p>
 
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
                             <span className="text-sm font-medium">{request.items}</span>
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-muted-foreground">
                               {request.fulfilledQuantity || 0} / {request.quantity}
                             </span>
                           </div>
                           
                           <div className="space-y-2">
-                            <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div className="w-full bg-muted rounded-full h-2">
                               <div 
                                 className={`h-2 rounded-full transition-all duration-300 ${
-                                  progressPercentage >= 100 ? 'bg-green-600' : 'bg-blue-600'
+                                  progressPercentage >= 100 ? 'bg-success' : 'bg-primary'
                                 }`}
                                 style={{ width: `${Math.min(progressPercentage, 100)}%` }}
                               />
                             </div>
                             <div className="flex items-center justify-between text-xs">
-                              <span className="text-gray-500">{progressPercentage}% fulfilled</span>
+                              <span className="text-muted-foreground">{progressPercentage}% fulfilled</span>
                               {!isFullyFulfilled && (
-                                <span className="text-green-600 font-medium">
+                                <span className="text-success font-medium">
                                   {remainingNeeded} still needed
                                 </span>
                               )}
@@ -634,11 +634,11 @@ const DonateHub = () => {
                         </div>
 
                         <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Users className="h-4 w-4" />
                             <span>{request.requestedByNGO}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <MapPin className="h-4 w-4" />
                             <span className="line-clamp-1">{request.pickupAddress}</span>
                           </div>
@@ -714,8 +714,8 @@ const DonateHub = () => {
           {/* General Donations Tab */}
           <TabsContent value="general" className="space-y-6">
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">General Donations</h2>
-              <p className="text-gray-600">Donate any items to help those in need</p>
+              <h2 className="text-2xl font-bold text-foreground mb-2">General Donations</h2>
+              <p className="text-muted-foreground">Donate any items to help those in need</p>
             </div>
 
             {/* Benefits Section - Top */}
@@ -737,9 +737,9 @@ const DonateHub = () => {
             {/* Form Section - Full Width Below */}
             <div className="max-w-4xl mx-auto">
               <Card className="shadow-lg">
-                <CardHeader className="bg-green-50 border-b">
+                <CardHeader className="bg-secondary border-b">
                   <CardTitle className="flex items-center gap-2 text-center">
-                    <Gift className="h-6 w-6 text-green-600" />
+                    <Gift className="h-6 w-6 text-secondary-foreground" />
                     Make a Donation
                   </CardTitle>
                 </CardHeader>

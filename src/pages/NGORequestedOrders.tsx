@@ -71,28 +71,28 @@ const NGORequestedOrders = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
+        return <Badge className="bg-warm/20 text-warm-foreground">Pending</Badge>;
       case 'fulfilled':
-        return <Badge className="bg-green-100 text-green-800">Fulfilled</Badge>;
+        return <Badge className="bg-success/20 text-success-foreground">Fulfilled</Badge>;
       case 'cancelled':
-        return <Badge className="bg-red-100 text-red-800">Cancelled</Badge>;
+        return <Badge className="bg-destructive/20 text-destructive-foreground">Cancelled</Badge>;
       default:
-        return <Badge className="bg-gray-100 text-gray-800">Unknown</Badge>;
+        return <Badge className="bg-muted text-muted-foreground">Unknown</Badge>;
     }
   };
 
   const getUrgencyBadge = (urgency: string) => {
     switch (urgency) {
       case 'urgent':
-        return <Badge className="bg-red-100 text-red-800">Urgent</Badge>;
+        return <Badge className="bg-destructive/20 text-destructive-foreground">Urgent</Badge>;
       case 'high':
-        return <Badge className="bg-orange-100 text-orange-800">High</Badge>;
+        return <Badge className="bg-warm/20 text-warm-foreground">High</Badge>;
       case 'normal':
-        return <Badge className="bg-blue-100 text-blue-800">Normal</Badge>;
+        return <Badge className="bg-primary/20 text-primary">Normal</Badge>;
       case 'low':
-        return <Badge className="bg-gray-100 text-gray-800">Low</Badge>;
+        return <Badge className="bg-muted text-muted-foreground">Low</Badge>;
       default:
-        return <Badge className="bg-gray-100 text-gray-800">Normal</Badge>;
+        return <Badge className="bg-muted text-muted-foreground">Normal</Badge>;
     }
   };
 
@@ -109,57 +109,57 @@ const NGORequestedOrders = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-background py-8">
       <div className="container mx-auto px-4 max-w-7xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="font-display text-4xl font-bold mb-1 text-gray-900">Requested Orders</h1>
-          <p className="text-gray-600">Manage donation requests you have made to donors</p>
+          <h1 className="font-display text-4xl font-bold mb-1 text-foreground">Requested Orders</h1>
+          <p className="text-muted-foreground">Manage donation requests you have made to donors</p>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card className="bg-blue-50 border-blue-200">
+          <Card className="bg-card border-border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-blue-600">Total Requests</p>
-                  <p className="text-3xl font-bold text-blue-800">{donationRequests.length}</p>
+                  <p className="text-primary">Total Requests</p>
+                  <p className="text-3xl font-bold text-primary-foreground">{donationRequests.length}</p>
                 </div>
-                <ShoppingBag className="h-8 w-8 text-blue-400" />
+                <ShoppingBag className="h-8 w-8 text-primary" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-yellow-50 border-yellow-200">
+          <Card className="bg-card border-border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-yellow-600">Pending</p>
-                  <p className="text-3xl font-bold text-yellow-800">{donationRequests.filter(r => r.status === 'pending').length}</p>
+                  <p className="text-warm">Pending</p>
+                  <p className="text-3xl font-bold text-warm-foreground">{donationRequests.filter(r => r.status === 'pending').length}</p>
                 </div>
-                <Clock className="h-8 w-8 text-yellow-400" />
+                <Clock className="h-8 w-8 text-warm" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-green-50 border-green-200">
+          <Card className="bg-card border-border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-green-600">Fulfilled</p>
-                  <p className="text-3xl font-bold text-green-800">{donationRequests.filter(r => r.status === 'fulfilled').length}</p>
+                  <p className="text-success">Fulfilled</p>
+                  <p className="text-3xl font-bold text-success-foreground">{donationRequests.filter(r => r.status === 'fulfilled').length}</p>
                 </div>
-                <CheckCircle className="h-8 w-8 text-green-400" />
+                <CheckCircle className="h-8 w-8 text-success" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-red-50 border-red-200">
+          <Card className="bg-card border-border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-red-600">Cancelled</p>
-                  <p className="text-3xl font-bold text-red-800">{donationRequests.filter(r => r.status === 'cancelled').length}</p>
+                  <p className="text-destructive">Cancelled</p>
+                  <p className="text-3xl font-bold text-destructive-foreground">{donationRequests.filter(r => r.status === 'cancelled').length}</p>
                 </div>
-                <XCircle className="h-8 w-8 text-red-400" />
+                <XCircle className="h-8 w-8 text-destructive" />
               </div>
             </CardContent>
           </Card>
@@ -167,13 +167,13 @@ const NGORequestedOrders = () => {
 
         {/* Main Table */}
         <Card className="shadow-lg">
-          <CardHeader className="bg-gray-50 border-b">
+          <CardHeader className="bg-muted border-b">
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-gray-600" />
+                <AlertCircle className="h-5 w-5 text-foreground" />
                 Donation Requests
               </span>
-              <span className="text-sm font-normal text-gray-600">
+              <span className="text-sm font-normal text-muted-foreground">
                 {donationRequests.length} request{donationRequests.length !== 1 ? 's' : ''}
               </span>
             </CardTitle>
@@ -181,32 +181,32 @@ const NGORequestedOrders = () => {
           <CardContent className="p-0">
             {loading ? (
               <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <p className="mt-2 text-blue-600">Loading requests...</p>
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p className="mt-2 text-primary">Loading requests...</p>
               </div>
             ) : donationRequests.length === 0 ? (
-              <div className="text-center py-12 text-gray-600">
-                <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+              <div className="text-center py-12 text-muted-foreground">
+                <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                 <p className="text-lg font-medium">No donation requests</p>
                 <p className="text-sm">Request donations from the NGO dashboard to see them here</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader className="bg-gray-50">
+                  <TableHeader className="bg-muted">
                     <TableRow>
-                      <TableHead className="font-semibold text-gray-900">Request Title</TableHead>
-                      <TableHead className="font-semibold text-gray-900">Items Needed</TableHead>
-                      <TableHead className="font-semibold text-gray-900">Category</TableHead>
-                      <TableHead className="font-semibold text-gray-900">Urgency</TableHead>
-                      <TableHead className="font-semibold text-gray-900">Pickup Address</TableHead>
-                      <TableHead className="font-semibold text-gray-900">Status</TableHead>
-                      <TableHead className="font-semibold text-gray-900">Actions</TableHead>
+                      <TableHead className="font-semibold text-foreground">Request Title</TableHead>
+                      <TableHead className="font-semibold text-foreground">Items Needed</TableHead>
+                      <TableHead className="font-semibold text-foreground">Category</TableHead>
+                      <TableHead className="font-semibold text-foreground">Urgency</TableHead>
+                      <TableHead className="font-semibold text-foreground">Pickup Address</TableHead>
+                      <TableHead className="font-semibold text-foreground">Status</TableHead>
+                      <TableHead className="font-semibold text-foreground">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {donationRequests.map((request) => (
-                      <TableRow key={request.id} className="hover:bg-gray-50 transition-colors">
+                      <TableRow key={request.id} className="hover:bg-muted transition-colors">
                         <TableCell className="font-medium">{request.title}</TableCell>
                         <TableCell>
                           <div className="max-w-xs">
@@ -223,7 +223,7 @@ const NGORequestedOrders = () => {
                         <TableCell>{getUrgencyBadge(request.urgency)}</TableCell>
                         <TableCell>
                           <div className="max-w-xs">
-                            <p className="text-sm text-gray-600 truncate">
+                            <p className="text-sm text-muted-foreground truncate">
                               {request.pickupAddress}
                             </p>
                           </div>
@@ -242,12 +242,12 @@ const NGORequestedOrders = () => {
                               </Button>
                             )}
                             {request.status === 'fulfilled' && (
-                              <Badge className="bg-green-100 text-green-800">
+                              <Badge className="bg-success/20 text-success-foreground">
                                 Fulfilled
                               </Badge>
                             )}
                             {request.status === 'cancelled' && (
-                              <Badge className="bg-red-100 text-red-800">
+                              <Badge className="bg-destructive/20 text-destructive-foreground">
                                 Cancelled
                               </Badge>
                             )}

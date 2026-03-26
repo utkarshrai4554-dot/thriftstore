@@ -200,11 +200,11 @@ const Leaderboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen py-20">
+      <div className="min-h-screen bg-background py-20">
         <div className="container mx-auto px-4">
           <div className="text-center py-20">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto"></div>
-            <p className="mt-4 text-stone-600">Loading leaderboard...</p>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading leaderboard...</p>
           </div>
         </div>
       </div>
@@ -212,24 +212,24 @@ const Leaderboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-stone-50 to-amber-100">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-stone-200">
+      <div className="bg-card/80 backdrop-blur-sm border-b border-border">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Link to="/" className="flex items-center gap-2 text-stone-700 hover:text-stone-900 transition-colors">
+              <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
                 <ArrowLeft className="h-5 w-5" />
                 <span className="font-semibold">Back to Home</span>
               </Link>
-              <div className="h-8 w-px bg-stone-300"></div>
+              <div className="h-8 w-px bg-border"></div>
               <div className="flex items-center gap-2">
-                <Trophy className="h-6 w-6 text-amber-600" />
-                <h1 className="text-2xl font-bold text-stone-900">Donor Leaderboard</h1>
+                <Trophy className="h-6 w-6 text-primary" />
+                <h1 className="text-2xl font-bold text-foreground">Donor Leaderboard</h1>
               </div>
               <Button 
                 onClick={fetchDonorData} 
-                className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 text-sm"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 text-sm"
               >
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Refresh
@@ -239,12 +239,12 @@ const Leaderboard = () => {
             {user && userStats && (
               <div className="flex items-center gap-4">
                 <div className="text-right">
-                  <p className="text-sm text-stone-600">Your Rank</p>
-                  <p className="text-2xl font-bold text-stone-900">#{userRank || '--'}</p>
+                  <p className="text-sm text-muted-foreground">Your Rank</p>
+                  <p className="text-2xl font-bold text-foreground">#{userRank || '--'}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-stone-600">Impact Score</p>
-                  <p className="text-2xl font-bold text-amber-700">{userStats?.impactScore || 0}</p>
+                  <p className="text-sm text-muted-foreground">Impact Score</p>
+                  <p className="text-2xl font-bold text-primary">{userStats?.impactScore || 0}</p>
                 </div>
               </div>
             )}
@@ -256,38 +256,38 @@ const Leaderboard = () => {
       <div className="container mx-auto px-4 py-12">
         {/* Stats Overview */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-          <Card className="bg-white/80 backdrop-blur-sm border border-stone-200">
+          <Card className="bg-card/80 backdrop-blur-sm border border-border">
             <CardContent className="p-6 text-center">
-              <Users className="h-8 w-8 text-amber-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-stone-900">{topDonors.length}</p>
-              <p className="text-sm text-stone-600">Total Donors</p>
+              <Users className="h-8 w-8 text-primary mx-auto mb-2" />
+              <p className="text-2xl font-bold text-foreground">{topDonors.length}</p>
+              <p className="text-sm text-muted-foreground">Total Donors</p>
             </CardContent>
           </Card>
-          <Card className="bg-white/80 backdrop-blur-sm border border-stone-200">
+          <Card className="bg-card/80 backdrop-blur-sm border border-border">
             <CardContent className="p-6 text-center">
-              <Package className="h-8 w-8 text-amber-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-stone-900">
+              <Package className="h-8 w-8 text-success mx-auto mb-2" />
+              <p className="text-2xl font-bold text-foreground">
                 {topDonors.reduce((sum, donor) => sum + donor.totalItems, 0)}
               </p>
-              <p className="text-sm text-stone-600">Items Donated</p>
+              <p className="text-sm text-muted-foreground">Items Donated</p>
             </CardContent>
           </Card>
-          <Card className="bg-white/80 backdrop-blur-sm border border-stone-200">
+          <Card className="bg-card/80 backdrop-blur-sm border border-border">
             <CardContent className="p-6 text-center">
-              <Heart className="h-8 w-8 text-amber-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-stone-900">
+              <Heart className="h-8 w-8 text-warm mx-auto mb-2" />
+              <p className="text-2xl font-bold text-foreground">
                 {topDonors.reduce((sum, donor) => sum + donor.totalDonations, 0)}
               </p>
-              <p className="text-sm text-stone-600">Total Donations</p>
+              <p className="text-sm text-muted-foreground">Total Donations</p>
             </CardContent>
           </Card>
-          <Card className="bg-white/80 backdrop-blur-sm border border-stone-200">
+          <Card className="bg-card/80 backdrop-blur-sm border border-border">
             <CardContent className="p-6 text-center">
-              <TrendingUp className="h-8 w-8 text-amber-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-stone-900">
+              <TrendingUp className="h-8 w-8 text-accent mx-auto mb-2" />
+              <p className="text-2xl font-bold text-foreground">
                 {Math.round(topDonors.reduce((sum, donor) => sum + donor.impactScore, 0) / topDonors.length || 0)}
               </p>
-              <p className="text-sm text-stone-600">Avg Impact Score</p>
+              <p className="text-sm text-muted-foreground">Avg Impact Score</p>
             </CardContent>
           </Card>
         </div>
@@ -295,15 +295,15 @@ const Leaderboard = () => {
         {/* Leaderboard */}
         {topDonors.length === 0 ? (
           <div className="text-center py-20">
-            <div className="inline-flex items-center justify-center w-32 h-32 bg-gradient-to-br from-amber-100 to-stone-100 rounded-full mb-8">
-              <Trophy className="h-16 w-16 text-amber-700" />
+            <div className="inline-flex items-center justify-center w-32 h-32 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full mb-8">
+              <Trophy className="h-16 w-16 text-primary" />
             </div>
-            <h2 className="text-3xl font-bold text-stone-900 mb-4">No Donors Yet</h2>
-            <p className="text-xl text-stone-600 mb-8 max-w-md mx-auto">
+            <h2 className="text-3xl font-bold text-foreground mb-4">No Donors Yet</h2>
+            <p className="text-xl text-muted-foreground mb-8 max-w-md mx-auto">
               Be the first to make a difference! Start donating to see your name on the leaderboard.
             </p>
             <Link to="/donate">
-              <Button className="bg-gradient-to-r from-amber-700 to-stone-700 hover:from-amber-800 hover:to-stone-800 text-white px-8 py-3 text-lg font-semibold shadow-lg">
+              <Button className="bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-primary-foreground px-8 py-3 text-lg font-semibold shadow-lg">
                 <Heart className="h-5 w-5 mr-2" />
                 Make Your First Donation
               </Button>
@@ -316,24 +316,24 @@ const Leaderboard = () => {
               {/* 2nd Place */}
               {topDonors[1] && (
                 <div className="text-center">
-                  <div className="bg-gradient-to-br from-stone-200 to-stone-300 rounded-2xl p-8 shadow-xl transform transition-all duration-300 hover:scale-105">
-                    <div className="inline-flex items-center justify-center w-20 h-20 bg-stone-400 rounded-full mb-4">
+                  <div className="bg-gradient-to-br from-secondary to-muted rounded-2xl p-8 shadow-xl transform transition-all duration-300 hover:scale-105">
+                    <div className="inline-flex items-center justify-center w-20 h-20 bg-accent rounded-full mb-4">
                       <span className="text-3xl">🥈</span>
                     </div>
-                    <h3 className="text-2xl font-bold text-stone-800 mb-2">{topDonors[1].name}</h3>
-                    <div className="space-y-3 text-stone-600">
+                    <h3 className="text-2xl font-bold text-foreground mb-2">{topDonors[1].name}</h3>
+                    <div className="space-y-3 text-muted-foreground">
                       <div className="flex items-center justify-center gap-2">
                         <Package className="h-5 w-5" />
                         <span className="font-semibold text-lg">{topDonors[1].totalItems}</span>
-                        <span className="text-stone-500">items</span>
+                        <span className="text-muted-foreground/70">items</span>
                       </div>
                       <div className="flex items-center justify-center gap-2">
                         <Heart className="h-5 w-5" />
                         <span className="font-semibold text-lg">{topDonors[1].totalDonations}</span>
-                        <span className="text-stone-500">donations</span>
+                        <span className="text-muted-foreground/70">donations</span>
                       </div>
                       {topDonors[1].firstDonation && (
-                        <div className="flex items-center justify-center gap-2 text-sm text-stone-500">
+                        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground/70">
                           <Calendar className="h-4 w-4" />
                           <span>Since {topDonors[1].firstDonation.toLocaleDateString()}</span>
                         </div>
@@ -347,36 +347,36 @@ const Leaderboard = () => {
                       ))}
                     </div>
                   </div>
-                  <div className="text-2xl font-bold text-stone-500 mt-4">2nd Place</div>
+                  <div className="text-2xl font-bold text-accent mt-4">2nd Place</div>
                 </div>
               )}
               
               {/* 1st Place */}
               {topDonors[0] && (
                 <div className="text-center md:transform md:scale-110">
-                  <div className="bg-gradient-to-br from-amber-200 to-amber-300 rounded-2xl p-8 shadow-xl transform transition-all duration-300 hover:scale-105 relative">
+                  <div className="bg-gradient-to-br from-primary to-secondary rounded-2xl p-8 shadow-xl transform transition-all duration-300 hover:scale-105 relative">
                     <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                      <div className="bg-gradient-to-r from-amber-600 to-stone-600 text-white px-6 py-2 rounded-full text-sm font-bold">
+                      <div className="bg-gradient-to-r from-primary to-secondary text-primary-foreground px-6 py-2 rounded-full text-sm font-bold">
                         👑 Champion
                       </div>
                     </div>
-                    <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-amber-600 to-stone-600 rounded-full mb-4 shadow-lg">
+                    <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-primary to-secondary rounded-full mb-4 shadow-lg">
                       <span className="text-4xl">👑</span>
                     </div>
-                    <h3 className="text-3xl font-bold text-stone-800 mb-2">{topDonors[0].name}</h3>
-                    <div className="space-y-3 text-stone-600">
+                    <h3 className="text-3xl font-bold text-foreground mb-2">{topDonors[0].name}</h3>
+                    <div className="space-y-3 text-muted-foreground">
                       <div className="flex items-center justify-center gap-2">
                         <Package className="h-5 w-5" />
                         <span className="font-semibold text-lg">{topDonors[0].totalItems}</span>
-                        <span className="text-stone-500">items</span>
+                        <span className="text-muted-foreground/70">items</span>
                       </div>
                       <div className="flex items-center justify-center gap-2">
                         <Heart className="h-5 w-5" />
                         <span className="font-semibold text-lg">{topDonors[0].totalDonations}</span>
-                        <span className="text-stone-500">donations</span>
+                        <span className="text-muted-foreground/70">donations</span>
                       </div>
                       {topDonors[0].firstDonation && (
-                        <div className="flex items-center justify-center gap-2 text-sm text-stone-500">
+                        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground/70">
                           <Calendar className="h-4 w-4" />
                           <span>Since {topDonors[0].firstDonation.toLocaleDateString()}</span>
                         </div>
@@ -390,31 +390,31 @@ const Leaderboard = () => {
                       ))}
                     </div>
                   </div>
-                  <div className="text-2xl font-bold text-amber-700 mt-4">🏆 Top Donor</div>
+                  <div className="text-2xl font-bold text-primary mt-4">🏆 Top Donor</div>
                 </div>
               )}
               
               {/* 3rd Place */}
               {topDonors[2] && (
                 <div className="text-center">
-                  <div className="bg-gradient-to-br from-orange-100 to-orange-200 rounded-2xl p-8 shadow-xl transform transition-all duration-300 hover:scale-105">
-                    <div className="inline-flex items-center justify-center w-20 h-20 bg-orange-600 rounded-full mb-4">
+                  <div className="bg-gradient-to-br from-warm to-muted rounded-2xl p-8 shadow-xl transform transition-all duration-300 hover:scale-105">
+                    <div className="inline-flex items-center justify-center w-20 h-20 bg-warm rounded-full mb-4">
                       <span className="text-3xl">🥉</span>
                     </div>
-                    <h3 className="text-2xl font-bold text-stone-800 mb-2">{topDonors[2].name}</h3>
-                    <div className="space-y-3 text-stone-600">
+                    <h3 className="text-2xl font-bold text-foreground mb-2">{topDonors[2].name}</h3>
+                    <div className="space-y-3 text-muted-foreground">
                       <div className="flex items-center justify-center gap-2">
                         <Package className="h-5 w-5" />
                         <span className="font-semibold text-lg">{topDonors[2].totalItems}</span>
-                        <span className="text-stone-500">items</span>
+                        <span className="text-muted-foreground/70">items</span>
                       </div>
                       <div className="flex items-center justify-center gap-2">
                         <Heart className="h-5 w-5" />
                         <span className="font-semibold text-lg">{topDonors[2].totalDonations}</span>
-                        <span className="text-stone-500">donations</span>
+                        <span className="text-muted-foreground/70">donations</span>
                       </div>
                       {topDonors[2].firstDonation && (
-                        <div className="flex items-center justify-center gap-2 text-sm text-stone-500">
+                        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground/70">
                           <Calendar className="h-4 w-4" />
                           <span>Since {topDonors[2].firstDonation.toLocaleDateString()}</span>
                         </div>
@@ -428,17 +428,17 @@ const Leaderboard = () => {
                       ))}
                     </div>
                   </div>
-                  <div className="text-2xl font-bold text-orange-600 mt-4">3rd Place</div>
+                  <div className="text-2xl font-bold text-warm mt-4">3rd Place</div>
                 </div>
               )}
             </div>
 
             {/* Rest of Leaderboard */}
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-stone-200 p-8">
-              <h3 className="text-xl font-bold text-stone-900 mb-6">All Donors</h3>
+            <div className="bg-card/80 backdrop-blur-sm rounded-2xl border border-border p-8">
+              <h3 className="text-xl font-bold text-foreground mb-6">All Donors</h3>
               <div className="space-y-4">
                 {topDonors.map((donor, index) => (
-                  <div key={donor.id || `donor-${index}`} className="flex items-center gap-6 p-4 bg-white rounded-xl border border-stone-200 hover:shadow-md transition-all duration-300">
+                  <div key={donor.id || `donor-${index}`} className="flex items-center gap-6 p-4 bg-card rounded-xl border border-border hover:shadow-md transition-all duration-300">
                     {/* Rank */}
                     <div className="flex-shrink-0">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white ${
@@ -455,16 +455,16 @@ const Leaderboard = () => {
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
                         <div>
-                          <h4 className="text-lg font-bold text-stone-900">{donor.name}</h4>
+                          <h4 className="text-lg font-bold text-foreground">{donor.name}</h4>
                           {user && user.uid === donor.id && (
-                            <Badge className="bg-amber-100 text-amber-800 text-xs">You</Badge>
+                            <Badge className="bg-primary/20 text-primary text-xs">You</Badge>
                           )}
                         </div>
-                        <div className="text-2xl font-bold text-stone-700">#{index + 1}</div>
+                        <div className="text-2xl font-bold text-muted-foreground">#{index + 1}</div>
                       </div>
                       
                       {/* Stats */}
-                      <div className="flex items-center gap-6 text-sm text-stone-600">
+                      <div className="flex items-center gap-6 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Package className="h-4 w-4" />
                           <span>{donor.totalItems} items</span>
@@ -504,7 +504,7 @@ const Leaderboard = () => {
       {/* Call to Action */}
       <div className="text-center py-12">
         <Link to="/donate">
-          <Button className="bg-gradient-to-r from-amber-700 to-stone-700 hover:from-amber-800 hover:to-stone-800 text-white px-8 py-3 text-lg font-semibold shadow-lg transform transition-all duration-300 hover:scale-105">
+          <Button className="bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-primary-foreground px-8 py-3 text-lg font-semibold shadow-lg transform transition-all duration-300 hover:scale-105">
             <Heart className="h-5 w-5 mr-2" />
             Donate Now
           </Button>

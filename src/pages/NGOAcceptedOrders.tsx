@@ -74,11 +74,11 @@ const NGOAcceptedOrders = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'accepted':
-        return <Badge className="bg-blue-100 text-blue-800">Accepted</Badge>;
+        return <Badge className="bg-primary/20 text-primary">Accepted</Badge>;
       case 'picked_up':
-        return <Badge className="bg-green-100 text-green-800">Picked Up</Badge>;
+        return <Badge className="bg-success/20 text-success-foreground">Picked Up</Badge>;
       default:
-        return <Badge className="bg-gray-100 text-gray-800">Unknown</Badge>;
+        return <Badge className="bg-muted text-muted-foreground">Unknown</Badge>;
     }
   };
 
@@ -95,46 +95,46 @@ const NGOAcceptedOrders = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-background py-8">
       <div className="container mx-auto px-4 max-w-7xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="font-display text-4xl font-bold mb-1 text-gray-900">Accepted Orders</h1>
-          <p className="text-gray-600">Manage donations you have accepted from donors</p>
+          <h1 className="font-display text-4xl font-bold mb-1 text-foreground">Accepted Orders</h1>
+          <p className="text-muted-foreground">Manage donations you have accepted from donors</p>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card className="bg-blue-50 border-blue-200">
+          <Card className="bg-card border-border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-blue-600">Total Accepted</p>
-                  <p className="text-3xl font-bold text-blue-800">{donations.length}</p>
+                  <p className="text-primary">Total Accepted</p>
+                  <p className="text-3xl font-bold text-primary-foreground">{donations.length}</p>
                 </div>
-                <CheckCircle className="h-8 w-8 text-blue-400" />
+                <CheckCircle className="h-8 w-8 text-primary" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-green-50 border-green-200">
+          <Card className="bg-card border-border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-green-600">Picked Up</p>
-                  <p className="text-3xl font-bold text-green-800">{donations.filter(d => d.status === 'picked_up').length}</p>
+                  <p className="text-success">Picked Up</p>
+                  <p className="text-3xl font-bold text-success-foreground">{donations.filter(d => d.status === 'picked_up').length}</p>
                 </div>
-                <Truck className="h-8 w-8 text-green-400" />
+                <Truck className="h-8 w-8 text-success" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-orange-50 border-orange-200">
+          <Card className="bg-card border-border">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-orange-600">Pending Pickup</p>
-                  <p className="text-3xl font-bold text-orange-800">{donations.filter(d => d.status === 'accepted').length}</p>
+                  <p className="text-warm">Pending Pickup</p>
+                  <p className="text-3xl font-bold text-warm-foreground">{donations.filter(d => d.status === 'accepted').length}</p>
                 </div>
-                <Clock className="h-8 w-8 text-orange-400" />
+                <Clock className="h-8 w-8 text-warm" />
               </div>
             </CardContent>
           </Card>
@@ -142,13 +142,13 @@ const NGOAcceptedOrders = () => {
 
         {/* Main Table */}
         <Card className="shadow-lg">
-          <CardHeader className="bg-gray-50 border-b">
+          <CardHeader className="bg-muted border-b">
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
-                <Package className="h-5 w-5 text-gray-600" />
+                <Package className="h-5 w-5 text-foreground" />
                 Accepted Donations
               </span>
-              <span className="text-sm font-normal text-gray-600">
+              <span className="text-sm font-normal text-muted-foreground">
                 {donations.length} donation{donations.length !== 1 ? 's' : ''}
               </span>
             </CardTitle>
@@ -156,30 +156,30 @@ const NGOAcceptedOrders = () => {
           <CardContent className="p-0">
             {loading ? (
               <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <p className="mt-2 text-blue-600">Loading donations...</p>
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p className="mt-2 text-primary">Loading donations...</p>
               </div>
             ) : donations.length === 0 ? (
-              <div className="text-center py-12 text-gray-600">
-                <Package className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+              <div className="text-center py-12 text-muted-foreground">
+                <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                 <p className="text-lg font-medium">No accepted donations</p>
                 <p className="text-sm">Accept donations from donors to see them here</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader className="bg-gray-50">
+                  <TableHeader className="bg-muted">
                     <TableRow>
-                      <TableHead className="font-semibold text-gray-900">Donor</TableHead>
-                      <TableHead className="font-semibold text-gray-900">Items</TableHead>
-                      <TableHead className="font-semibold text-gray-900">Pickup Address</TableHead>
-                      <TableHead className="font-semibold text-gray-900">Status</TableHead>
-                      <TableHead className="font-semibold text-gray-900">Actions</TableHead>
+                      <TableHead className="font-semibold text-foreground">Donor</TableHead>
+                      <TableHead className="font-semibold text-foreground">Items</TableHead>
+                      <TableHead className="font-semibold text-foreground">Pickup Address</TableHead>
+                      <TableHead className="font-semibold text-foreground">Status</TableHead>
+                      <TableHead className="font-semibold text-foreground">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {donations.map((donation) => (
-                      <TableRow key={donation.id} className="hover:bg-gray-50 transition-colors">
+                      <TableRow key={donation.id} className="hover:bg-muted transition-colors">
                         <TableCell className="font-medium">{donation.donorName}</TableCell>
                         <TableCell>
                           <div className="max-w-xs">
@@ -190,7 +190,7 @@ const NGOAcceptedOrders = () => {
                         </TableCell>
                         <TableCell>
                           <div className="max-w-xs">
-                            <p className="text-sm text-gray-600 truncate">
+                            <p className="text-sm text-muted-foreground truncate">
                               {donation.pickupAddress}
                             </p>
                           </div>
@@ -202,14 +202,14 @@ const NGOAcceptedOrders = () => {
                               <Button
                                 size="sm"
                                 onClick={() => handleMarkPickedUp(donation.id)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                className="bg-primary hover:bg-primary/90 text-primary-foreground"
                               >
                                 <Truck className="h-4 w-4 mr-1" />
                                 Mark Picked Up
                               </Button>
                             )}
                             {donation.status === 'picked_up' && (
-                              <Badge className="bg-green-100 text-green-800">
+                              <Badge className="bg-success text-success-foreground">
                                 Completed
                               </Badge>
                             )}
