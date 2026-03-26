@@ -47,7 +47,7 @@ const Products = () => {
       console.log('🚀 fetchProducts called!');
       try {
         setLoading(true);
-        const productsRef = collection(db, 'products');
+        const productsRef = collection(db, 'acceptedProducts');
         
         // Get all products and filter in JavaScript to avoid index requirement
         const querySnapshot = await getDocs(productsRef);
@@ -62,35 +62,47 @@ const Products = () => {
         
         sortedProducts.forEach((doc) => {
           const data = doc.data();
-          // Only include approved products
-          if (data.status === 'approved') {
-            fetchedProducts.push({
-              id: doc.id,
-              title: data.title || '',
-              brand: data.brand || '',
-              category: data.category || '',
-              color: data.color,
-              size: data.size,
-              condition: data.condition || 'Good',
-              originalPrice: data.originalPrice,
-              sellingPrice: data.sellingPrice || 0,
-              description: data.description || '',
-              images: data.images || [],
-              sellerId: data.sellerId || '',
-              status: data.status || 'approved',
-              quantity: data.quantity || 1,
-              soldQuantity: data.soldQuantity || 0,
-              views: data.views || 0,
-              likes: data.likes || 0,
-              createdAt: data.createdAt?.toDate() || new Date(),
-              updatedAt: data.updatedAt?.toDate() || new Date()
-            });
-          }
+          console.log(`📋 Processing product ${doc.id}:`, {
+            title: data.title,
+            status: data.status,
+            sellingPrice: data.sellingPrice,
+            originalPrice: data.originalPrice,
+            category: data.category,
+            brand: data.brand,
+            condition: data.condition,
+            quantity: data.quantity,
+            sellerId: data.sellerId
+          });
+          
+          // All products in acceptedProducts are already approved
+          console.log(`✅ Adding product: ${data.title}`);
+          fetchedProducts.push({
+            id: doc.id,
+            title: data.title || '',
+            brand: data.brand || '',
+            category: data.category || '',
+            color: data.color,
+            size: data.size || undefined,
+            condition: data.condition || 'Good',
+            originalPrice: (data.originalPrice && !isNaN(data.originalPrice)) ? data.originalPrice : undefined,
+            sellingPrice: (data.sellingPrice && !isNaN(data.sellingPrice)) ? data.sellingPrice : 0,
+            description: data.description || '',
+            images: data.images || [],
+            sellerId: data.sellerId || '',
+            status: data.status || 'approved',
+            quantity: data.quantity || 1,
+            soldQuantity: data.soldQuantity || 0,
+            views: data.views || 0,
+            likes: data.likes || 0,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date()
+          });
         });
         
         console.log(`📊 Products fetched: ${fetchedProducts.length}`);
         console.log('📊 Sample product data:', fetchedProducts[0]);
         setProducts(fetchedProducts);
+        
       } catch (error) {
         console.error('Error fetching products:', error);
       } finally {

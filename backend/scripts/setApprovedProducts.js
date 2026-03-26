@@ -1,4 +1,4 @@
-const { admin } = require('../config/firebase');
+const { admin } = require('../config/firebase.cjs');
 
 // Set specific products as approved for testing
 async function setApprovedProducts() {

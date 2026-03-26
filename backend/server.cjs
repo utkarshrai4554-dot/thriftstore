@@ -8,6 +8,7 @@ require('dotenv').config();
 // Import routes
 const chatRoutes = require('./routes/chat');
 const productRoutes = require('./routes/products');
+const adminRoutes = require('./routes/admin');
 
 // Initialize Express app
 const app = express();
@@ -73,6 +74,7 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/chat', chatRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

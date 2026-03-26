@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Products to Firebase - StyleEase</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8fafc;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .success { background: #10b981; color: white; }
+        .error { background: #ef4444; color: white; }
+        .info { background: #3b82f6; color: white; }
+        button {
+            background: #059669;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        button:hover { background: #047857; }
+        button:disabled { background: #9ca3af; cursor: not-allowed; }
+        .log {
+            background: #f3f4f6;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛍️ Add Sample Products to Firebase</h1>
+        <p>This tool will add sample products to your Firebase Firestore database.</p>
+        
+        <div id="status" class="status info">
+            Ready to add products to Firebase...
+        </div>
+        
+        <button id="addProductsBtn" onclick="addProducts()">
+            Add Sample Products to Firebase
+        </button>
+        
+        <button id="clearProductsBtn" onclick="clearProducts()">
+            Clear All Products First
+        </button>
+        
+        <div id="log" class="log"></div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCpKm4tr8kg9-fy4psyAajPhU8T9IHAzQ0",
+            authDomain: "styleease-2170f.firebaseapp.com",
+            projectId: "styleease-2170f",
+            storageBucket: "styleease-2170f.firebasestorage.app",
+            messagingSenderId: "921047643742",
+            appId: "1:921047643742:web:29a1189bd75f69cf42e6cf",
+            measurementId: "G-DM4BG77729"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Sample products data
+        const sampleProducts = [
+            {
+                title: "Vintage Leather Jacket",
+                brand: "Vintage Brand",
+                category: "Clothes",
+                color: "Brown",
+                size: "M",
+                condition: "good",
+                originalPrice: 150,
+                sellingPrice: 89,
+                description: "Beautiful vintage leather jacket in great condition. Minor wear on the cuffs.",
+                images: ["https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=500&fit=crop"],
+                sellerId: "sample-seller-1",
+                status: 'approved',
+                quantity: 1,
+                soldQuantity: 0,
+                views: 234,
+                likes: 12
+            },
+            {
+                title: "Retro Gold Necklace",
+                brand: "Vintage Jewelry",
+                category: "Jewellery",
+                condition: "excellent",
+                originalPrice: 60,
+                sellingPrice: 35,
+                description: "Stunning vintage gold necklace with intricate detailing.",
+                images: ["https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&h=500&fit=crop"],
+                sellerId: "sample-seller-2",
+                status: 'approved',
+                quantity: 1,
+                soldQuantity: 0,
+                views: 180,
+                likes: 8
+            },
+            {
+                title: "Classic Canvas Sneakers",
+                brand: "Classic Footwear",
+                category: "Shoes",
+                color: "White",
+                size: "9",
+                condition: "fair",
+                originalPrice: 50,
+                sellingPrice: 28,
+                description: "Classic canvas sneakers with some wear but plenty of life left.",
+                images: ["https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=400&h=500&fit=crop"],
+                sellerId: "sample-seller-3",
+                status: 'approved',
+                quantity: 2,
+                soldQuantity: 0,
+                views: 156,
+                likes: 5
+            },
+            {
+                title: "Art Deco Vase",
+                brand: "Antique Decor",
+                category: "Artifacts",
+                condition: "excellent",
+                originalPrice: 120,
+                sellingPrice: 65,
+                description: "Gorgeous Art Deco vase in perfect condition.",
+                images: ["https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?w=400&h=500&fit=crop"],
+                sellerId: "sample-seller-4",
+                status: 'approved',
+                quantity: 1,
+                soldQuantity: 0,
+                views: 312,
+                likes: 15
+            },
+            {
+                title: "Floral Midi Dress",
+                brand: "Fashion Brand",
+                category: "Clothes",
+                color: "Multi",
+                size: "S",
+                condition: "good",
+                originalPrice: 80,
+                sellingPrice: 42,
+                description: "Beautiful floral midi dress, perfect for summer.",
+                images: ["https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=400&h=500&fit=crop"],
+                sellerId: "sample-seller-5",
+                status: 'approved',
+                quantity: 1,
+                soldQuantity: 0,
+                views: 98,
+                likes: 7
+            },
+            {
+                title: "Antique Pocket Watch",
+                brand: "Vintage Timepieces",
+                category: "Vintage",
+                condition: "good",
+                originalPrice: 200,
+                sellingPrice: 120,
+                description: "Rare antique pocket watch, still keeps time.",
+                images: ["https://images.unsplash.com/photo-1509048191080-d2984bad6ae5?w=400&h=500&fit=crop"],
+                sellerId: "sample-seller-6",
+                status: 'approved',
+                quantity: 1,
+                soldQuantity: 0,
+                views: 445,
+                likes: 22
+            },
+            {
+                title: "Suede Ankle Boots",
+                brand: "Boot Maker",
+                category: "Shoes",
+                color: "Tan",
+                size: "8",
+                condition: "good",
+                originalPrice: 90,
+                sellingPrice: 55,
+                description: "Quality suede boots with minor scuffing.",
+                images: ["https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400&h=500&fit=crop"],
+                sellerId: "sample-seller-7",
+                status: 'approved',
+                quantity: 1,
+                soldQuantity: 0,
+                views: 201,
+                likes: 9
+            },
+            {
+                title: "Beaded Bracelet Set",
+                brand: "Handmade Jewelry",
+                category: "Jewellery",
+                condition: "excellent",
+                originalPrice: 30,
+                sellingPrice: 18,
+                description: "Handmade beaded bracelet set, like new.",
+                images: ["https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=400&h=500&fit=crop"],
+                sellerId: "sample-seller-8",
+                status: 'approved',
+                quantity: 3,
+                soldQuantity: 0,
+                views: 89,
+                likes: 4
+            }
+        ];
+
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+
+        function log(message) {
+            const logEl = document.getElementById('log');
+            logEl.textContent += new Date().toLocaleTimeString() + ': ' + message + '\n';
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        async function clearProducts() {
+            const btn = document.getElementById('clearProductsBtn');
+            btn.disabled = true;
+            
+            try {
+                updateStatus('Clearing existing products...', 'info');
+                log('🗑️ Clearing existing products...');
+                
+                const snapshot = await db.collection('products').get();
+                const batch = db.batch();
+                
+                snapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                
+                await batch.commit();
+                
+                updateStatus(`Cleared ${snapshot.size} products successfully!`, 'success');
+                log(`✅ Successfully cleared ${snapshot.size} products`);
+                
+            } catch (error) {
+                updateStatus('Error clearing products: ' + error.message, 'error');
+                log('❌ Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function addProducts() {
+            const btn = document.getElementById('addProductsBtn');
+            btn.disabled = true;
+            
+            try {
+                updateStatus('Adding products to Firebase...', 'info');
+                log('🚀 Starting to add products...');
+                
+                let addedCount = 0;
+                
+                for (const product of sampleProducts) {
+                    const productData = {
+                        ...product,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    
+                    await db.collection('products').add(productData);
+                    log(`✅ Added: ${product.title}`);
+                    addedCount++;
+                }
+                
+                updateStatus(`Successfully added ${addedCount} products to Firebase!`, 'success');
+                log(`🎉 Success! Added ${addedCount} products to Firebase.`);
+                log(`🌐 Now visit your products page to see them: http://localhost:8081/products`);
+                
+            } catch (error) {
+                updateStatus('Error adding products: ' + error.message, 'error');
+                log('❌ Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // Check current products on load
+        window.addEventListener('load', async () => {
+            try {
+                const snapshot = await db.collection('products').get();
+                log(`📊 Current products in database: ${snapshot.size}`);
+                
+                if (snapshot.size > 0) {
+                    updateStatus(`Found ${snapshot.size} products in database`, 'info');
+                } else {
+                    updateStatus('No products found in database - ready to add sample products', 'info');
+                }
+            } catch (error) {
+                updateStatus('Error checking products: ' + error.message, 'error');
+                log('❌ Error checking products: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>

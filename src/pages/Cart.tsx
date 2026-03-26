@@ -95,7 +95,8 @@ const Cart = () => {
     }
     
     try {
-      let finalTotal = getCartTotal();
+      // Calculate totals properly
+      const cartTotal = getCartTotal();
       let couponDiscount = 0;
       let pointsDiscount = 0;
       
@@ -104,7 +105,7 @@ const Cart = () => {
         const coupon = await validateCoupon(couponCode);
         if (coupon) {
           if (coupon.type === 'percentage') {
-            couponDiscount = finalTotal * (coupon.value / 100);
+            couponDiscount = cartTotal * (coupon.value / 100);
           } else {
             couponDiscount = coupon.value;
           }
@@ -121,12 +122,33 @@ const Cart = () => {
         toast.success(`${pointsToUse} points redeemed`);
       }
       
-      const totalAfterDiscounts = finalTotal - couponDiscount - pointsDiscount;
+      const shipping = 0; // Free shipping
+      const tax = Math.round((cartTotal - couponDiscount - pointsDiscount) * 0.18);
+      const totalAfterDiscounts = cartTotal - couponDiscount - pointsDiscount + shipping + tax;
+      const finalTotal = totalAfterDiscounts;
       
-      // Update product quantities and create order
+      // Update product quantities and move to sold products
       for (const item of items) {
         await updateProductSoldQuantity(item.id, item.quantity);
         console.log(`✅ Updated product ${item.id}: sold ${item.quantity} units`);
+        
+        // Move product to sold collection
+        const response = await fetch(`/api/products/${item.id}/mark-sold`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            quantity: item.quantity,
+            buyerId: user.uid 
+          }),
+        });
+        
+        if (response.ok) {
+          console.log(`✅ Product ${item.id} moved to sold products`);
+        } else {
+          console.error(`❌ Failed to move product ${item.id} to sold`);
+        }
       }
       
       // Create order in database
@@ -141,9 +163,11 @@ const Cart = () => {
           quantity: item.quantity,
           category: item.category
         })),
-        totalAmount: finalTotal,
+        totalAmount: cartTotal,
         discountAmount: couponDiscount + pointsDiscount,
-        finalAmount: totalAfterDiscounts,
+        taxAmount: tax,
+        shippingAmount: shipping,
+        finalAmount: finalTotal,
         status: 'confirmed' as const,
         paymentMethod: 'Mock Payment Gateway',
         paymentStatus: 'paid' as const,
@@ -172,7 +196,7 @@ const Cart = () => {
       console.log(`✅ Order created with ID: ${orderId}`);
       
       // Add points for purchase (5% of order value as points)
-      const pointsEarned = Math.floor(totalAfterDiscounts * 0.05);
+      const pointsEarned = Math.floor(finalTotal * 0.05);
       await addUserPoints(user.uid, pointsEarned, 'Purchase reward');
       
       // Clear cart and redirect after delay
@@ -406,11 +430,11 @@ const Cart = () => {
                   </div>
                   <div className="flex justify-between items-center pb-2 border-b">
                     <span className="text-muted-foreground">Shipping</span>
-                    <span className="text-green-600 font-medium">FREE</span>
+                    <span className="font-medium">₹0</span>
                   </div>
                   <div className="flex justify-between items-center pb-2 border-b">
                     <span className="text-muted-foreground">Tax</span>
-                    <span className="font-medium">₹{Math.round(getCartTotal() * 0.18)}</span>
+                    <span className="font-medium">₹{Math.round((getCartTotal() - (couponCode ? Math.round(getCartTotal() * 0.1) : 0) - (usePoints ? pointsToUse : 0)) * 0.18)}</span>
                   </div>
                   {(couponCode) && (
                     <div className="flex justify-between items-center p-2 bg-green-50 rounded border border-green-200">
@@ -420,20 +444,19 @@ const Cart = () => {
                     </div>
                   )}
                   {usePoints && pointsToUse > 0 && (
-                    <div className="flex justify-between items-center p-2 bg-primary/10 rounded border">
-                      <Gift className="h-4 w-4 text-primary" />
-                      <span className="text-primary font-medium">Points Used</span>
-                      <span className="font-bold text-primary">-₹{pointsToUse}</span>
+                    <div className="flex justify-between items-center p-2 bg-blue-50 rounded border border-blue-200">
+                      <Gift className="h-4 w-4 text-blue-600" />
+                      <span className="text-blue-700 font-medium">Points Used</span>
+                      <span className="font-bold text-blue-800">-₹{pointsToUse}</span>
                     </div>
                   )}
                   <div className="flex justify-between items-center pt-2">
                     <span className="text-muted-foreground">Total</span>
-                    <span className="font-bold text-lg text-primary">₹{getCartTotal() + Math.round(getCartTotal() * 0.18) - Math.round(getCartTotal() * 0.1) - pointsToUse}</span>
+                    <span className="font-bold text-lg text-primary">₹{getCartTotal() + Math.round((getCartTotal() - (couponCode ? Math.round(getCartTotal() * 0.1) : 0) - (usePoints ? pointsToUse : 0)) * 0.18) - (couponCode ? Math.round(getCartTotal() * 0.1) : 0) - (usePoints ? pointsToUse : 0)}</span>
                   </div>
                 </div>
 
                 <Button 
-                  size="lg" 
                   onClick={handleCheckout}
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-md hover:shadow-lg transition-all duration-200 hover:scale-[1.02]"
                 >

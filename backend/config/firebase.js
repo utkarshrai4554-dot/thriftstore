@@ -1,5 +1,4 @@
-import admin from 'firebase-admin';
-import { initializeApp } from 'firebase/app';
+const admin = require('firebase-admin');
 
 // Firebase configuration
 const firebaseConfig = {
@@ -14,30 +13,35 @@ const firebaseConfig = {
 
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      "type": "service_account",
-      "project_id": "styleease-2170f",
-      "private_key_id": "your-private-key-id",
-      "private_key": "-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY_HERE\n-----END PRIVATE KEY-----\n",
-      "client_email": "firebase-adminsdk-xxxxx@styleease-2170f.iam.gserviceaccount.com",
-      "client_id": "123456789012345678901",
-      "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-      "token_uri": "https://oauth2.googleapis.com/token",
-      "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-      "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/yourproject.iam.gserviceaccount.com"
-    }),
-    databaseURL: "https://styleease-2170f.firebaseio.com"
-  });
+  try {
+    // Try to initialize with service account if available
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        "type": "service_account",
+        "project_id": "styleease-2170f",
+        "private_key_id": "your-private-key-id",
+        "private_key": "-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY_HERE\n-----END PRIVATE KEY-----\n",
+        "client_email": "firebase-adminsdk-xxxxx@styleease-2170f.iam.gserviceaccount.com",
+        "client_id": "123456789012345678901",
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/yourproject.iam.gserviceaccount.com"
+      }),
+      databaseURL: "https://styleease-2170f.firebaseio.com"
+    });
+  } catch (error) {
+    // Fallback to initialize without credentials for development
+    console.warn('⚠️ Firebase Admin SDK initialized without service account credentials. Some features may not work.');
+    admin.initializeApp({
+      projectId: "styleease-2170f",
+      databaseURL: "https://styleease-2170f.firebaseio.com"
+    });
+  }
 }
 
 // Export Firestore instance
 const db = admin.firestore();
 
 // Export for use in other modules
-export { db, admin };
-
-// Initialize Firebase App for client-side operations
-const app = initializeApp(firebaseConfig);
-
-export default app;
+module.exports = { db, admin };

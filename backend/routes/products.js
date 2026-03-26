@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/productController');
 const auth = require('../middleware/auth');
+const soldProductService = require('../services/soldProductService');
 const rateLimit = require('express-rate-limit');
 
 // Rate limiting for product operations
@@ -125,5 +126,37 @@ router.post('/:id/like', auth.required, productController.toggleLike);
  * Get similar products (AI-powered - placeholder)
  */
 router.get('/:id/similar', productController.getSimilarProducts);
+
+// Mark product as sold and move to productsSold collection
+router.post('/:id/mark-sold', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { quantity, buyerId } = req.body;
+    
+    if (!id || !quantity || !buyerId) {
+      return res.status(400).json({
+        error: 'Product ID, quantity, and buyer ID are required',
+        code: 'MISSING_DATA'
+      });
+    }
+
+    // Move product to sold collection
+    const result = await soldProductService.moveProductToSold(id, quantity);
+    
+    res.json({
+      message: 'Product marked as sold successfully',
+      result,
+      code: 'PRODUCT_SOLD'
+    });
+
+  } catch (error) {
+    console.error('Mark Product Sold Error:', error);
+    res.status(500).json({
+      error: 'Failed to mark product as sold',
+      code: 'MARK_SOLD_ERROR',
+      message: error.message
+    });
+  }
+});
 
 module.exports = router;

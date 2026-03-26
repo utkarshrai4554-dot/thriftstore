@@ -1,4 +1,5 @@
 const productService = require('../services/productService');
+const { db } = require('../config/firebase.cjs');
 
 class ProductController {
   // Create a new product
