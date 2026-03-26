@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { collection, query, where, getDocs, doc, updateDoc, addDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, updateDoc, addDoc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Truck, CheckCircle, XCircle, Clock, Plus, Package, HandHeart } from "lucide-react";
+import { Truck, CheckCircle, XCircle, Clock, Plus, Package, HandHeart, Users, MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ import { getUserProfile } from "@/services/userService";
 
 interface Donation {
   id: string;
+  userId: string;
   donorName: string;
   donorEmail: string;
   donorPhone: string;
@@ -24,10 +25,18 @@ interface Donation {
   items: string;
   description: string;
   quantity: number;
+  cause?: string;
   status: 'pending' | 'accepted' | 'rejected' | 'picked_up';
   assignedNGO?: string;
   assignedNGOName?: string;
   requestId?: string; // Link to donation request
+  rejectedBy?: string[]; // Array of NGO UIDs who rejected this donation
+  images?: Array<{
+    name: string;
+    size: number;
+    type: string;
+    url: string;
+  }>;
   createdAt: any;
   acceptedAt?: any;
   pickedUpAt?: any;
@@ -70,6 +79,9 @@ const NGODashboard = () => {
     urgency: 'normal'
   });
   const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
+  const [viewMode, setViewMode] = useState<'requested' | 'unsolicited'>('requested');
+  const [selectedDonation, setSelectedDonation] = useState<Donation | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   useEffect(() => {
     fetchDonations();
@@ -78,21 +90,40 @@ const NGODashboard = () => {
 
   const fetchDonations = async () => {
     try {
-      // Fetch donations assigned to this NGO
-      const q = query(
+      // Fetch donations assigned to this NGO AND unassigned general donations
+      const assignedQuery = query(
         collection(db, 'donations'),
         where('assignedNGO', '==', user?.uid)
       );
-      const querySnapshot = await getDocs(q);
-      const data = querySnapshot.docs.map(doc => ({
+      
+      const unassignedQuery = query(
+        collection(db, 'donations'),
+        where('assignedNGO', '==', null)
+      );
+      
+      const [assignedSnapshot, unassignedSnapshot] = await Promise.all([
+        getDocs(assignedQuery),
+        getDocs(unassignedQuery)
+      ]);
+      
+      const assignedData = assignedSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Donation[];
       
-      console.log('🔍 NGO Dashboard - Fetched donations:', data);
-      console.log('🔍 NGO Dashboard - Donation data sample:', data[0]);
+      const unassignedData = unassignedSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Donation[];
       
-      setDonations(data);
+      // Combine both arrays
+      const allDonations = [...assignedData, ...unassignedData];
+      
+      console.log('🔍 NGO Dashboard - Fetched assigned donations:', assignedData);
+      console.log('🔍 NGO Dashboard - Fetched unassigned donations:', unassignedData);
+      console.log('🔍 NGO Dashboard - All donations:', allDonations);
+      
+      setDonations(allDonations);
     } catch (error) {
       console.error('Error fetching donations:', error);
       toast.error('Failed to fetch donations');
@@ -122,12 +153,44 @@ const NGODashboard = () => {
     }
   };
 
+  const handleRejectDonation = async (donationId: string) => {
+    try {
+      // Add this NGO to the rejected list for this donation
+      const donationRef = doc(db, 'donations', donationId);
+      const donationDoc = await getDoc(donationRef);
+      const donationData = donationDoc.data();
+      
+      const rejectedBy = donationData?.rejectedBy || [];
+      if (!rejectedBy.includes(user?.uid)) {
+        rejectedBy.push(user?.uid);
+      }
+      
+      await updateDoc(donationRef, {
+        rejectedBy: rejectedBy,
+        assignedNGO: null,
+        assignedNGOName: null,
+        status: 'rejected', // Set status to rejected
+        rejectedAt: new Date(),
+        rejectedByNGO: user?.uid
+      });
+      
+      toast.success('Donation rejected. Admin will reassign to another NGO.');
+      fetchDonations();
+    } catch (error) {
+      console.error('Error rejecting donation:', error);
+      toast.error('Failed to reject donation');
+    }
+  };
+
   const handleAcceptDonation = async (donationId: string) => {
     try {
       await updateDoc(doc(db, 'donations', donationId), {
         status: 'accepted',
         acceptedAt: new Date(),
-        acceptedBy: user?.uid
+        acceptedBy: user?.uid,
+        assignedNGO: user?.uid,
+        assignedNGOName: user?.displayName || user?.email?.split('@')[0] || 'NGO',
+        ngoAcceptedAt: new Date()
       });
       
       toast.success('Donation accepted successfully!');
@@ -138,31 +201,36 @@ const NGODashboard = () => {
     }
   };
 
-  const handleRejectDonation = async (donationId: string) => {
-    try {
-      await updateDoc(doc(db, 'donations', donationId), {
-        status: 'rejected',
-        rejectedAt: new Date(),
-        rejectedBy: user?.uid
-      });
-      
-      toast.success('Donation rejected');
-      fetchDonations();
-    } catch (error) {
-      console.error('Error rejecting donation:', error);
-      toast.error('Failed to reject donation');
-    }
-  };
-
   const handleMarkPickedUp = async (donationId: string) => {
     try {
-      await updateDoc(doc(db, 'donations', donationId), {
+      // Get the donation details first
+      const donationRef = doc(db, 'donations', donationId);
+      const donationDoc = await getDoc(donationRef);
+      const donationData = donationDoc.data();
+      
+      // Update donation status to picked_up
+      await updateDoc(donationRef, {
         status: 'picked_up',
         pickedUpAt: new Date()
       });
       
+      // If this donation is linked to a request, update the fulfilled quantity
+      if (donationData?.requestId) {
+        const requestRef = doc(db, 'donationRequests', donationData.requestId);
+        const requestDoc = await getDoc(requestRef);
+        const requestData = requestDoc.data();
+        
+        if (requestData) {
+          const currentFulfilled = requestData.fulfilledQuantity || 0;
+          await updateDoc(requestRef, {
+            fulfilledQuantity: currentFulfilled + (donationData.quantity || 1)
+          });
+        }
+      }
+      
       toast.success('Donation marked as picked up!');
       fetchDonations();
+      fetchDonationRequests();
     } catch (error) {
       console.error('Error marking as picked up:', error);
       toast.error('Failed to update donation status');
@@ -233,6 +301,11 @@ const NGODashboard = () => {
   };
 
   const filteredDonations = donations.filter(donation => {
+    // Filter by viewMode first
+    if (viewMode === 'requested' && !donation.requestId) return false;
+    if (viewMode === 'unsolicited' && donation.requestId) return false;
+    
+    // Then filter by status
     if (filter === 'all') return true;
     return donation.status === filter;
   });
@@ -448,10 +521,28 @@ const NGODashboard = () => {
         <Card className="shadow-lg mb-8">
           <CardHeader className="bg-muted border-b">
             <CardTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <HandHeart className="h-5 w-5 text-foreground" />
-                Donation Requests Assigned to You
-              </span>
+              <div className="flex items-center gap-4">
+                <span className="flex items-center gap-2">
+                  <HandHeart className="h-5 w-5 text-foreground" />
+                  {viewMode === 'requested' ? 'Requested Donations' : 'Unsolicited Donations'}
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant={viewMode === 'requested' ? 'default' : 'outline'}
+                    onClick={() => setViewMode('requested')}
+                  >
+                    Requested
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={viewMode === 'unsolicited' ? 'default' : 'outline'}
+                    onClick={() => setViewMode('unsolicited')}
+                  >
+                    Unsolicited
+                  </Button>
+                </div>
+              </div>
               <span className="text-sm font-normal text-muted-foreground">
                 {filteredDonations.length} donation{filteredDonations.length !== 1 ? 's' : ''}
               </span>
@@ -470,7 +561,7 @@ const NGODashboard = () => {
                 <p className="text-sm">Request donations or wait for admin assignments</p>
               </div>
             ) : (
-              <>
+              <div className="max-h-96 overflow-y-auto">
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader className="bg-muted">
@@ -499,25 +590,59 @@ const NGODashboard = () => {
                           <TableCell>{getStatusBadge(donation.status)}</TableCell>
                           <TableCell>
                             <div className="flex gap-2 justify-center">
-                              {donation.status === 'pending' && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleAcceptDonation(donation.id)}
-                                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                                >
-                                  <CheckCircle className="h-4 w-4 mr-1" />
-                                  Accept
-                                </Button>
+                              {donation.status === 'pending' && donation.assignedNGO === user?.uid && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedDonation(donation);
+                                      setShowDetailsModal(true);
+                                    }}
+                                    className="bg-secondary hover:bg-secondary/90 text-secondary-foreground"
+                                  >
+                                    <Package className="h-4 w-4 mr-1" />
+                                    View Details
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleAcceptDonation(donation.id)}
+                                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Accept
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleRejectDonation(donation.id)}
+                                    className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                                  >
+                                    <XCircle className="h-4 w-4 mr-1" />
+                                    Reject
+                                  </Button>
+                                </>
                               )}
                               {donation.status === 'accepted' && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleMarkPickedUp(donation.id)}
-                                  className="bg-success hover:bg-success/90 text-success-foreground"
-                                >
-                                  <Truck className="h-4 w-4 mr-1" />
-                                  Mark Picked Up
-                                </Button>
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedDonation(donation);
+                                      setShowDetailsModal(true);
+                                    }}
+                                    className="bg-secondary hover:bg-secondary/90 text-secondary-foreground"
+                                  >
+                                    <Package className="h-4 w-4 mr-1" />
+                                    View Details
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleMarkPickedUp(donation.id)}
+                                    className="bg-success hover:bg-success/90 text-success-foreground"
+                                  >
+                                    <Truck className="h-4 w-4 mr-1" />
+                                    Mark Picked Up
+                                  </Button>
+                                </>
                               )}
                                 {donation.status === 'picked_up' && (
                                   <Badge className="bg-accent/20 text-accent-foreground">
@@ -532,7 +657,7 @@ const NGODashboard = () => {
                     </TableBody>
                   </Table>
                 </div>
-              </>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -648,6 +773,141 @@ const NGODashboard = () => {
             )}
           </CardContent>
           </Card>
+      
+      {/* Donation Details Modal */}
+      <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Donation Details</DialogTitle>
+          </DialogHeader>
+          {selectedDonation && (
+            <div className="space-y-6">
+              {/* Donor Information */}
+              <div className="bg-muted p-4 rounded-lg">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Donor Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Name</p>
+                    <p className="font-medium">{selectedDonation.donorName || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Email</p>
+                    <p className="font-medium">{selectedDonation.donorEmail || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Phone</p>
+                    <p className="font-medium">{selectedDonation.donorPhone || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Submitted Date</p>
+                    <p className="font-medium">
+                      {selectedDonation.createdAt ? 
+                        new Date(selectedDonation.createdAt.toDate ? selectedDonation.createdAt.toDate() : selectedDonation.createdAt).toLocaleString() : 
+                        'N/A'
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Images Section */}
+              {selectedDonation.images && selectedDonation.images.length > 0 && (
+                <div className="bg-muted p-4 rounded-lg">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Donation Images
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {selectedDonation.images.map((image, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={image.url}
+                          alt={`Donation image ${index + 1}`}
+                          className="w-full h-32 object-cover rounded-lg border cursor-pointer transition-transform hover:scale-105"
+                          onClick={() => window.open(image.url, '_blank')}
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <div className="bg-white/90 rounded px-2 py-1 text-xs">
+                            Click to view
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1 truncate">
+                          {image.name || `Image ${index + 1}`}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Donation Information */}
+              <div className="bg-muted p-4 rounded-lg">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Donation Information
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Items</p>
+                    <p className="font-medium">{selectedDonation.items || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Description</p>
+                    <p className="font-medium">{selectedDonation.description || 'No description provided'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Quantity</p>
+                    <p className="font-medium">{selectedDonation.quantity || 1}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Cause</p>
+                    <Badge variant="outline" className="mt-1">
+                      {selectedDonation.cause || 'N/A'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pickup Information */}
+              <div className="bg-muted p-4 rounded-lg">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Pickup Information
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Pickup Address</p>
+                    <p className="font-medium">{selectedDonation.pickupAddress || 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t">
+                <Button
+                  onClick={() => {
+                    handleMarkPickedUp(selectedDonation.id);
+                    setShowDetailsModal(false);
+                  }}
+                  className="bg-success hover:bg-success/90 text-success-foreground"
+                >
+                  <Truck className="h-4 w-4 mr-2" />
+                  Mark as Picked Up
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDetailsModal(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
       </div>
     </div>
   );

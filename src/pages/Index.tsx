@@ -295,10 +295,15 @@ const Index = () => {
         )}
         <div className="relative container mx-auto px-4">
           <div className="animate-fade-in mt-8">
-            <div className="flex justify-center">
-              <Link to="/donatehub">
+            <div className="flex justify-center gap-4">
+              <Link to="/products">
                 <Button size="lg" className={`text-base px-8 ${theme === 'dark' ? 'bg-primary hover:bg-primary/90 text-primary-foreground' : 'bg-green-600 hover:bg-green-700 text-white'}`}>
-                  Manage Donation <Package className="ml-2 h-4 w-4" />
+                  Shop Now <ShoppingBag className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+              <Link to="/sell">
+                <Button size="lg" variant="outline" className={`text-base px-8 ${theme === 'dark' ? 'border-primary text-primary hover:bg-primary/10' : 'border-green-600 text-green-600 hover:bg-green-50'}`}>
+                  Start Selling <Gift className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
             </div>

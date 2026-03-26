@@ -47,11 +47,12 @@ const Products = () => {
       console.log('🚀 fetchProducts called!');
       try {
         setLoading(true);
-        const productsRef = collection(db, 'acceptedProducts');
+        const productsRef = collection(db, 'products');
+        const q = query(productsRef, where('status', '==', 'approved'));
         
         // Get all products and filter in JavaScript to avoid index requirement
-        const querySnapshot = await getDocs(productsRef);
-        console.log(`📊 Total documents in products collection: ${querySnapshot.docs.length}`);
+        const querySnapshot = await getDocs(q);
+        console.log(`📊 Total approved products: ${querySnapshot.docs.length}`);
         
         const sortedProducts = querySnapshot.docs.sort((a, b) => 
           (b.data().createdAt?.toMillis() || 0) - (a.data().createdAt?.toMillis() || 0)

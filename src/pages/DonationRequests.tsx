@@ -120,13 +120,6 @@ const DonationRequests = () => {
 
       await addDoc(collection(db, 'donations'), donationData);
 
-      // Update the donation request with new fulfilled quantity
-      const newFulfilledQuantity = (selectedRequest.fulfilledQuantity || 0) + donateForm.quantity;
-      await updateDoc(doc(db, 'donationRequests', selectedRequest.id), {
-        fulfilledQuantity: newFulfilledQuantity,
-        status: newFulfilledQuantity >= selectedRequest.quantity ? 'fulfilled' : 'pending'
-      });
-
       toast.success(`Thank you for donating ${donateForm.quantity} ${selectedRequest.items}!`);
       setShowDonateModal(false);
       setDonateForm({ quantity: 1, message: '', pickupAddress: '' });

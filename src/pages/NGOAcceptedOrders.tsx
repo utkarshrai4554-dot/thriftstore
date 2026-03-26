@@ -20,6 +20,7 @@ interface Donation {
   status: 'pending' | 'accepted' | 'rejected' | 'picked_up';
   assignedNGO?: string;
   assignedNGOName?: string;
+  requestId?: string; // Link to donation request
   createdAt: any;
   acceptedAt?: any;
   pickedUpAt?: any;
@@ -29,6 +30,7 @@ const NGOAcceptedOrders = () => {
   const { user } = useAuth();
   const [donations, setDonations] = useState<Donation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'requested' | 'unsolicited'>('requested');
 
   useEffect(() => {
     fetchAcceptedDonations();
@@ -81,6 +83,15 @@ const NGOAcceptedOrders = () => {
         return <Badge className="bg-muted text-muted-foreground">Unknown</Badge>;
     }
   };
+
+  // Filter donations based on viewMode
+  const filteredDonations = donations.filter(donation => {
+    if (viewMode === 'requested') {
+      return donation.requestId; // Only show donations with requestId
+    } else {
+      return !donation.requestId; // Only show donations without requestId
+    }
+  });
 
   if (!user) {
     return (
@@ -144,12 +155,30 @@ const NGOAcceptedOrders = () => {
         <Card className="shadow-lg">
           <CardHeader className="bg-muted border-b">
             <CardTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <Package className="h-5 w-5 text-foreground" />
-                Accepted Donations
-              </span>
+              <div className="flex items-center gap-4">
+                <span className="flex items-center gap-2">
+                  <Package className="h-5 w-5 text-foreground" />
+                  {viewMode === 'requested' ? 'Requested Donations' : 'Unsolicited Donations'}
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant={viewMode === 'requested' ? 'default' : 'outline'}
+                    onClick={() => setViewMode('requested')}
+                  >
+                    Requested
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={viewMode === 'unsolicited' ? 'default' : 'outline'}
+                    onClick={() => setViewMode('unsolicited')}
+                  >
+                    Unsolicited
+                  </Button>
+                </div>
+              </div>
               <span className="text-sm font-normal text-muted-foreground">
-                {donations.length} donation{donations.length !== 1 ? 's' : ''}
+                {filteredDonations.length} donation{filteredDonations.length !== 1 ? 's' : ''}
               </span>
             </CardTitle>
           </CardHeader>
@@ -159,15 +188,16 @@ const NGOAcceptedOrders = () => {
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 <p className="mt-2 text-primary">Loading donations...</p>
               </div>
-            ) : donations.length === 0 ? (
+            ) : filteredDonations.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                 <p className="text-lg font-medium">No accepted donations</p>
                 <p className="text-sm">Accept donations from donors to see them here</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
+              <div className="max-h-96 overflow-y-auto">
+                <div className="overflow-x-auto">
+                  <Table>
                   <TableHeader className="bg-muted">
                     <TableRow>
                       <TableHead className="font-semibold text-foreground">Donor</TableHead>
@@ -178,7 +208,7 @@ const NGOAcceptedOrders = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {donations.map((donation) => (
+                    {filteredDonations.map((donation) => (
                       <TableRow key={donation.id} className="hover:bg-muted transition-colors">
                         <TableCell className="font-medium">{donation.donorName}</TableCell>
                         <TableCell>
@@ -219,6 +249,7 @@ const NGOAcceptedOrders = () => {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </div>
             )}
           </CardContent>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, query, where, getDocs, doc, updateDoc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, updateDoc, setDoc, serverTimestamp, getDoc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,13 @@ interface Donation {
   status: 'pending' | 'accepted' | 'rejected' | 'picked_up';
   assignedNGO?: string;
   assignedNGOName?: string;
+  images?: Array<{
+    name: string;
+    size: number;
+    type: string;
+    url: string;
+  }>;
+  rejectedBy?: string[]; // Array of NGO UIDs who rejected this donation
   createdAt: any;
   acceptedAt?: any;
   pickedUpAt?: any;
@@ -44,7 +51,7 @@ const AdminDonationAssignment = () => {
   const [donations, setDonations] = useState<Donation[]>([]);
   const [approvedNGOs, setApprovedNGOs] = useState<NGO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string>('pending');
+  const [filter, setFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -55,6 +62,15 @@ const AdminDonationAssignment = () => {
   useEffect(() => {
     fetchDonations();
     fetchApprovedNGOs();
+  }, []);
+
+  // Add periodic refresh to see NGO actions in real-time
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchDonations();
+    }, 10000); // Refresh every 10 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
   const fetchDonations = async () => {
@@ -104,11 +120,12 @@ const AdminDonationAssignment = () => {
       
       // Update the donation status
       await updateDoc(doc(db, 'donations', donationId), {
-        status: 'pending',
+        status: 'pending', // Reset to pending for new NGO to accept
         assignedNGO: ngoUid,
         assignedNGOName: ngoName,
         assignedBy: user?.uid,
-        assignedAt: new Date()
+        assignedAt: new Date(),
+        ngoAssignedAt: new Date()
       });
       
       // Create a record in ngoAcceptedOrders for leaderboard tracking
@@ -143,6 +160,37 @@ const AdminDonationAssignment = () => {
     } catch (error) {
       console.error('Error assigning NGO:', error);
       toast.error('Failed to assign NGO');
+    }
+  };
+
+  const handleAcceptDonation = async (donationId: string) => {
+    try {
+      await updateDoc(doc(db, 'donations', donationId), {
+        status: 'accepted',
+        acceptedAt: new Date(),
+        acceptedBy: user?.uid
+      });
+      
+      toast.success('Donation accepted successfully! Ready for NGO assignment.');
+      fetchDonations();
+    } catch (error) {
+      console.error('Error accepting donation:', error);
+      toast.error('Failed to accept donation');
+    }
+  };
+
+  const handleRemoveDonation = async (donationId: string) => {
+    if (!window.confirm('Are you sure you want to remove this donation? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, 'donations', donationId));
+      toast.success('Donation removed successfully!');
+      fetchDonations();
+    } catch (error) {
+      console.error('Error removing donation:', error);
+      toast.error('Failed to remove donation');
     }
   };
 
@@ -268,7 +316,7 @@ const AdminDonationAssignment = () => {
               <SelectContent>
                 <SelectItem value="all">All Donations</SelectItem>
                 <SelectItem value="pending">Pending Assignment</SelectItem>
-                <SelectItem value="accepted">Assigned</SelectItem>
+                <SelectItem value="accepted">Accepted (Ready for Assignment)</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
                 <SelectItem value="picked_up">Picked Up</SelectItem>
               </SelectContent>
@@ -352,6 +400,7 @@ const AdminDonationAssignment = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="font-semibold">Images</TableHead>
                         <TableHead className="font-semibold">Donor</TableHead>
                         <TableHead className="font-semibold">Items</TableHead>
                         <TableHead className="font-semibold">Cause</TableHead>
@@ -364,6 +413,32 @@ const AdminDonationAssignment = () => {
                     <TableBody>
                       {paginatedDonations.map((donation) => (
                         <TableRow key={donation.id}>
+                          <TableCell>
+                            {donation.images && donation.images.length > 0 ? (
+                              <div className="flex gap-1">
+                                {donation.images.slice(0, 3).map((image, index) => (
+                                  <div key={index} className="relative">
+                                    <img
+                                      src={image.url}
+                                      alt={`Donation image ${index + 1}`}
+                                      className="w-12 h-12 object-cover rounded border"
+                                      onClick={() => window.open(image.url, '_blank')}
+                                      style={{ cursor: 'pointer' }}
+                                    />
+                                    {donation.images.length > 3 && index === 2 && (
+                                      <div className="absolute inset-0 bg-black/50 rounded flex items-center justify-center text-white text-xs">
+                                        +{donation.images.length - 3}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-xs">
+                                No Image
+                              </div>
+                            )}
+                          </TableCell>
                           <TableCell className="font-medium">{donation.donorName || 'N/A'}</TableCell>
                           <TableCell>
                             <div className="max-w-xs">
@@ -409,27 +484,42 @@ const AdminDonationAssignment = () => {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-48">
                                   {donation.status === 'pending' && (
-                                    <>
-                                      <DropdownMenuItem
-                                        onClick={() => {
-                                          setSelectedDonation(donation);
-                                          setShowAssignModal(true);
-                                        }}
-                                        className="text-green-600 focus:text-green-600"
-                                      >
-                                        <CheckCircle className="h-4 w-4 mr-2" />
-                                        Assign to NGO
-                                      </DropdownMenuItem>
-                                    </>
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setSelectedDonation(donation);
+                                        console.log('Selected donation for assignment:', donation);
+                                        console.log('RejectedBy array:', donation.rejectedBy);
+                                        setShowAssignModal(true);
+                                      }}
+                                      className="text-green-600 focus:text-green-600"
+                                    >
+                                      <CheckCircle className="h-4 w-4 mr-2" />
+                                      Assign to NGO
+                                    </DropdownMenuItem>
                                   )}
                                   {donation.status === 'accepted' && (
-                                    <DropdownMenuItem
-                                      onClick={() => handleUnassignNGO(donation.id)}
-                                      className="text-red-600 focus:text-red-600"
-                                    >
-                                      <XCircle className="h-4 w-4 mr-2" />
-                                      Unassign NGO
-                                    </DropdownMenuItem>
+                                    <>
+                                      {!donation.assignedNGO ? (
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            setSelectedDonation(donation);
+                                            setShowAssignModal(true);
+                                          }}
+                                          className="text-green-600 focus:text-green-600"
+                                        >
+                                          <CheckCircle className="h-4 w-4 mr-2" />
+                                          Assign to NGO
+                                        </DropdownMenuItem>
+                                      ) : (
+                                        <DropdownMenuItem
+                                          onClick={() => handleUnassignNGO(donation.id)}
+                                          className="text-red-600 focus:text-red-600"
+                                        >
+                                          <XCircle className="h-4 w-4 mr-2" />
+                                          Unassign NGO
+                                        </DropdownMenuItem>
+                                      )}
+                                    </>
                                   )}
                                   <DropdownMenuItem
                                     onClick={() => {
@@ -439,6 +529,13 @@ const AdminDonationAssignment = () => {
                                   >
                                     <Package className="h-4 w-4 mr-2" />
                                     View Details
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleRemoveDonation(donation.id)}
+                                    className="text-red-600 focus:text-red-600"
+                                  >
+                                    <XCircle className="h-4 w-4 mr-2" />
+                                    Remove Donation
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -559,7 +656,14 @@ const AdminDonationAssignment = () => {
               <div>
                 <h4 className="font-semibold mb-2">Select NGO</h4>
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {approvedNGOs.map((ngo) => (
+                  {approvedNGOs
+                    .filter(ngo => {
+                      // Debug logging
+                      console.log('NGO UID:', ngo.uid, 'RejectedBy:', selectedDonation?.rejectedBy);
+                      console.log('Is NGO rejected?', selectedDonation?.rejectedBy?.includes(ngo.uid));
+                      return !selectedDonation?.rejectedBy?.includes(ngo.uid);
+                    })
+                    .map((ngo) => (
                     <Button
                       key={ngo.id}
                       variant="outline"
@@ -576,6 +680,11 @@ const AdminDonationAssignment = () => {
                       </div>
                     </Button>
                   ))}
+                  {selectedDonation?.rejectedBy && selectedDonation.rejectedBy.length > 0 && (
+                    <div className="text-sm text-gray-500 text-center py-2">
+                      {approvedNGOs.filter(ngo => selectedDonation?.rejectedBy?.includes(ngo.uid)).length} NGO(s) have rejected this donation
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -644,6 +753,41 @@ const AdminDonationAssignment = () => {
                     </Badge>
                   </div>
                 </div>
+              </div>
+
+              {/* Images Section */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Donation Images
+                </h3>
+                {selectedDonation.images && selectedDonation.images.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {selectedDonation.images.map((image, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={image.url}
+                          alt={`Donation image ${index + 1}`}
+                          className="w-full h-32 object-cover rounded-lg border cursor-pointer transition-transform hover:scale-105"
+                          onClick={() => window.open(image.url, '_blank')}
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <div className="bg-white/90 rounded px-2 py-1 text-xs">
+                            Click to view
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1 truncate">
+                          {image.name || `Image ${index + 1}`}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>No images uploaded for this donation</p>
+                  </div>
+                )}
               </div>
 
               {/* Pickup Information */}

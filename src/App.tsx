@@ -29,6 +29,7 @@ import OrderTracking from "./pages/OrderTracking";
 import Orders from "./pages/Orders";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminProductApproval from "./pages/AdminProductApproval";
+import AdminNGOApproval from "./pages/AdminNGOApproval";
 import DeliveryDashboard from "./pages/DeliveryDashboard";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import NotFound from "./pages/NotFound";
@@ -116,6 +117,14 @@ const AppContent = () => {
           } 
         />
         <Route 
+          path="/admin/ngo-approval" 
+          element={
+            <AdminRoute>
+              <AdminNGOApproval />
+            </AdminRoute>
+          } 
+        />
+        <Route 
           path="/admin" 
           element={
             <AdminRoute>
@@ -141,6 +150,10 @@ const AppContent = () => {
         />
         <Route 
           path="/ngo/register" 
+          element={<NGORegister />} 
+        />
+        <Route 
+          path="/ngo-register" 
           element={<NGORegister />} 
         />
         <Route 

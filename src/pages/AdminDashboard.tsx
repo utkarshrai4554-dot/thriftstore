@@ -284,9 +284,9 @@ const AdminDashboard = () => {
   const fetchPendingItemsFunction = async () => {
     try {
       setLoading(true);
-      console.log('🔍 AdminDashboard: Loading pending items...');
+      console.log('🔍 AdminDashboard: Loading pending products...');
       
-      // Fetch pending products
+      // Fetch pending products ONLY
       const productsRef = collection(db, 'sellProducts');
       const productsQuery = query(
         productsRef,
@@ -294,18 +294,9 @@ const AdminDashboard = () => {
       );
       const productsSnapshot = await getDocs(productsQuery);
       
-      // Fetch pending donations
-      const donationsRef = collection(db, 'donations');
-      const donationsQuery = query(
-        donationsRef,
-        where('status', '==', 'pending')
-      );
-      const donationsSnapshot = await getDocs(donationsQuery);
-      
-      // Combine and sort all pending items
+      // Process only products
       const allItems: PendingItem[] = [];
       
-      // Process products
       productsSnapshot.docs.forEach(doc => {
         const data = doc.data();
         allItems.push({
@@ -321,37 +312,12 @@ const AdminDashboard = () => {
         });
       });
       
-      // Process donations
-      donationsSnapshot.docs.forEach(doc => {
-        const data = doc.data();
-        allItems.push({
-          id: doc.id,
-          title: data.items || 'Donation Items',
-          type: 'donation',
-          donorInfo: {
-            displayName: data.donorName || 'Anonymous Donor',
-            email: data.donorEmail || 'N/A',
-            phone: data.donorPhone || 'N/A'
-          },
-          status: data.status || 'pending',
-          items: data.items,
-          cause: data.cause,
-          category: data.category,
-          urgency: data.urgency,
-          quantity: data.quantity,
-          pickupAddress: data.pickupAddress,
-          images: data.images,
-          description: data.description,
-          createdAt: data.createdAt?.toDate() || new Date()
-        });
-      });
-      
       // Sort by creation date (newest first)
       const sortedItems = allItems.sort((a, b) => 
         b.createdAt.getTime() - a.createdAt.getTime()
       );
       
-      console.log(`📊 AdminDashboard: Found ${sortedItems.length} pending items (${productsSnapshot.docs.length} products, ${donationsSnapshot.docs.length} donations)`);
+      console.log(`📊 AdminDashboard: Found ${sortedItems.length} pending products`);
       
       setPendingItems(sortedItems);
     } catch (error) {
@@ -400,6 +366,7 @@ const AdminDashboard = () => {
           <TabsList>
             <TabsTrigger value="products">Pending Products</TabsTrigger>
             <TabsTrigger value="ngo-approval">NGO Approval</TabsTrigger>
+            <TabsTrigger value="assign-donation">Assign Donation</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="delivery">Delivery Agents</TabsTrigger>
           </TabsList>
@@ -488,45 +455,58 @@ const AdminDashboard = () => {
           <TabsContent value="ngo-approval" className="mt-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">NGO Management</CardTitle>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  NGO Management
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                        <Users className="h-6 w-6 text-blue-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-lg">NGO Approvals</h3>
-                        <p className="text-sm text-muted-foreground">Review and approve NGO registrations</p>
-                      </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                      <Users className="h-6 w-6 text-blue-600" />
                     </div>
-                    <Link to="/admin/ngo-approval">
-                      <Button className="w-full">
-                        <Eye className="h-4 w-4 mr-2" />
-                        Manage NGO Registrations
-                      </Button>
-                    </Link>
-                  </div>
-                  
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                        <Gift className="h-6 w-6 text-green-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-lg">Donation Assignment</h3>
-                        <p className="text-sm text-muted-foreground">Assign donations to approved NGOs</p>
-                      </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">NGO Registrations</h3>
+                      <p className="text-sm text-muted-foreground">Review and approve NGO registration requests</p>
                     </div>
-                    <Link to="/admin/donation-assignment">
-                      <Button className="w-full" variant="outline">
-                        <Truck className="h-4 w-4 mr-2" />
-                        Assign Donations
-                      </Button>
-                    </Link>
                   </div>
+                  <Link to="/admin/ngo-approval">
+                    <Button className="w-full">
+                      <Eye className="h-4 w-4 mr-2" />
+                      Manage NGO Registrations
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="assign-donation" className="mt-4">
+            <Card className="bg-card border-border">
+              <CardHeader className="bg-muted border-border">
+                <CardTitle className="text-lg flex items-center gap-2" style={{ color: 'hsl(var(--dark-brown))' }}>
+                  <Gift className="h-5 w-5 text-warm" />
+                  Donation Assignment Center
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="bg-card">
+                <div className="bg-muted border border-border rounded-lg p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-warm/20 flex items-center justify-center">
+                      <Gift className="h-6 w-6 text-warm-foreground" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg" style={{ color: 'hsl(var(--dark-brown))' }}>Assign Donations</h3>
+                      <p className="text-sm text-muted-foreground">View and assign donations to approved NGOs</p>
+                    </div>
+                  </div>
+                  <Link to="/admin/donation-assignment">
+                    <Button className="w-full bg-warm hover:bg-warm/90 text-warm-foreground">
+                      <Truck className="h-4 w-4 mr-2" />
+                      Go to Donation Assignment
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>

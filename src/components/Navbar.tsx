@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, ShoppingBag, Heart, User, Package, BarChart3, ShoppingCart, Moon, Sun } from "lucide-react";
+import { Menu, X, ShoppingBag, Heart, User, Package, BarChart3, ShoppingCart, Moon, Sun, LogOut, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { toast } from "sonner";
 
 const navLinks = [
   { to: "/products", label: "Shop" },
@@ -19,13 +21,18 @@ const navLinks = [
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, logout } = useAuth();
   const { getCartCount } = useCart();
   const { getWishlistCount } = useWishlist();
   const location = useLocation();
 
   const cartCount = getCartCount();
   const wishlistCount = getWishlistCount();
+
+  const handleLogout = () => {
+    logout();
+    toast.success('Logged out successfully');
+  };
 
   // Filter navLinks based on user role
   const filteredNavLinks = navLinks.filter(link => {
@@ -156,12 +163,27 @@ const Navbar = () => {
           </Button>
 
           {user ? (
-            <Link to="/profile">
-              <Button variant="outline" className={`${theme === 'dark' ? 'border-warm text-warm-foreground hover:bg-warm/10' : 'border-primary text-primary hover:bg-primary/10'}`} size="sm">
-                <User className="h-4 w-4 mr-2" />
-                {userProfile?.displayName || user?.email?.split('@')[0]}
-              </Button>
-            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className={`${theme === 'dark' ? 'border-warm text-warm-foreground hover:bg-warm/10' : 'border-primary text-primary hover:bg-primary/10'}`} size="sm">
+                  <User className="h-4 w-4 mr-2" />
+                  {userProfile?.displayName || user?.email?.split('@')[0]}
+                  <ChevronDown className="h-4 w-4 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem asChild>
+                  <Link to="/profile" className="flex items-center">
+                    <User className="h-4 w-4 mr-2" />
+                    Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout} className="flex items-center text-red-600 focus:text-red-600">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <Link to="/auth">
               <Button variant="outline" className={`${theme === 'dark' ? 'border-warm text-warm-foreground hover:bg-warm/10' : 'border-primary text-primary hover:bg-primary/10'}`} size="sm">
@@ -222,12 +244,26 @@ const Navbar = () => {
           )}
           <div className="flex gap-2 pt-2">
             {user ? (
-              <Link to="/profile" onClick={() => setOpen(false)}>
-                <Button variant="outline" className="border-warm text-warm-foreground hover:bg-warm/10" size="sm">
-                  <User className="h-4 w-4 mr-2" />
-                  {userProfile?.displayName || user?.email?.split('@')[0]}
+              <>
+                <Link to="/profile" onClick={() => setOpen(false)}>
+                  <Button variant="outline" className="border-warm text-warm-foreground hover:bg-warm/10" size="sm">
+                    <User className="h-4 w-4 mr-2" />
+                    {userProfile?.displayName || user?.email?.split('@')[0]}
+                  </Button>
+                </Link>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    handleLogout();
+                    setOpen(false);
+                  }} 
+                  className="border-red-500 text-red-500 hover:bg-red-50" 
+                  size="sm"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
                 </Button>
-              </Link>
+              </>
             ) : (
               <Link to="/auth" onClick={() => setOpen(false)}>
                 <Button variant="outline" className="border-warm text-warm-foreground hover:bg-warm/10" size="sm">
