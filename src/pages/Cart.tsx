@@ -6,10 +6,13 @@ import { useCart } from "@/contexts/CartContext";
 import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, Tag, Gift, Percent, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { updateProductSoldQuantity } from "@/services/productService";
-import { createOrder } from "@/services/orderService";
+import { createOrder, updatePaymentStatus, cancelOrder } from "@/services/orderService";
 import { validateCoupon, useCoupon, getUserPoints, addUserPoints, redeemPoints } from "@/services/couponService";
+import { saveUpdatedRewardPoints, getUserProfile, deductBonusPoints, addBackBonusPoints, ensureUserHasRewardPoints } from "@/services/userService";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const Cart = () => {
   const { items, removeFromCart, updateQuantity, getCartTotal, clearCart, loading } = useCart();
@@ -36,14 +39,44 @@ const Cart = () => {
     toast.success('Cart cleared');
   };
 
-  // Load user points
+  // Load user points from user profile (bonus points) instead of coupon service
   useEffect(() => {
     if (user) {
-      getUserPoints(user.uid).then(points => {
-        setUserPoints(points);
+      // Get bonus points from user profile
+      getUserProfile(user.uid).then(profile => {
+        if (profile) {
+          setUserPoints({ points: profile.rewardPoints || 0 });
+          console.log(`🔍 Loaded bonus points from profile: ${profile.rewardPoints || 0}`);
+        } else {
+          setUserPoints({ points: 0 });
+          console.log('🔍 No user profile found, setting points to 0');
+        }
+      }).catch(error => {
+        console.error('❌ Error loading user profile:', error);
+        setUserPoints({ points: 0 });
       });
     }
   }, [user]);
+
+  // Calculate tiered bonus points based on order amount
+  const getTieredBonus = (orderAmount: number) => {
+    if (orderAmount > 3499) return { tier: 3, bonus: 40, text: '₹3499+', description: 'Earn 40 bonus points!' };
+    if (orderAmount > 2499) return { tier: 2, bonus: 35, text: '₹2499+', description: 'Earn 35 bonus points!' };
+    if (orderAmount > 1499) return { tier: 1, bonus: 25, text: '₹1499+', description: 'Earn 25 bonus points!' };
+    return { tier: 0, bonus: 0, text: 'Below ₹1499', description: 'No bonus points' };
+  };
+
+  const currentTier = getTieredBonus(getCartTotal());
+  const refreshPoints = async () => {
+    if (user) {
+      console.log('🔄 Manually refreshing points...');
+      const profile = await getUserProfile(user.uid);
+      if (profile) {
+        setUserPoints({ points: profile.rewardPoints || 0 });
+        console.log(`🔄 Refreshed points to: ${profile.rewardPoints || 0}`);
+      }
+    }
+  };
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
@@ -94,38 +127,174 @@ const Cart = () => {
       return;
     }
     
+    let orderId: string | null = null;
+    let couponApplied = false;
+    let pointsRedeemed = false;
+    
     try {
       // Calculate totals properly
       const cartTotal = getCartTotal();
       let couponDiscount = 0;
       let pointsDiscount = 0;
       
-      // Apply coupon discount
+      // Validate and prepare coupon (but don't apply yet)
+      let coupon = null;
       if (couponCode) {
-        const coupon = await validateCoupon(couponCode);
-        if (coupon) {
-          if (coupon.type === 'percentage') {
-            couponDiscount = cartTotal * (coupon.value / 100);
-          } else {
-            couponDiscount = coupon.value;
-          }
-          
-          await useCoupon(coupon.id, user.uid);
-          toast.success(`Coupon applied: ${coupon.value}${coupon.type === 'percentage' ? '% off' : ' off'}`);
+        coupon = await validateCoupon(couponCode);
+        if (!coupon) {
+          toast.error('Invalid coupon code');
+          return;
+        }
+
+        if (coupon.minAmount && getCartTotal() < coupon.minAmount) {
+          toast.error(`Minimum order amount ₹${coupon.minAmount} required for this coupon`);
+          return;
+        }
+        
+        if (coupon.type === 'percentage') {
+          couponDiscount = cartTotal * (coupon.value / 100);
+        } else {
+          couponDiscount = coupon.value;
         }
       }
       
-      // Apply points discount
+      // Validate points (but don't redeem yet)
       if (usePoints && pointsToUse > 0) {
+        // Use user profile bonus points for validation, not coupon service points
+        const userProfile = await getUserProfile(user.uid);
+        const availableBonusPoints = userProfile?.rewardPoints || 0;
+        
+        if (availableBonusPoints < pointsToUse) {
+          toast.error(`Insufficient bonus points. Available: ${availableBonusPoints}, Required: ${pointsToUse}`);
+          return;
+        }
         pointsDiscount = pointsToUse;
-        await redeemPoints(user.uid, pointsToUse);
-        toast.success(`${pointsToUse} points redeemed`);
+        console.log(`🔍 Validated bonus points: Available ${availableBonusPoints}, Using ${pointsToUse}`);
       }
       
       const shipping = 0; // Free shipping
       const tax = Math.round((cartTotal - couponDiscount - pointsDiscount) * 0.18);
       const totalAfterDiscounts = cartTotal - couponDiscount - pointsDiscount + shipping + tax;
       const finalTotal = totalAfterDiscounts;
+      
+      // Create order with pending payment status first
+      const orderData: any = {
+        userId: user.uid,
+        orderNumber: 'ORD-' + Date.now(),
+        items: items.map(item => ({
+          productId: item.id,
+          productName: item.name,
+          productImage: item.image,
+          price: item.price,
+          quantity: item.quantity,
+          category: item.category
+        })),
+        totalAmount: cartTotal,
+        discountAmount: couponDiscount + pointsDiscount,
+        taxAmount: tax,
+        shippingAmount: shipping,
+        finalAmount: finalTotal,
+        status: 'confirmed' as const,
+        paymentMethod: 'Mock Payment Gateway',
+        paymentStatus: 'pending' as const,
+        paymentId: 'mock_payment_' + Date.now(),
+        shippingAddress: {
+          street: '123 Fashion Street',
+          city: 'Style City',
+          state: 'ST',
+          zipCode: '12345',
+          country: 'USA'
+        },
+        createdAt: new Date()
+      };
+      
+      // Only add couponCode if it exists
+      if (couponCode && coupon) {
+        orderData.couponCode = couponCode;
+      }
+      
+      // Only add pointsUsed if points are used
+      if (usePoints && pointsToUse > 0) {
+        orderData.pointsUsed = pointsToUse;
+      }
+      
+      orderId = await createOrder(orderData);
+      console.log(`✅ Order created with ID: ${orderId}`);
+      
+      // Simulate payment processing
+      toast.success('Processing payment...');
+      
+      // Simulate payment delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Simulate payment success (95% success rate for demo)
+      const paymentSuccessful = Math.random() > 0.05;
+      
+      if (!paymentSuccessful) {
+        throw new Error('Payment failed: Insufficient funds');
+      }
+      
+      // PAYMENT SUCCESSFUL - Now deduct points and apply coupons
+      
+      // Apply coupon discount
+      if (coupon && couponCode) {
+        await useCoupon(coupon.id, user.uid);
+        couponApplied = true;
+        const discountText = coupon.type === 'percentage' 
+          ? `${coupon.value}% off` 
+          : `₹${coupon.value} off`;
+        toast.success(`Coupon applied: ${discountText}`);
+      }
+      
+      // Redeem points
+      if (usePoints && pointsToUse > 0) {
+        console.log(`🔍 Starting points redemption process for ${pointsToUse} points`);
+        
+        // First ensure user has reward points initialized
+        console.log('🔍 Ensuring user has reward points initialized...');
+        await ensureUserHasRewardPoints(user.uid);
+        
+        // Check user profile before deduction
+        const profileBefore = await getUserProfile(user.uid);
+        console.log('🔍 User profile before deduction:', {
+          uid: profileBefore?.uid,
+          rewardPoints: profileBefore?.rewardPoints || 0,
+          birthdayPoints: profileBefore?.birthdayRewardPoints || 0
+        });
+        
+        // First deduct from couponService points system
+        console.log('🔍 Deducting from coupon service...');
+        await redeemPoints(user.uid, pointsToUse);
+        pointsRedeemed = true;
+        console.log('✅ Coupon service points deducted successfully');
+        
+        // Also deduct from userService bonus points system for consistency
+        console.log('🔍 Deducting from user service bonus points...');
+        const deductionResult = await deductBonusPoints(user.uid, pointsToUse);
+        if (deductionResult.success) {
+          toast.success(`${pointsToUse} points redeemed successfully`);
+          console.log(`✅ Bonus points deducted. New balance: ${deductionResult.newBalance}`);
+          
+          // Update the cart state to reflect new points balance
+          setUserPoints({ points: deductionResult.newBalance || 0 });
+          console.log(`🔍 Updated cart display to: ${deductionResult.newBalance || 0} points`);
+          
+          // Check user profile after deduction
+          const profileAfter = await getUserProfile(user.uid);
+          console.log('🔍 User profile after deduction:', {
+            uid: profileAfter?.uid,
+            rewardPoints: profileAfter?.rewardPoints || 0,
+            birthdayPoints: profileAfter?.birthdayRewardPoints || 0
+          });
+        } else {
+          console.error('❌ Failed to deduct bonus points:', deductionResult.message);
+          toast.error(`Failed to deduct bonus points: ${deductionResult.message}`);
+          // Continue with order even if bonus points deduction fails, as couponService points were deducted
+        }
+      }
+      
+      // Update order status to paid
+      await updatePaymentStatus(orderId, 'paid');
       
       // Update product quantities and move to sold products
       for (const item of items) {
@@ -151,56 +320,44 @@ const Cart = () => {
         }
       }
       
-      // Create order in database
-      const orderData: any = {
-        userId: user.uid,
-        orderNumber: 'ORD-' + Date.now(),
-        items: items.map(item => ({
-          productId: item.id,
-          productName: item.name,
-          productImage: item.image,
-          price: item.price,
-          quantity: item.quantity,
-          category: item.category
-        })),
-        totalAmount: cartTotal,
-        discountAmount: couponDiscount + pointsDiscount,
-        taxAmount: tax,
-        shippingAmount: shipping,
-        finalAmount: finalTotal,
-        status: 'confirmed' as const,
-        paymentMethod: 'Mock Payment Gateway',
-        paymentStatus: 'paid' as const,
-        paymentId: 'mock_payment_' + Date.now(),
-        shippingAddress: {
-          street: '123 Fashion Street',
-          city: 'Style City',
-          state: 'ST',
-          zipCode: '12345',
-          country: 'USA'
-        },
-        createdAt: new Date()
-      };
+      // Add tiered bonus points based on order amount
+      let tieredBonusPoints = 0;
       
-      // Only add couponCode if it exists
-      if (couponCode) {
-        orderData.couponCode = couponCode;
+      // Calculate tiered bonus points based on order amount
+      if (finalTotal > 3499) {
+        tieredBonusPoints = 40;
+        console.log(`🎁 Tier 3 Bonus: Adding ${tieredBonusPoints} points for order above ₹3499`);
+      } else if (finalTotal > 2499) {
+        tieredBonusPoints = 35;
+        console.log(`🎁 Tier 2 Bonus: Adding ${tieredBonusPoints} points for order above ₹2499`);
+      } else if (finalTotal > 1499) {
+        tieredBonusPoints = 25;
+        console.log(`🎁 Tier 1 Bonus: Adding ${tieredBonusPoints} points for order above ₹1499`);
+      } else {
+        console.log(`🎁 No tiered bonus: Order amount ₹${finalTotal} is below ₹1499 threshold`);
       }
       
-      // Only add pointsUsed if points are used
-      if (usePoints && pointsToUse > 0) {
-        orderData.pointsUsed = pointsToUse;
+      const totalPointsEarned = tieredBonusPoints;
+      
+      await addUserPoints(user.uid, totalPointsEarned, `Purchase reward: Tiered Bonus(${tieredBonusPoints})`);
+      
+      console.log(`🎉 Points earned breakdown:`);
+      console.log(`   - Tiered bonus: ${tieredBonusPoints}`);
+      console.log(`   - Total points earned: ${totalPointsEarned}`);
+      
+      toast.success(`Earned ${totalPointsEarned} points! (${tieredBonusPoints > 0 ? `${tieredBonusPoints} bonus` : 'No bonus'})`);
+      
+      // Update cart state to reflect newly earned points
+      const updatedProfile = await getUserProfile(user.uid);
+      if (updatedProfile) {
+        const newTotalPoints = (updatedProfile?.rewardPoints || 0) + totalPointsEarned;
+        setUserPoints({ points: newTotalPoints });
+        console.log(`🔍 Updated cart display to: ${newTotalPoints} points (includes new earned points)`);
       }
       
-      const orderId = await createOrder(orderData);
-      console.log(`✅ Order created with ID: ${orderId}`);
-      
-      // Add points for purchase (5% of order value as points)
-      const pointsEarned = Math.floor(finalTotal * 0.05);
-      await addUserPoints(user.uid, pointsEarned, 'Purchase reward');
+      toast.success('Payment successful! Order confirmed.');
       
       // Clear cart and redirect after delay
-      toast.success('Processing payment...');
       setTimeout(() => {
         clearCart();
         setCouponCode('');
@@ -211,7 +368,57 @@ const Cart = () => {
       
     } catch (error) {
       console.error('❌ Error processing payment:', error);
-      toast.error('Failed to process payment. Please try again.');
+      
+      // ROLLBACK: If order was created but payment failed, cancel it
+      if (orderId) {
+        try {
+          await cancelOrder(orderId, `Payment failed: ${error.message}`);
+          console.log(`✅ Order ${orderId} cancelled due to payment failure`);
+        } catch (rollbackError) {
+          console.error('❌ Failed to cancel order after payment failure:', rollbackError);
+        }
+      }
+      
+      // ROLLBACK: Restore points if they were redeemed
+      if (pointsRedeemed && usePoints && pointsToUse > 0) {
+        try {
+          // Restore couponService points
+          await addUserPoints(user.uid, pointsToUse, 'Rollback - Payment failed');
+          console.log(`✅ Coupon service points rolled back: ${pointsToUse} points restored`);
+          
+          // Also restore bonus points in userService
+          const restoreResult = await addBackBonusPoints(user.uid, pointsToUse, 'Payment failed rollback');
+          if (restoreResult.success) {
+            console.log(`✅ Bonus points rolled back: ${pointsToUse} points restored. New balance: ${restoreResult.newBalance}`);
+            
+            // Update the cart state to reflect restored points balance
+            setUserPoints({ points: restoreResult.newBalance || 0 });
+            console.log(`🔍 Updated cart display to: ${restoreResult.newBalance || 0} points`);
+          } else {
+            console.error('❌ Failed to rollback bonus points:', restoreResult.message);
+          }
+        } catch (rollbackError) {
+          console.error('❌ Failed to rollback points:', rollbackError);
+        }
+      }
+      
+      // ROLLBACK: Restore coupon usage if it was applied
+      if (couponApplied && couponCode) {
+        try {
+          const coupon = await validateCoupon(couponCode);
+          if (coupon) {
+            const couponRef = doc(db, 'coupons', coupon.id);
+            await updateDoc(couponRef, {
+              usedCount: Math.max(0, (coupon.usedCount || 1) - 1)
+            });
+            console.log(`✅ Coupon usage rolled back: ${couponCode}`);
+          }
+        } catch (rollbackError) {
+          console.error('❌ Failed to rollback coupon:', rollbackError);
+        }
+      }
+      
+      toast.error(`Payment failed: ${error.message}`);
     }
   };
 
@@ -331,76 +538,55 @@ const Cart = () => {
               </Card>
             ))}
           </div>
-
+          
           <div className="lg:col-span-1">
-            <Card className="sticky top-8">
+            <Card>
               <CardContent className="p-6">
                 <h2 className="font-display text-xl font-bold mb-4">Order Summary</h2>
                 
-                {/* Coupon Section */}
-                <div className="space-y-3 mb-6 p-4 bg-card rounded-lg border shadow-sm">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Tag className="h-5 w-5 text-primary" />
-                    <h3 className="font-semibold text-foreground">Coupon Code</h3>
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
+                <div className="space-y-4 mb-6">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Coupon Code</label>
+                    </div>
+                    <div className="flex gap-2">
                       <Input
                         placeholder="Enter coupon code"
                         value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                        className="pr-10 border-input focus:ring-primary"
+                        onChange={(e) => setCouponCode(e.target.value)}
+                        className="flex-1"
                       />
-                      {couponCode && (
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                          <Percent className="h-4 w-4 text-green-500" />
-                        </div>
-                      )}
+                      <Button onClick={handleApplyCoupon} variant="outline">
+                        Apply
+                      </Button>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      onClick={handleApplyCoupon}
-                      disabled={!couponCode.trim()}
-                      size="sm"
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                    >
-                      Apply
-                    </Button>
                   </div>
-                  {couponCode && (
-                    <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
-                      <div className="flex items-center gap-2 text-green-700">
-                        <CheckCircle className="h-4 w-4" />
-                        <span className="text-sm font-medium">Coupon applied!</span>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Reward Points</label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Available: {userPoints?.points || 0}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={refreshPoints}
+                          className="h-6 w-6 p-0"
+                        >
+                          ↻
+                        </Button>
                       </div>
                     </div>
-                  )}
-                </div>
-
-                {/* Points Section */}
-                <div className="space-y-3 mb-6 p-4 bg-card rounded-lg border shadow-sm">
-                  <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <Gift className="h-5 w-5 text-primary" />
-                      <h3 className="font-semibold text-foreground">Loyalty Points</h3>
-                    </div>
-                    {userPoints && (
-                      <div className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs font-medium">
-                        🎁 {userPoints.points} pts
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <label className="flex items-center gap-2 cursor-pointer text-sm" htmlFor="usePoints">
                       <input
                         type="checkbox"
                         id="usePoints"
                         checked={usePoints}
                         onChange={(e) => setUsePoints(e.target.checked)}
-                        className="h-4 w-4 text-primary border-input focus:ring-primary"
+                        className="h-4 w-4"
                       />
-                      <span className="text-foreground">Use points for discount</span>
-                    </label>
+                      <label htmlFor="usePoints" className="text-sm">Use points for discount</label>
+                    </div>
                     <Input
                       type="number"
                       placeholder="Points"

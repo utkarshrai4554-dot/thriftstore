@@ -34,7 +34,7 @@ export const registerUser = async (email: string, password: string, displayName:
       phone,
       address,
       birthdate,
-      rewardPoints: 50,
+      rewardPoints: 0,
       role: 'customer',
       createdAt: new Date(),
       updatedAt: new Date()
@@ -48,7 +48,7 @@ export const registerUser = async (email: string, password: string, displayName:
       phone,
       address,
       birthdate,
-      rewardPoints: 50,
+      rewardPoints: 0,
       role: 'customer',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()

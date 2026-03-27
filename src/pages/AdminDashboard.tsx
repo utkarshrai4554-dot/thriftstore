@@ -367,6 +367,7 @@ const AdminDashboard = () => {
             <TabsTrigger value="products">Pending Products</TabsTrigger>
             <TabsTrigger value="ngo-approval">NGO Approval</TabsTrigger>
             <TabsTrigger value="assign-donation">Assign Donation</TabsTrigger>
+            <TabsTrigger value="assign-delivery">Assign Delivery</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="delivery">Delivery Agents</TabsTrigger>
           </TabsList>
@@ -505,6 +506,36 @@ const AdminDashboard = () => {
                     <Button className="w-full bg-warm hover:bg-warm/90 text-warm-foreground">
                       <Truck className="h-4 w-4 mr-2" />
                       Go to Donation Assignment
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="assign-delivery" className="mt-4">
+            <Card className="bg-card border-border">
+              <CardHeader className="bg-muted border-border">
+                <CardTitle className="text-lg flex items-center gap-2" style={{ color: 'hsl(var(--dark-brown))' }}>
+                  <Truck className="h-5 w-5 text-warm" />
+                  Delivery Assignment Center
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="bg-card">
+                <div className="bg-muted border border-border rounded-lg p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-warm/20 flex items-center justify-center">
+                      <Truck className="h-6 w-6 text-warm-foreground" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg" style={{ color: 'hsl(var(--dark-brown))' }}>Assign Delivery Partners</h3>
+                      <p className="text-sm text-muted-foreground">View and assign delivery partners to paid orders</p>
+                    </div>
+                  </div>
+                  <Link to="/admin/orders">
+                    <Button className="w-full bg-warm hover:bg-warm/90 text-warm-foreground">
+                      <Truck className="h-4 w-4 mr-2" />
+                      Go to Delivery Assignment
                     </Button>
                   </Link>
                 </div>

@@ -500,7 +500,7 @@ export const migrateExistingUserPoints = async (uid: string): Promise<void> => {
     if (userDoc.exists()) {
       const userData = userDoc.data();
       if (userData.rewardPoints === undefined) {
-        updates.rewardPoints = 50;
+        updates.rewardPoints = 0;
       }
       if (userData.role === undefined) {
         updates.role = 'customer';
@@ -517,7 +517,7 @@ export const migrateExistingUserPoints = async (uid: string): Promise<void> => {
     if (profileDoc.exists()) {
       const profileData = profileDoc.data();
       if (profileData.rewardPoints === undefined) {
-        profileUpdates.rewardPoints = 50;
+        profileUpdates.rewardPoints = 0;
       }
       if (profileData.role === undefined) {
         profileUpdates.role = 'customer';
@@ -575,6 +575,110 @@ export const ensureUserHasRewardPoints = async (uid: string): Promise<void> => {
   } catch (error) {
     // If user doesn't exist in users collection, create them with default points
     await migrateExistingUserPoints(uid);
+  }
+};
+
+export const addBackBonusPoints = async (uid: string, pointsToAdd: number, reason: string): Promise<{ success: boolean; message: string; newBalance?: number }> => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    const userDoc = await getDoc(userRef);
+    
+    if (!userDoc.exists()) {
+      return { success: false, message: 'User profile not found' };
+    }
+
+    const userData = userDoc.data() as UserProfile;
+    const currentPoints = userData.rewardPoints || 0;
+    const newBalance = currentPoints + pointsToAdd;
+    
+    // Update both collections for consistency
+    const profileRef = doc(db, 'userProfiles', uid);
+    await Promise.all([
+      updateDoc(userRef, {
+        rewardPoints: newBalance,
+        updatedAt: new Date()
+      }),
+      updateDoc(profileRef, {
+        rewardPoints: newBalance,
+        updatedAt: serverTimestamp()
+      })
+    ]);
+    
+    console.log(`✅ Added back ${pointsToAdd} bonus points to user ${uid}. New balance: ${newBalance}`);
+    
+    return { 
+      success: true, 
+      message: `${pointsToAdd} bonus points added back: ${reason}`,
+      newBalance
+    };
+  } catch (error: any) {
+    console.error('❌ Error adding back bonus points:', error);
+    throw new Error(`Failed to add back bonus points: ${error.message}`);
+  }
+};
+
+export const deductBonusPoints = async (uid: string, pointsToDeduct: number): Promise<{ success: boolean; message: string; newBalance?: number }> => {
+  try {
+    console.log(`🔍 Attempting to deduct ${pointsToDeduct} points from user ${uid}`);
+    
+    const userRef = doc(db, 'users', uid);
+    const userDoc = await getDoc(userRef);
+    
+    if (!userDoc.exists()) {
+      console.log(`❌ User profile not found in 'users' collection for uid: ${uid}`);
+      return { success: false, message: 'User profile not found' };
+    }
+
+    const userData = userDoc.data() as UserProfile;
+    const currentPoints = userData.rewardPoints || 0;
+    
+    console.log(`🔍 Current user points: ${currentPoints}`);
+    console.log(`🔍 User data:`, userData);
+    
+    if (currentPoints < pointsToDeduct) {
+      console.log(`❌ Insufficient points. Current: ${currentPoints}, Required: ${pointsToDeduct}`);
+      return { success: false, message: 'Insufficient bonus points' };
+    }
+    
+    const newBalance = currentPoints - pointsToDeduct;
+    
+    console.log(`🔍 New balance will be: ${newBalance}`);
+    
+    // Update both collections for consistency
+    const profileRef = doc(db, 'userProfiles', uid);
+    const profileDoc = await getDoc(profileRef);
+    
+    if (!profileDoc.exists()) {
+      console.log(`❌ User profile not found in 'userProfiles' collection for uid: ${uid}`);
+      // Still update the main users collection
+      await updateDoc(userRef, {
+        rewardPoints: newBalance,
+        updatedAt: new Date()
+      });
+      console.log(`✅ Updated only 'users' collection. New balance: ${newBalance}`);
+    } else {
+      // Update both collections
+      await Promise.all([
+        updateDoc(userRef, {
+          rewardPoints: newBalance,
+          updatedAt: new Date()
+        }),
+        updateDoc(profileRef, {
+          rewardPoints: newBalance,
+          updatedAt: serverTimestamp()
+        })
+      ]);
+      console.log(`✅ Updated both 'users' and 'userProfiles' collections. New balance: ${newBalance}`);
+    }
+    
+    return { 
+      success: true, 
+      message: `${pointsToDeduct} bonus points deducted successfully`,
+      newBalance
+    };
+  } catch (error: any) {
+    console.error('❌ Error deducting bonus points:', error);
+    throw new Error(`Failed to deduct bonus points: ${error.message}`);
   }
 };
 

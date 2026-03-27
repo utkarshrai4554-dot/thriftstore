@@ -48,7 +48,7 @@ const Profile = () => {
     phone: '',
     address: '',
     birthdate: '',
-    rewardPoints: 50,
+    rewardPoints: 0,
     birthdayRewardPoints: 0,
     birthdayRewardExpiry: null as Date | null,
     hasValidBirthdayReward: false,
@@ -75,7 +75,7 @@ const Profile = () => {
           phone: userProfile?.phone || profileDoc?.data()?.phone || '',
           address: userProfile?.address || profileDoc?.data()?.address || '',
           birthdate: userProfile?.birthdate || profileDoc?.data()?.birthdate || '',
-          rewardPoints: userProfile?.rewardPoints || 50, // Total points (base + birthday bonus)
+          rewardPoints: userProfile?.rewardPoints || 0, // Total points (base + birthday bonus)
           birthdayRewardPoints: userProfile?.birthdayRewardPoints || 0,
           birthdayRewardExpiry: userProfile?.birthdayRewardExpiry?.toDate() || null,
           hasValidBirthdayReward: userProfile ? hasValidBirthdayReward(userProfile) : false,
@@ -104,7 +104,7 @@ const Profile = () => {
           phone: userProfile?.phone || '',
           address: userProfile?.address || '',
           birthdate: '',
-          rewardPoints: userProfile?.rewardPoints || 50, // Total points (base + birthday bonus)
+          rewardPoints: userProfile?.rewardPoints || 0, // Total points (base + birthday bonus)
           birthdayRewardPoints: userProfile?.birthdayRewardPoints || 0,
           birthdayRewardExpiry: userProfile?.birthdayRewardExpiry?.toDate() || null,
           hasValidBirthdayReward: userProfile ? hasValidBirthdayReward(userProfile) : false,

@@ -39,6 +39,9 @@ export interface Order {
   estimatedDelivery?: Date | Timestamp;
   trackingNumber?: string;
   notes?: string;
+  deliveryPartner?: string;
+  deliveryPartnerName?: string;
+  assignedAt?: Date | Timestamp;
 }
 
 export interface OrderItem {
@@ -180,6 +183,7 @@ export const cancelOrder = async (orderId: string, reason?: string): Promise<voi
     const orderRef = doc(db, 'orders', orderId);
     const updateData: Partial<Order> = {
       status: 'cancelled',
+      paymentStatus: 'failed',
       updatedAt: new Date()
     };
     

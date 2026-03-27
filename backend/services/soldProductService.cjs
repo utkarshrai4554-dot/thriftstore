@@ -2,7 +2,7 @@ const { db } = require('../config/firebase.cjs');
 
 class SoldProductService {
   // Move product from acceptedProducts to productsSold after purchase
-  async moveProductToSold(productId, quantitySold = 1) {
+  async moveProductToSold(productId, quantitySold = 1, buyerId = null) {
     try {
       console.log(`🔄 Moving product ${productId} to sold products...`);
       
@@ -23,7 +23,7 @@ class SoldProductService {
         quantitySold: quantitySold,
         soldAt: new Date(),
         soldPrice: productData.sellingPrice,
-        buyerId: null, // Will be set during checkout
+        buyerId: buyerId, // Use the buyerId from request
         status: 'sold',
         movedToSoldAt: new Date()
       };

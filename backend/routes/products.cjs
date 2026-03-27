@@ -140,8 +140,8 @@ router.post('/:id/mark-sold', async (req, res) => {
       });
     }
 
-    // Move product to sold collection
-    const result = await soldProductService.moveProductToSold(id, quantity);
+    // Move product to sold collection with buyerId
+    const result = await soldProductService.moveProductToSold(id, quantity, buyerId);
     
     res.json({
       message: 'Product marked as sold successfully',

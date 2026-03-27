@@ -395,6 +395,12 @@ const Orders = () => {
                             {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
                           </Badge>
                         </div>
+                        {order.deliveryPartnerName && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Delivery Partner:</span>
+                            <span className="font-medium text-green-600">{order.deliveryPartnerName}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -449,6 +455,12 @@ const Orders = () => {
                     <div>
                       <span className="text-gray-700 font-medium">Tracking Number:</span>
                       <span className="ml-2 font-medium text-gray-900">{selectedOrder.trackingNumber}</span>
+                    </div>
+                  )}
+                  {selectedOrder.deliveryPartnerName && (
+                    <div>
+                      <span className="text-gray-700 font-medium">Delivery Partner:</span>
+                      <span className="ml-2 font-medium text-gray-900">{selectedOrder.deliveryPartnerName}</span>
                     </div>
                   )}
                   <div>
