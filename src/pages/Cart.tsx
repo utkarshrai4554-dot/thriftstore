@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { updateProductSoldQuantity } from "@/services/productService";
 import { createOrder, updatePaymentStatus, cancelOrder } from "@/services/orderService";
 import { validateCoupon, useCoupon, getUserPoints, addUserPoints, redeemPoints } from "@/services/couponService";
-import { saveUpdatedRewardPoints, getUserProfile, deductBonusPoints, addBackBonusPoints, ensureUserHasRewardPoints } from "@/services/userService";
+import { saveUpdatedRewardPoints, getUserProfile, deductBonusPoints, addBackBonusPoints } from "@/services/userService";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
 import { doc, updateDoc } from "firebase/firestore";
@@ -250,10 +250,6 @@ const Cart = () => {
       if (usePoints && pointsToUse > 0) {
         console.log(`🔍 Starting points redemption process for ${pointsToUse} points`);
         
-        // First ensure user has reward points initialized
-        console.log('🔍 Ensuring user has reward points initialized...');
-        await ensureUserHasRewardPoints(user.uid);
-        
         // Check user profile before deduction
         const profileBefore = await getUserProfile(user.uid);
         console.log('🔍 User profile before deduction:', {
@@ -350,9 +346,13 @@ const Cart = () => {
       // Update cart state to reflect newly earned points
       const updatedProfile = await getUserProfile(user.uid);
       if (updatedProfile) {
-        const newTotalPoints = (updatedProfile?.rewardPoints || 0) + totalPointsEarned;
+        const newTotalPoints = updatedProfile?.rewardPoints || 0;
         setUserPoints({ points: newTotalPoints });
         console.log(`🔍 Updated cart display to: ${newTotalPoints} points (includes new earned points)`);
+        
+        // Reset points usage fields after successful payment
+        setUsePoints(false);
+        setPointsToUse(0);
       }
       
       toast.success('Payment successful! Order confirmed.');
@@ -361,8 +361,6 @@ const Cart = () => {
       setTimeout(() => {
         clearCart();
         setCouponCode('');
-        setUsePoints(false);
-        setPointsToUse(0);
         window.location.href = `/payment-success?payment_id=${orderData.paymentId}`;
       }, 1500);
       

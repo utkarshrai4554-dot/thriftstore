@@ -30,7 +30,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { doc, setDoc, serverTimestamp, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
-import { checkAndAwardBirthdayReward, getTotalRewardPoints, hasValidBirthdayReward, getUserProfile, ensureUserHasRewardPoints, cleanupExpiredBirthdayRewards, saveUpdatedRewardPoints, getBirthdayCountdown, isBirthdayApproaching } from "@/services/userService";
+import { checkAndAwardBirthdayReward, getTotalRewardPoints, hasValidBirthdayReward, getUserProfile, ensureUserHasRewardPoints, cleanupExpiredBirthdayRewards, saveUpdatedRewardPoints, getBirthdayCountdown, isBirthdayApproaching, clearBirthdayBonus } from "@/services/userService";
 import { updateUserProfile } from "@/services/userService";
 import BirthdayCountdownAlert from "@/components/BirthdayCountdownAlert";
 
@@ -245,6 +245,23 @@ const Profile = () => {
 
     return () => clearInterval(interval);
   }, [formData.hasValidBirthdayReward, formData.birthdayRewardExpiry, user, formData.rewardPoints, formData.birthdayRewardPoints]);
+
+  const handleClearBirthdayBonus = async () => {
+    if (!user) return;
+    
+    try {
+      const result = await clearBirthdayBonus(user.uid);
+      if (result.success) {
+        toast.success(result.message);
+        // Refresh user profile to update display
+        window.location.reload();
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error: any) {
+      toast.error(`Failed to clear birthday bonus: ${error.message}`);
+    }
+  };
 
   const checkBirthdayReward = async () => {
     if (!user) return;

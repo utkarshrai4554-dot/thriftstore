@@ -39,9 +39,6 @@ export const setupDailyBirthdayCheck = () => {
   // Check every minute
   const interval = setInterval(checkBirthdays, 60000);
   
-  // Also run immediately when setup is called (in case we missed the scheduled time)
-  runBirthdayRewardChecks();
-  
   return () => clearInterval(interval);
 };
 

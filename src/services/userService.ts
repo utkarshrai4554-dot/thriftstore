@@ -397,6 +397,48 @@ export const getTotalRewardPoints = (userData: UserProfile): number => {
   return basePoints + birthdayPoints;
 };
 
+export const clearBirthdayBonus = async (uid: string): Promise<{ success: boolean; message: string; newBalance?: number }> => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    const userDoc = await getDoc(userRef);
+    
+    if (!userDoc.exists()) {
+      return { success: false, message: 'User profile not found' };
+    }
+    
+    const userData = userDoc.data() as UserProfile;
+    const currentBirthdayPoints = userData.birthdayRewardPoints || 0;
+    
+    // Remove birthday bonus and adjust total points
+    const newTotalPoints = Math.max(0, (userData.rewardPoints || 0) - currentBirthdayPoints);
+    
+    await updateDoc(userRef, {
+      rewardPoints: newTotalPoints,
+      birthdayRewardPoints: 0,
+      birthdayRewardExpiry: null,
+      lastBirthdayReward: userData.lastBirthdayReward, // Keep the award date for yearly tracking
+      updatedAt: new Date()
+    });
+    
+    // Also update userProfiles collection
+    const profileRef = doc(db, 'userProfiles', uid);
+    await updateDoc(profileRef, {
+      rewardPoints: newTotalPoints,
+      birthdayRewardPoints: 0,
+      birthdayRewardExpiry: null,
+      updatedAt: serverTimestamp()
+    });
+    
+    return { 
+      success: true, 
+      message: `Birthday bonus of ${currentBirthdayPoints} points removed. New balance: ${newTotalPoints}`,
+      newBalance: newTotalPoints
+    };
+  } catch (error: any) {
+    throw new Error(`Failed to clear birthday bonus: ${error.message}`);
+  }
+};
+
 export const hasValidBirthdayReward = (userData: UserProfile): boolean => {
   if (!userData.birthdayRewardPoints || !userData.birthdayRewardExpiry) {
     return false;
