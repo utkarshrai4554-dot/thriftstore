@@ -659,8 +659,8 @@ const AdminProductApproval = () => {
                       </div>
 
                       {/* Action Buttons */}
-                      {product.status === 'pending' && (
-                        <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
+                        {product.status === 'pending' && (
                           <Button
                             onClick={() => handleApproveProduct(product.id)}
                             className="bg-green-600 hover:bg-green-700"
@@ -668,6 +668,8 @@ const AdminProductApproval = () => {
                             <Check className="w-4 h-4 mr-2" />
                             Approve
                           </Button>
+                        )}
+                        {product.status === 'pending' && (
                           <Button
                             variant="destructive"
                             onClick={() => handleRejectProduct(product.id)}
@@ -675,15 +677,19 @@ const AdminProductApproval = () => {
                             <X className="w-4 h-4 mr-2" />
                             Reject
                           </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => setSelectedProduct(product)}
-                          >
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Details
-                          </Button>
-                        </div>
-                      )}
+                        )}
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            console.log('Details button clicked for product:', product);
+                            setSelectedProduct(product);
+                          }}
+                          className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          Details
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -733,55 +739,86 @@ const AdminProductApproval = () => {
                       <div className="flex items-center gap-2 mb-4">
                         {getStatusBadge(selectedProduct.status)}
                         <Badge variant="outline" className="capitalize">{selectedProduct.category}</Badge>
-                        <Badge variant="outline" className="capitalize">{selectedProduct.condition}</Badge>
+                        {'condition' in selectedProduct && (
+                          <Badge variant="outline" className="capitalize">{selectedProduct.condition}</Badge>
+                        )}
                       </div>
                     </div>
 
-                    <div>
-                      <h4 className="font-semibold mb-2">Price</h4>
-                      <div className="text-2xl font-bold text-green-600">
-                        {formatIndianPrice(selectedProduct.sellingPrice)}
-                      </div>
-                      {selectedProduct.originalPrice && selectedProduct.originalPrice > selectedProduct.sellingPrice && (
-                        <div className="text-sm text-muted-foreground line-through">
-                          Original: {formatIndianPrice(selectedProduct.originalPrice)}
+                    {'sellingPrice' in selectedProduct && (
+                      <div>
+                        <h4 className="font-semibold mb-2">Price</h4>
+                        <div className="text-2xl font-bold text-green-600">
+                          {formatIndianPrice(selectedProduct.sellingPrice)}
                         </div>
-                      )}
-                    </div>
+                        {'originalPrice' in selectedProduct && selectedProduct.originalPrice && selectedProduct.originalPrice > selectedProduct.sellingPrice && (
+                          <div className="text-sm text-muted-foreground line-through">
+                            Original: {formatIndianPrice(selectedProduct.originalPrice)}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <div>
                       <h4 className="font-semibold mb-2">Description</h4>
                       <p className="text-muted-foreground">{selectedProduct.description}</p>
                     </div>
 
-                    <div>
-                      <h4 className="font-semibold mb-2">Seller Information</h4>
-                      <div className="space-y-1 text-sm">
-                        <p><strong>Name:</strong> {selectedProduct.sellerInfo?.displayName || 'Unknown'}</p>
-                        <p><strong>Email:</strong> {selectedProduct.sellerInfo?.email || 'Unknown'}</p>
-                        <p><strong>ID:</strong> {selectedProduct.sellerId}</p>
+                    {'sellerInfo' in selectedProduct && (
+                      <div>
+                        <h4 className="font-semibold mb-2">Seller Information</h4>
+                        <div className="space-y-1 text-sm">
+                          <p><strong>Name:</strong> {selectedProduct.sellerInfo?.displayName || 'Unknown'}</p>
+                          <p><strong>Email:</strong> {selectedProduct.sellerInfo?.email || 'Unknown'}</p>
+                          <p><strong>ID:</strong> {'sellerId' in selectedProduct ? selectedProduct.sellerId : 'Unknown'}</p>
+                        </div>
                       </div>
-                    </div>
+                    )}
 
-                    <div>
-                      <h4 className="font-semibold mb-2">Product Details</h4>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <p><strong>Brand:</strong> {selectedProduct.brand}</p>
-                        <p><strong>Category:</strong> {selectedProduct.category}</p>
-                        {selectedProduct.size && <p><strong>Size:</strong> {selectedProduct.size}</p>}
-                        {selectedProduct.color && <p><strong>Color:</strong> {selectedProduct.color}</p>}
-                        <p><strong>Condition:</strong> {selectedProduct.condition}</p>
-                        <p><strong>Views:</strong> {selectedProduct.views}</p>
+                    {'brand' in selectedProduct && (
+                      <div>
+                        <h4 className="font-semibold mb-2">Product Details</h4>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <p><strong>Brand:</strong> {selectedProduct.brand}</p>
+                          {'size' in selectedProduct && (
+                            <p><strong>Size:</strong> {selectedProduct.size || 'N/A'}</p>
+                          )}
+                          {'color' in selectedProduct && (
+                            <p><strong>Color:</strong> {selectedProduct.color || 'N/A'}</p>
+                          )}
+                          {'condition' in selectedProduct && (
+                            <p><strong>Condition:</strong> {selectedProduct.condition}</p>
+                          )}
+                          {'views' in selectedProduct && (
+                            <p><strong>Views:</strong> {selectedProduct.views}</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
-                    <div>
-                      <h4 className="font-semibold mb-2">Timeline</h4>
-                      <div className="space-y-1 text-sm">
-                        <p><strong>Created:</strong> {selectedProduct.createdAt.toLocaleString()}</p>
-                        <p><strong>Updated:</strong> {selectedProduct.updatedAt.toLocaleString()}</p>
+                    {'donorName' in selectedProduct && (
+                      <div>
+                        <h4 className="font-semibold mb-2">Donor Information</h4>
+                        <div className="space-y-1 text-sm">
+                          <p><strong>Name:</strong> {selectedProduct.donorName}</p>
+                          <p><strong>Email:</strong> {selectedProduct.donorEmail}</p>
+                          <p><strong>Phone:</strong> {selectedProduct.donorPhone}</p>
+                          <p><strong>Pickup Address:</strong> {selectedProduct.pickupAddress}</p>
+                        </div>
                       </div>
-                    </div>
+                    )}
+
+                    {'cause' in selectedProduct && (
+                      <div>
+                        <h4 className="font-semibold mb-2">Donation Details</h4>
+                        <div className="space-y-1 text-sm">
+                          <p><strong>Cause:</strong> {selectedProduct.cause}</p>
+                          <p><strong>Items:</strong> {selectedProduct.items}</p>
+                          <p><strong>Quantity:</strong> {selectedProduct.quantity}</p>
+                          <p><strong>Urgency:</strong> {selectedProduct.urgency}</p>
+                        </div>
+                      </div>
+                    )}
 
                     {selectedProduct.status === 'pending' && (
                       <div className="flex gap-2 pt-4">

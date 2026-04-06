@@ -26,12 +26,19 @@ export interface UserProfile {
   birthdayRewardPoints?: number;
   birthdayRewardExpiry?: Date | Timestamp;
   lastBirthdayReward?: Date | Timestamp;
-  role?: 'customer' | 'admin' | 'seller' | 'ngo';
+  role?: 'customer' | 'admin' | 'seller' | 'ngo' | 'delivery';
   bio?: string;
   createdAt: Date | Timestamp;
   updatedAt: Date | Timestamp;
   lastLoginAt?: Date | Timestamp;
   isActive: boolean;
+  // Delivery guy specific fields
+  vehicleType?: string;
+  vehicleNumber?: string;
+  drivingLicense?: string;
+  experience?: string;
+  availability?: string;
+  status?: 'pending' | 'approved' | 'rejected';
 }
 
 export const createUserProfile = async (uid: string, userData: Omit<UserProfile, 'uid' | 'isActive'>): Promise<void> => {
@@ -395,6 +402,51 @@ export const getTotalRewardPoints = (userData: UserProfile): number => {
   }
   
   return basePoints + birthdayPoints;
+};
+
+// Function to check and expire birthday points for a user
+export const checkAndExpireBirthdayPoints = async (uid: string): Promise<{ expired: boolean; pointsExpired: number }> => {
+  try {
+    const userRef = doc(db, 'users', uid);
+    const userDoc = await getDoc(userRef);
+    
+    if (!userDoc.exists()) {
+      return { expired: false, pointsExpired: 0 };
+    }
+
+    const userData = userDoc.data() as UserProfile;
+    
+    // Check if user has birthday points that might have expired
+    if (!userData.birthdayRewardPoints || userData.birthdayRewardPoints <= 0) {
+      return { expired: false, pointsExpired: 0 };
+    }
+
+    // Check if birthday points have expired
+    if (userData.birthdayRewardExpiry) {
+      const expiryDate = userData.birthdayRewardExpiry instanceof Date 
+        ? userData.birthdayRewardExpiry 
+        : userData.birthdayRewardExpiry.toDate();
+      
+      if (new Date() > expiryDate) {
+        // Points have expired, remove them
+        const pointsExpired = userData.birthdayRewardPoints;
+        
+        await updateDoc(userRef, {
+          birthdayRewardPoints: 0,
+          birthdayRewardExpiry: null,
+          updatedAt: new Date()
+        });
+        
+        console.log(`🕐 Expired ${pointsExpired} birthday points for user ${uid}`);
+        return { expired: true, pointsExpired };
+      }
+    }
+    
+    return { expired: false, pointsExpired: 0 };
+  } catch (error: any) {
+    console.error('❌ Error checking birthday points expiration:', error);
+    return { expired: false, pointsExpired: 0 };
+  }
 };
 
 export const clearBirthdayBonus = async (uid: string): Promise<{ success: boolean; message: string; newBalance?: number }> => {

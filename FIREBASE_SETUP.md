@@ -1,6 +1,6 @@
 # Firebase Setup Guide
 
-This guide will help you set up Firebase for the Style Revival Hub authentication system.
+This guide will help you set up Firebase for the StyleEase authentication system.
 
 ## Step 1: Create Firebase Project
 

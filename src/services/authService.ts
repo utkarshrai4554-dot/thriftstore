@@ -34,7 +34,7 @@ export const registerUser = async (email: string, password: string, displayName:
       phone,
       address,
       birthdate,
-      rewardPoints: 0,
+      rewardPoints: 50, // Award 50 points for registration
       role: 'customer',
       createdAt: new Date(),
       updatedAt: new Date()
@@ -71,6 +71,84 @@ export const registerUser = async (email: string, password: string, displayName:
       code: error.code,
       message: getErrorMessage(error.code)
     } as AuthError;
+  }
+};
+
+export const registerDeliveryGuy = async (
+  email: string, 
+  password: string, 
+  displayName: string, 
+  phone: string,
+  vehicleType: string,
+  vehicleNumber: string,
+  drivingLicense: string,
+  address: string,
+  experience?: string,
+  availability?: string
+): Promise<string> => {
+  try {
+    console.log('🚚 Starting delivery guy registration request:', { 
+      email, 
+      displayName, 
+      phone,
+      vehicleType,
+      vehicleNumber,
+      availability
+    });
+    
+    // Create delivery agent request instead of direct registration
+    const { createDeliveryAgentRequest } = await import('./deliveryAgentService');
+    const requestId = await createDeliveryAgentRequest(email, {
+      displayName,
+      phone,
+      vehicleType,
+      vehicleNumber,
+      drivingLicense,
+      address,
+      experience,
+      availability
+    });
+    
+    console.log('✅ Delivery agent request created successfully:', requestId);
+    console.log('📧 Request sent to admin for approval');
+    
+    return requestId;
+    
+  } catch (error: any) {
+    console.error('❌ Delivery guy registration request error:', error);
+    
+    // Handle specific errors
+    let authError: AuthError;
+    
+    if (error.code === 'auth/email-already-in-use') {
+      authError = {
+        code: error.code,
+        message: 'An account with this email already exists. Please try logging in instead.'
+      };
+    } else if (error.code === 'auth/weak-password') {
+      authError = {
+        code: error.code,
+        message: 'Password is too weak. Please choose a stronger password with at least 6 characters.'
+      };
+    } else if (error.code === 'auth/invalid-email') {
+      authError = {
+        code: error.code,
+        message: 'Invalid email address. Please enter a valid email.'
+      };
+    } else if (error.code === 'auth/network-request-failed') {
+      authError = {
+        code: error.code,
+        message: 'Network error. Please check your internet connection and try again.'
+      };
+    } else {
+      authError = {
+        code: error.code || 'unknown',
+        message: error.message || 'Registration request failed. Please try again.'
+      };
+    }
+    
+    console.error('❌ Auth error details:', authError);
+    throw authError;
   }
 };
 

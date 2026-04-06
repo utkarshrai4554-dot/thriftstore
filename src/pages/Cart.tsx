@@ -8,7 +8,9 @@ import { toast } from "sonner";
 import { updateProductSoldQuantity } from "@/services/productService";
 import { createOrder, updatePaymentStatus, cancelOrder } from "@/services/orderService";
 import { validateCoupon, useCoupon, getUserPoints, addUserPoints, redeemPoints } from "@/services/couponService";
-import { saveUpdatedRewardPoints, getUserProfile, deductBonusPoints, addBackBonusPoints } from "@/services/userService";
+import { saveUpdatedRewardPoints, getUserProfile, deductBonusPoints, addBackBonusPoints, checkAndExpireBirthdayPoints, getTotalRewardPoints } from "@/services/userService";
+import { calculateShoppingPoints, getPointsBreakdownMessage } from "@/utils/pointsCalculator";
+import PointsInfo from "@/components/PointsInfo";
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
 import { doc, updateDoc } from "firebase/firestore";
@@ -39,23 +41,46 @@ const Cart = () => {
     toast.success('Cart cleared');
   };
 
-  // Load user points from user profile (bonus points) instead of coupon service
+  // Load user points from user profile and check for expired birthday points
   useEffect(() => {
     if (user) {
-      // Get bonus points from user profile
-      getUserProfile(user.uid).then(profile => {
-        if (profile) {
-          setUserPoints({ points: profile.rewardPoints || 0 });
-          console.log(`🔍 Loaded bonus points from profile: ${profile.rewardPoints || 0}`);
-        } else {
+      const loadPoints = async () => {
+        try {
+          // First check for expired birthday points
+          await checkAndExpireBirthdayPoints(user.uid);
+          
+          // Get user profile
+          const profile = await getUserProfile(user.uid);
+          if (profile) {
+            // Calculate total points (base + valid birthday points)
+            const totalPoints = getTotalRewardPoints(profile);
+            setUserPoints({ points: totalPoints });
+            console.log(`🔍 Loaded total points: ${totalPoints} (base: ${profile.rewardPoints || 0}, birthday: ${profile.birthdayRewardPoints || 0})`);
+          } else {
+            setUserPoints({ points: 0 });
+            console.log('🔍 No user profile found, setting points to 0');
+          }
+        } catch (error) {
+          console.error('❌ Error loading user profile:', error);
           setUserPoints({ points: 0 });
-          console.log('🔍 No user profile found, setting points to 0');
         }
-      }).catch(error => {
-        console.error('❌ Error loading user profile:', error);
-        setUserPoints({ points: 0 });
-      });
+      };
+      
+      loadPoints();
     }
+  }, [user]);
+
+  // Refresh points when window gains focus (user returns to cart tab)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (user) {
+        console.log('🔄 Window focused, refreshing points...');
+        refreshPoints();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [user]);
 
   // Calculate tiered bonus points based on order amount
@@ -70,10 +95,18 @@ const Cart = () => {
   const refreshPoints = async () => {
     if (user) {
       console.log('🔄 Manually refreshing points...');
-      const profile = await getUserProfile(user.uid);
-      if (profile) {
-        setUserPoints({ points: profile.rewardPoints || 0 });
-        console.log(`🔄 Refreshed points to: ${profile.rewardPoints || 0}`);
+      try {
+        // Check for expired birthday points first
+        await checkAndExpireBirthdayPoints(user.uid);
+        
+        const profile = await getUserProfile(user.uid);
+        if (profile) {
+          const totalPoints = getTotalRewardPoints(profile);
+          setUserPoints({ points: totalPoints });
+          console.log(`🔄 Refreshed total points to: ${totalPoints} (base: ${profile.rewardPoints || 0}, birthday: ${profile.birthdayRewardPoints || 0})`);
+        }
+      } catch (error) {
+        console.error('❌ Error refreshing points:', error);
       }
     }
   };
@@ -316,39 +349,35 @@ const Cart = () => {
         }
       }
       
-      // Add tiered bonus points based on order amount
-      let tieredBonusPoints = 0;
+      // Add tiered bonus points based on order amount to base reward points
+      const orderTotal = getCartTotal();
+      const pointsBreakdown = calculateShoppingPoints(orderTotal);
       
-      // Calculate tiered bonus points based on order amount
-      if (finalTotal > 3499) {
-        tieredBonusPoints = 40;
-        console.log(`🎁 Tier 3 Bonus: Adding ${tieredBonusPoints} points for order above ₹3499`);
-      } else if (finalTotal > 2499) {
-        tieredBonusPoints = 35;
-        console.log(`🎁 Tier 2 Bonus: Adding ${tieredBonusPoints} points for order above ₹2499`);
-      } else if (finalTotal > 1499) {
-        tieredBonusPoints = 25;
-        console.log(`🎁 Tier 1 Bonus: Adding ${tieredBonusPoints} points for order above ₹1499`);
-      } else {
-        console.log(`🎁 No tiered bonus: Order amount ₹${finalTotal} is below ₹1499 threshold`);
-      }
+      console.log(`🎉 Points calculation for ₹${orderTotal}:`, pointsBreakdown);
       
-      const totalPointsEarned = tieredBonusPoints;
+      // Add points to user's base reward points (not birthday points)
+      const currentProfile = await getUserProfile(user.uid);
+      const currentBasePoints = currentProfile?.rewardPoints || 0;
+      const newBasePoints = currentBasePoints + pointsBreakdown.totalPoints;
       
-      await addUserPoints(user.uid, totalPointsEarned, `Purchase reward: Tiered Bonus(${tieredBonusPoints})`);
+      await saveUpdatedRewardPoints(user.uid, newBasePoints);
       
       console.log(`🎉 Points earned breakdown:`);
-      console.log(`   - Tiered bonus: ${tieredBonusPoints}`);
-      console.log(`   - Total points earned: ${totalPointsEarned}`);
+      console.log(`   - Base points: ${pointsBreakdown.basePoints}`);
+      console.log(`   - Tiered points: ${pointsBreakdown.tieredPoints}`);
+      console.log(`   - Bonus points: ${pointsBreakdown.bonusPoints}`);
+      console.log(`   - Total points: ${pointsBreakdown.totalPoints}`);
+      console.log(`   - Previous balance: ${currentBasePoints}`);
+      console.log(`   - New balance: ${newBasePoints}`);
       
-      toast.success(`Earned ${totalPointsEarned} points! (${tieredBonusPoints > 0 ? `${tieredBonusPoints} bonus` : 'No bonus'})`);
+      toast.success(getPointsBreakdownMessage(pointsBreakdown, 'shopping'));
       
       // Update cart state to reflect newly earned points
       const updatedProfile = await getUserProfile(user.uid);
       if (updatedProfile) {
-        const newTotalPoints = updatedProfile?.rewardPoints || 0;
+        const newTotalPoints = getTotalRewardPoints(updatedProfile);
         setUserPoints({ points: newTotalPoints });
-        console.log(`🔍 Updated cart display to: ${newTotalPoints} points (includes new earned points)`);
+        console.log(`🔍 Updated cart display to: ${newTotalPoints} total points (base: ${updatedProfile.rewardPoints || 0}, birthday: ${updatedProfile.birthdayRewardPoints || 0})`);
         
         // Reset points usage fields after successful payment
         setUsePoints(false);
@@ -639,6 +668,9 @@ const Cart = () => {
                     <span className="font-bold text-lg text-primary">₹{getCartTotal() + Math.round((getCartTotal() - (couponCode ? Math.round(getCartTotal() * 0.1) : 0) - (usePoints ? pointsToUse : 0)) * 0.18) - (couponCode ? Math.round(getCartTotal() * 0.1) : 0) - (usePoints ? pointsToUse : 0)}</span>
                   </div>
                 </div>
+
+                {/* Points Information */}
+                <PointsInfo cartTotal={getCartTotal()} className="mb-4" />
 
                 <Button 
                   onClick={handleCheckout}

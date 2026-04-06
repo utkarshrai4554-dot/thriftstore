@@ -1,4 +1,4 @@
-# Style Revival Hub
+# StyleEase
 
 ## Project info
 
@@ -8,11 +8,11 @@
 
 There are several ways of editing your application.
 
-**Use Style Revival Hub Editor**
+**Use StyleEase Editor**
 
-Simply visit the [Style Revival Hub](https://style-revival-hub.com) and start editing.
+Simply visit the [StyleEase](https://style-revival-hub.com) and start editing.
 
-Changes made via the editor will be committed automatically to this repo.
+Changes made via the StyleEase editor will be committed automatically to this repo.
 
 **Use your preferred IDE**
 

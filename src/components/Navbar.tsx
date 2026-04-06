@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, ShoppingBag, Heart, User, Package, BarChart3, ShoppingCart, Moon, Sun, LogOut, ChevronDown } from "lucide-react";
+import { Menu, X, Heart, User, Package, BarChart3, ShoppingCart, Moon, Sun, LogOut, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";

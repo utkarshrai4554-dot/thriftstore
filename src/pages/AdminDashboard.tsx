@@ -12,6 +12,7 @@ import {
 import { collection, query, where, orderBy, getDocs, getDoc, doc as docRef, setDoc, deleteDoc, updateDoc, getCountFromServer, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
+import DeliveryAgentApproval from "@/components/DeliveryAgentApproval";
 
 interface PendingItem {
   id: string;
@@ -41,6 +42,7 @@ interface PendingItem {
 const AdminDashboard = () => {
   const { user } = useAuth();
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([]);
+  const [selectedItem, setSelectedItem] = useState<PendingItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState([
     { label: "Total Sales", value: "₹0", icon: DollarSign, change: "+0%" },
@@ -418,7 +420,7 @@ const AdminDashboard = () => {
                               {p.createdAt.toLocaleDateString()}
                             </p>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 flex-wrap">
                             <Button 
                               size="sm" 
                               variant="outline" 
@@ -435,15 +437,29 @@ const AdminDashboard = () => {
                             >
                               <XCircle className="h-4 w-4 mr-1" /> Reject
                             </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                              onClick={() => setSelectedItem(p)}
+                            >
+                              <Eye className="h-4 w-4 mr-1" /> Details
+                            </Button>
                           </div>
                         </div>
                       ))}
                     </div>
-                    <div className="mt-4 pt-4 border-t">
+                    <div className="mt-4 pt-4 border-t space-y-2">
+                      <Link to="/admin/products">
+                        <Button className="w-full" variant="outline">
+                          <Package className="h-4 w-4 mr-2" />
+                          View All Product Approvals
+                        </Button>
+                      </Link>
                       <Link to="/admin/donation-assignment">
                         <Button className="w-full">
                           <Eye className="h-4 w-4 mr-2" />
-                          View All Pending Items ({pendingItems.length})
+                          View All Donation Requests ({pendingItems.length})
                         </Button>
                       </Link>
                     </div>

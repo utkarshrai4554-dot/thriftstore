@@ -9,6 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Alert, AlertDescription } from '../ui/alert';
 import { Loader2 } from 'lucide-react';
 import { registerUser, AuthError } from '../../services/authService';
+import { createOTPRequest } from '../../services/otpService';
+import OTPVerification from './OTPVerification';
 import { useToast } from '../../hooks/use-toast';
 
 const registerSchema = z.object({
@@ -34,6 +36,9 @@ interface RegisterFormProps {
 export const RegisterForm = ({ onSuccess, onLoginClick }: RegisterFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showOTP, setShowOTP] = useState(false);
+  const [otpId, setOtpId] = useState<string>('');
+  const [formData, setFormData] = useState<RegisterFormData | null>(null);
   const { toast } = useToast();
 
   const {
@@ -49,24 +54,129 @@ export const RegisterForm = ({ onSuccess, onLoginClick }: RegisterFormProps) => 
     setError(null);
 
     try {
-      await registerUser(data.email, data.password, data.displayName, data.phone, data.address, data.birthdate);
+      console.log('🔍 Starting registration with OTP verification:', { email: data.email, displayName: data.displayName });
+      
+      // Step 1: Create OTP request
+      const otpRequestId = await createOTPRequest(data.email);
+      console.log('✅ OTP request created:', otpRequestId);
+      
+      // Step 2: Show OTP verification screen
+      setFormData(data);
+      setOtpId(otpRequestId);
+      setShowOTP(true);
+      
       toast({
-        title: 'Registration successful',
-        description: 'Your account has been created successfully!',
+        title: "Verification Code Sent",
+        description: "A 4-digit code has been sent to your email address.",
       });
-      onSuccess?.();
+      
     } catch (err) {
       const authError = err as AuthError;
-      setError(authError.message);
+      console.error('❌ Registration error:', authError);
+      
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      if (authError.code === 'auth/email-already-in-use') {
+        errorMessage = 'An account with this email already exists.';
+      } else if (authError.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak. Please choose a stronger password.';
+      } else if (authError.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address.';
+      } else if (authError.message) {
+        errorMessage = authError.message;
+      }
+      
+      setError(errorMessage);
       toast({
-        title: 'Registration failed',
-        description: authError.message,
-        variant: 'destructive',
+        variant: "destructive",
+        title: "Registration Failed",
+        description: errorMessage,
       });
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleOTPVerified = async () => {
+    if (!formData) return;
+    
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      console.log('🔍 OTP verified, completing registration...');
+      
+      // Step 3: Complete registration after OTP verification
+      await registerUser(
+        formData.email,
+        formData.password,
+        formData.displayName,
+        formData.phone,
+        formData.address,
+        formData.birthdate
+      );
+
+      toast({
+        title: "Registration Successful!",
+        description: "Your account has been created successfully.",
+      });
+
+      console.log('✅ Registration completed successfully');
+      onSuccess?.();
+
+    } catch (err) {
+      const authError = err as AuthError;
+      console.error('❌ Registration completion error:', authError);
+      
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      if (authError.code === 'auth/email-already-in-use') {
+        errorMessage = 'An account with this email already exists.';
+      } else if (authError.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak. Please choose a stronger password.';
+      } else if (authError.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address.';
+      } else if (authError.message) {
+        errorMessage = authError.message;
+      }
+      
+      setError(errorMessage);
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: errorMessage,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOTPCancel = () => {
+    setShowOTP(false);
+    setOtpId('');
+    setFormData(null);
+    setError(null);
+  };
+
+  const handleOTPBack = () => {
+    // Go back to registration form to resend OTP
+    setShowOTP(false);
+    setOtpId('');
+    // Keep formData to allow resending
+  };
+
+  // Show OTP verification screen
+  if (showOTP && formData && otpId) {
+    return (
+      <OTPVerification
+        email={formData.email}
+        otpId={otpId}
+        onVerified={handleOTPVerified}
+        onCancel={handleOTPCancel}
+        onBack={handleOTPBack}
+      />
+    );
+  }
 
   return (
     <Card className="w-full max-w-md mx-auto">

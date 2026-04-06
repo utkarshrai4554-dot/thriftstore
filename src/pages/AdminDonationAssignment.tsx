@@ -22,6 +22,9 @@ interface Donation {
   items: string;
   description: string;
   cause: string;
+  category?: string;
+  urgency?: string;
+  quantity?: number;
   status: 'pending' | 'accepted' | 'rejected' | 'picked_up';
   assignedNGO?: string;
   assignedNGOName?: string;
@@ -416,27 +419,62 @@ const AdminDonationAssignment = () => {
                           <TableCell>
                             {donation.images && donation.images.length > 0 ? (
                               <div className="flex gap-1">
-                                {donation.images.slice(0, 3).map((image, index) => (
-                                  <div key={index} className="relative">
-                                    <img
-                                      src={image.url}
-                                      alt={`Donation image ${index + 1}`}
-                                      className="w-12 h-12 object-cover rounded border"
-                                      onClick={() => window.open(image.url, '_blank')}
-                                      style={{ cursor: 'pointer' }}
-                                    />
-                                    {donation.images.length > 3 && index === 2 && (
-                                      <div className="absolute inset-0 bg-black/50 rounded flex items-center justify-center text-white text-xs">
-                                        +{donation.images.length - 3}
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
+                                {donation.images.slice(0, 3).map((image, index) => {
+                                  // Handle different image formats
+                                  let imageUrl = '';
+                                  if (typeof image === 'string') {
+                                    imageUrl = image;
+                                  } else if (image.url) {
+                                    imageUrl = image.url;
+                                  } else if (image.name) {
+                                    // If it's a file object with name, try to construct URL
+                                    imageUrl = `/uploads/donations/${image.name}`;
+                                  } else {
+                                    console.log('Image structure:', image);
+                                    imageUrl = '';
+                                  }
+                                  
+                                  return (
+                                    <div key={index} className="relative">
+                                      {imageUrl ? (
+                                        <img
+                                          src={imageUrl}
+                                          alt={`Donation image ${index + 1}`}
+                                          className="w-12 h-12 object-cover rounded border"
+                                          onClick={() => window.open(imageUrl, '_blank')}
+                                          style={{ cursor: 'pointer' }}
+                                          onError={(e) => {
+                                            console.log('Image failed to load:', imageUrl);
+                                            // Use fallback donation image
+                                            e.currentTarget.src = '/donation-sample.svg';
+                                          }}
+                                        />
+                                      ) : (
+                                        <img
+                                          src="/donation-sample.svg"
+                                          alt={`Donation image ${index + 1}`}
+                                          className="w-12 h-12 object-cover rounded border"
+                                          onClick={() => window.open('/donation-sample.svg', '_blank')}
+                                          style={{ cursor: 'pointer' }}
+                                        />
+                                      )}
+                                      {donation.images.length > 3 && index === 2 && (
+                                        <div className="absolute inset-0 bg-black/50 rounded flex items-center justify-center text-white text-xs">
+                                          +{donation.images.length - 3}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             ) : (
-                              <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-xs">
-                                No Image
-                              </div>
+                              <img
+                                src="/donation-sample.svg"
+                                alt="No donation image"
+                                className="w-12 h-12 object-cover rounded border"
+                                onClick={() => window.open('/donation-sample.svg', '_blank')}
+                                style={{ cursor: 'pointer' }}
+                              />
                             )}
                           </TableCell>
                           <TableCell className="font-medium">{donation.donorName || 'N/A'}</TableCell>
@@ -737,20 +775,79 @@ const AdminDonationAssignment = () => {
                   <Package className="h-4 w-4" />
                   Donation Information
                 </h3>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Items</p>
-                    <p className="font-medium">{selectedDonation.items || 'N/A'}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Items</p>
+                      <p className="font-medium">{selectedDonation.items || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Description</p>
+                      <p className="font-medium">{selectedDonation.description || 'No description provided'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Cause</p>
+                      <Badge variant="outline" className="mt-1">
+                        {selectedDonation.cause || 'N/A'}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Category</p>
+                      <Badge variant="secondary" className="mt-1">
+                        {selectedDonation.category || 'General'}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Quantity</p>
+                      <p className="font-medium">{selectedDonation.quantity || '1'} item(s)</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Urgency</p>
+                      <Badge variant={selectedDonation.urgency === 'High' ? 'destructive' : selectedDonation.urgency === 'Medium' ? 'default' : 'secondary'} className="mt-1">
+                        {selectedDonation.urgency || 'Normal'}
+                      </Badge>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Description</p>
-                    <p className="font-medium">{selectedDonation.description || 'No description provided'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Cause</p>
-                    <Badge variant="outline" className="mt-1">
-                      {selectedDonation.cause || 'N/A'}
-                    </Badge>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Status</p>
+                      <div className="mt-1">
+                        {getStatusBadge(selectedDonation.status)}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Submitted Date</p>
+                      <p className="font-medium">
+                        {selectedDonation.createdAt ? 
+                          new Date(selectedDonation.createdAt.toDate ? selectedDonation.createdAt.toDate() : selectedDonation.createdAt).toLocaleString() : 
+                          'N/A'
+                        }
+                      </p>
+                    </div>
+                    {selectedDonation.acceptedAt && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Accepted Date</p>
+                        <p className="font-medium">
+                          {new Date(selectedDonation.acceptedAt.toDate ? selectedDonation.acceptedAt.toDate() : selectedDonation.acceptedAt).toLocaleString()}
+                        </p>
+                      </div>
+                    )}
+                    {selectedDonation.pickedUpAt && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Picked Up Date</p>
+                        <p className="font-medium">
+                          {new Date(selectedDonation.pickedUpAt.toDate ? selectedDonation.pickedUpAt.toDate() : selectedDonation.pickedUpAt).toLocaleString()}
+                        </p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm text-muted-foreground">Assigned NGO</p>
+                      <p className="font-medium">{selectedDonation.assignedNGOName || 'Not assigned'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Donation ID</p>
+                      <p className="font-medium text-xs font-mono">{selectedDonation.id}</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -763,29 +860,72 @@ const AdminDonationAssignment = () => {
                 </h3>
                 {selectedDonation.images && selectedDonation.images.length > 0 ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {selectedDonation.images.map((image, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={image.url}
-                          alt={`Donation image ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg border cursor-pointer transition-transform hover:scale-105"
-                          onClick={() => window.open(image.url, '_blank')}
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                          <div className="bg-white/90 rounded px-2 py-1 text-xs">
-                            Click to view
-                          </div>
+                    {selectedDonation.images.map((image, index) => {
+                      // Handle different image formats
+                      let imageUrl = '';
+                      if (typeof image === 'string') {
+                        imageUrl = image;
+                      } else if (image.url) {
+                        imageUrl = image.url;
+                      } else if (image.name) {
+                        // If it's a file object with name, try to construct URL
+                        imageUrl = `/uploads/donations/${image.name}`;
+                      } else {
+                        console.log('Modal image structure:', image);
+                        imageUrl = '';
+                      }
+                      
+                      return (
+                        <div key={index} className="relative group">
+                          {imageUrl ? (
+                            <>
+                              <img
+                                src={imageUrl}
+                                alt={`Donation image ${index + 1}`}
+                                className="w-full h-32 object-cover rounded-lg border cursor-pointer transition-transform hover:scale-105"
+                                onClick={() => window.open(imageUrl, '_blank')}
+                                onError={(e) => {
+                                  console.log('Modal image failed to load:', imageUrl);
+                                  // Use fallback donation image
+                                  e.currentTarget.src = '/donation-sample.svg';
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                <div className="bg-white/90 rounded px-2 py-1 text-xs">
+                                  Click to view
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <img
+                                src="/donation-sample.svg"
+                                alt={`Donation image ${index + 1}`}
+                                className="w-full h-32 object-cover rounded-lg border cursor-pointer transition-transform hover:scale-105"
+                                onClick={() => window.open('/donation-sample.svg', '_blank')}
+                              />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                <div className="bg-white/90 rounded px-2 py-1 text-xs">
+                                  Click to view
+                                </div>
+                              </div>
+                            </>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-1 truncate">
+                            {image.name || `Image ${index + 1}`}
+                          </p>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1 truncate">
-                          {image.name || `Image ${index + 1}`}
-                        </p>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>No images uploaded for this donation</p>
+                  <div className="text-center py-8">
+                    <img
+                      src="/donation-sample.svg"
+                      alt="No donation images"
+                      className="w-32 h-32 mx-auto mb-4 object-cover rounded-lg border"
+                    />
+                    <p className="text-muted-foreground">No images uploaded for this donation</p>
                   </div>
                 )}
               </div>
