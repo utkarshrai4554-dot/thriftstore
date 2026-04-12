@@ -1,103 +1,182 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Package, MapPin, ArrowRight, Truck, CheckCircle } from "lucide-react";
+import { Package, MapPin, ArrowRight, Truck, CheckCircle, User, Phone, RefreshCw } from "lucide-react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/hooks/useAuth";
 
-const deliveryOrders = [
-  { id: "DEL001", product: "Vintage Silk Scarf", from: "Anna K.", to: "Warehouse", status: "Picked up", type: "pickup" },
-  { id: "DEL002", product: "Retro Sunglasses", from: "Warehouse", to: "Mike T.", status: "Transporting", type: "delivery" },
-  { id: "DEL003", product: "Leather Belt", from: "Sarah M.", to: "Warehouse", status: "Assigned", type: "pickup" },
-];
-
-const statusOptions = ["Picked up", "Transporting", "Reached warehouse", "Delivered", "Returned to seller"];
+interface DeliveryAgent {
+  uid: string;
+  displayName: string;
+  email: string;
+  phone: string;
+  vehicleType: string;
+  vehicleNumber: string;
+  drivingLicense: string;
+  address: string;
+  experience?: string;
+  availability: string;
+  status: string;
+  totalDeliveries: number;
+  rating: number;
+  approvedAt: any;
+  createdAt: any;
+}
 
 const DeliveryDashboard = () => {
-  const [isOnline, setIsOnline] = useState(true);
+  const { user } = useAuth();
+  const [deliveryAgents, setDeliveryAgents] = useState<DeliveryAgent[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  return (
-    <div className="min-h-screen py-8">
-      <div className="container mx-auto px-4 max-w-3xl">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="font-display text-3xl font-bold mb-1">Delivery Dashboard</h1>
-            <p className="text-muted-foreground">Manage your pickups and deliveries</p>
+  useEffect(() => {
+    fetchDeliveryAgents();
+  }, []);
+
+  const fetchDeliveryAgents = async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching delivery agents from collection...');
+      
+      const deliveryAgentsCollection = collection(db, 'deliveryAgents');
+      const querySnapshot = await getDocs(deliveryAgentsCollection);
+      
+      const agents: DeliveryAgent[] = querySnapshot.docs.map(doc => ({
+        uid: doc.id,
+        ...doc.data()
+      } as DeliveryAgent));
+      
+      console.log('Fetched delivery agents:', agents);
+      setDeliveryAgents(agents);
+    } catch (error) {
+      console.error('Error fetching delivery agents:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen py-8">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <span className="ml-2">Loading delivery agents...</span>
           </div>
-          <div className="flex items-center gap-3 bg-card border rounded-xl px-4 py-3">
-            <Label htmlFor="availability" className="text-sm font-medium">
-              {isOnline ? "Online" : "Offline"}
-            </Label>
-            <Switch id="availability" checked={isOnline} onCheckedChange={setIsOnline} />
-          </div>
-        </div>
-
-        {!isOnline && (
-          <div className="bg-muted rounded-xl p-6 text-center mb-8">
-            <Truck className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-            <p className="font-medium">You're currently offline</p>
-            <p className="text-sm text-muted-foreground">Toggle online to receive new delivery assignments</p>
-          </div>
-        )}
-
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          {[
-            { label: "Today", value: "3", icon: Package },
-            { label: "Completed", value: "18", icon: CheckCircle },
-            { label: "Total", value: "142", icon: Truck },
-          ].map((s, i) => (
-            <Card key={i}>
-              <CardContent className="p-4 text-center">
-                <s.icon className="h-5 w-5 mx-auto mb-2 text-primary" />
-                <p className="font-display text-2xl font-bold">{s.value}</p>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Orders */}
-        <h2 className="font-display text-xl font-bold mb-4">Active Orders</h2>
-        <div className="space-y-3">
-          {deliveryOrders.map((order) => (
-            <Card key={order.id} className="animate-fade-in">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <p className="font-medium">{order.product}</p>
-                    <p className="text-sm text-muted-foreground">#{order.id}</p>
-                  </div>
-                  <Badge variant={order.type === "pickup" ? "outline" : "default"}>
-                    {order.type}
-                  </Badge>
-                </div>
-
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-                  <MapPin className="h-3.5 w-3.5" />
-                  <span>{order.from}</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
-                  <span>{order.to}</span>
-                </div>
-
-                <div className="flex gap-2 flex-wrap">
-                  {statusOptions.map((s) => (
-                    <Button
-                      key={s}
-                      size="sm"
-                      variant={order.status === s ? "default" : "outline"}
-                      className="text-xs"
-                    >
-                      {s}
-                    </Button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="container mx-auto px-6 max-w-7xl">
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Delivery Dashboard</h1>
+              <p className="text-gray-600">Manage your delivery agents and track performance</p>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={fetchDeliveryAgents}
+              disabled={loading}
+              className="bg-white border-gray-300 hover:bg-gray-50 text-gray-700"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {[
+            { label: "Active Agents", value: deliveryAgents.length.toString(), icon: User, color: "text-emerald-600", bg: "bg-emerald-50" },
+            { label: "Total Deliveries", value: deliveryAgents.reduce((sum, agent) => sum + agent.totalDeliveries, 0).toString(), icon: CheckCircle, color: "text-orange-600", bg: "bg-orange-50" },
+            { label: "Avg Rating", value: deliveryAgents.length > 0 ? (deliveryAgents.reduce((sum, agent) => sum + agent.rating, 0) / deliveryAgents.length).toFixed(1) : "0", icon: Truck, color: "text-emerald-600", bg: "bg-emerald-50" },
+          ].map((s, i) => {
+            const IconComponent = s.icon;
+            return (
+              <Card key={i} className="bg-white border-gray-200 shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className={`p-3 rounded-lg ${s.bg}`}>
+                      <IconComponent className={`h-6 w-6 ${s.color}`} />
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-gray-900">{s.value}</p>
+                    </div>
+                  </div>
+                  <p className="text-sm font-medium text-gray-600">{s.label}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* Delivery Agents */}
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Delivery Agents</h2>
+            <p className="text-sm text-gray-600 mt-1">Approved delivery agents and their performance metrics</p>
+          </div>
+          
+          {deliveryAgents.length === 0 ? (
+            <div className="px-6 py-12 text-center">
+              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Truck className="h-6 w-6 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Delivery Agents</h3>
+              <p className="text-gray-600">No delivery agents have been approved yet.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {deliveryAgents.map((agent) => (
+                <div key={agent.uid} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                        <User className="h-5 w-5 text-gray-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{agent.displayName}</p>
+                        <p className="text-sm text-gray-600">{agent.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-900">{agent.totalDeliveries} deliveries</p>
+                        <p className="text-sm text-gray-600">Rating: {agent.rating.toFixed(1)}</p>
+                      </div>
+                      <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm px-4 py-2 text-sm font-medium">
+                        View Details
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-gray-400" />
+                      <span className="text-gray-600">{agent.phone}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Truck className="h-4 w-4 text-gray-400" />
+                      <span className="text-gray-600">{agent.vehicleType} ({agent.vehicleNumber})</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600">{agent.availability}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        </div>
     </div>
   );
 };

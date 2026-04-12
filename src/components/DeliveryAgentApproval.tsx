@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Truck, User, Phone, MapPin, CheckCircle, XCircle, Clock, Eye } from 'lucide-react';
+import { Truck, User, Phone, MapPin, CheckCircle, XCircle, Clock, Eye, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
   getPendingDeliveryAgentRequests, 
@@ -29,7 +29,9 @@ export const DeliveryAgentApproval: React.FC = () => {
   const fetchRequests = async () => {
     try {
       setLoading(true);
+      console.log('Fetching delivery agent requests...');
       const pendingRequests = await getPendingDeliveryAgentRequests();
+      console.log('Fetched requests:', pendingRequests);
       setRequests(pendingRequests);
     } catch (error) {
       console.error('Error fetching requests:', error);
@@ -140,9 +142,20 @@ export const DeliveryAgentApproval: React.FC = () => {
           <h2 className="text-2xl font-bold">Delivery Agent Approvals</h2>
           <p className="text-muted-foreground">Review and approve delivery agent registration requests</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Truck className="h-5 w-5 text-orange-600" />
-          <span className="text-lg font-semibold">{requests.length} Pending</span>
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={fetchRequests}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <div className="flex items-center gap-2">
+            <Truck className="h-5 w-5 text-orange-600" />
+            <span className="text-lg font-semibold">{requests.length} Pending</span>
+          </div>
         </div>
       </div>
 
@@ -212,7 +225,12 @@ export const DeliveryAgentApproval: React.FC = () => {
                 <div className="flex gap-2 pt-4 border-t">
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" onClick={() => setSelectedRequest(request)}>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setSelectedRequest(request)}
+                        className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-all duration-200"
+                      >
                         <Eye className="h-4 w-4 mr-2" />
                         View Details
                       </Button>

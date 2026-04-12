@@ -371,6 +371,7 @@ const AdminDashboard = () => {
             <TabsTrigger value="assign-donation">Assign Donation</TabsTrigger>
             <TabsTrigger value="assign-delivery">Assign Delivery</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="delivery-requests">Delivery Agent Requests</TabsTrigger>
             <TabsTrigger value="delivery">Delivery Agents</TabsTrigger>
           </TabsList>
 
@@ -580,6 +581,10 @@ const AdminDashboard = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="delivery-requests" className="mt-4">
+            <DeliveryAgentApproval />
           </TabsContent>
 
           <TabsContent value="delivery" className="mt-4">

@@ -185,7 +185,42 @@ export const loginUser = async (email: string, password: string): Promise<User> 
     });
     
     const userCredential: UserCredential = await signInWithEmailAndPassword(auth, email, password);
-    console.log('✅ Login successful for user:', userCredential.user.email);
+    console.log('✅ Firebase auth successful for user:', userCredential.user.email);
+    
+    // Check if user is a delivery agent and if they are approved
+    const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      
+      if (userData.role === 'delivery') {
+        console.log('User is a delivery agent, checking approval status...');
+        
+        // Check delivery agent approval status
+        const deliveryAgentDoc = await getDoc(doc(db, 'deliveryAgents', userCredential.user.uid));
+        if (!deliveryAgentDoc.exists()) {
+          console.log('Delivery agent not found in system');
+          await signOut(auth);
+          throw {
+            code: 'auth/delivery-agent-not-found',
+            message: 'Your delivery agent account is not properly set up. Please contact support.'
+          } as AuthError;
+        }
+        
+        const agentData = deliveryAgentDoc.data();
+        if (agentData.status !== 'approved') {
+          console.log('Delivery agent not approved:', agentData.status);
+          await signOut(auth);
+          throw {
+            code: 'auth/delivery-agent-not-approved',
+            message: 'Your delivery agent application is still pending approval. Please wait for admin approval.'
+          } as AuthError;
+        }
+        
+        console.log('Delivery agent is approved and can login');
+      }
+    }
+    
+    console.log('Login successful for user:', userCredential.user.email);
     return userCredential.user;
   } catch (error: any) {
     console.error('❌ Firebase login error:', {

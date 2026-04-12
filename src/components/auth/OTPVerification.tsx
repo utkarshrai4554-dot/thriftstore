@@ -297,20 +297,6 @@ export const OTPVerification: React.FC<OTPVerificationProps> = ({
             <Mail className="h-3 w-3 mr-1" />
             Check your spam folder if you don't see the email
           </Badge>
-          
-          {/* Development OTP Display */}
-          {window.location.hostname === 'localhost' && (
-            <Alert className="bg-yellow-50 border-yellow-200">
-              <Eye className="h-4 w-4 text-yellow-600" />
-              <AlertDescription className="text-yellow-800">
-                <div className="space-y-1">
-                  <p className="font-medium">🔔 Development Mode:</p>
-                  <p>Check the browser console for the OTP code</p>
-                  <p>You should also see an alert popup with the code</p>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
         </div>
       </CardContent>
     </Card>

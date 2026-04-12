@@ -64,80 +64,6 @@ export const createOTPRequest = async (
   }
 };
 
-export const sendOTPEmail = async (email: string, otp: string): Promise<void> => {
-  try {
-    console.log('📧 Sending OTP email to:', email);
-    
-    // Quick EmailJS setup - Replace these with your actual EmailJS credentials
-    const emailjsServiceId = 'service_demo123'; // Replace with your service ID
-    const emailjsTemplateId = 'template_demo123'; // Replace with your template ID
-    const emailjsPublicKey = 'demo_public_key'; // Replace with your public key
-    
-    // Email template parameters
-    const templateParams = {
-      to_email: email,
-      otp_code: otp,
-      expiry_minutes: 10,
-      app_name: 'StyleEase',
-      support_email: 'support@styleease.com'
-    };
-    
-    // Try to send email via EmailJS
-    try {
-      // Load EmailJS dynamically
-      if (typeof window !== 'undefined' && !window.emailjs) {
-        // Load EmailJS script
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js';
-        script.async = true;
-        document.head.appendChild(script);
-        
-        // Wait for script to load
-        await new Promise((resolve) => {
-          script.onload = resolve;
-        });
-      }
-      
-      // Initialize and send email
-      if (typeof window !== 'undefined' && window.emailjs) {
-        window.emailjs.init(emailjsPublicKey);
-        
-        await window.emailjs.send(emailjsServiceId, emailjsTemplateId, templateParams);
-        console.log('✅ Email sent successfully via EmailJS');
-      } else {
-        throw new Error('EmailJS not loaded');
-      }
-      
-    } catch (emailjsError) {
-      console.error('❌ EmailJS failed:', emailjsError);
-      
-      // For now, show the OTP in console for immediate testing
-      console.log(`
-    ╔══════════════════════════════════════════════════════════════╗
-    ║                    STYLEESE VERIFICATION                   ║
-    ╠══════════════════════════════════════════════════════════════╣
-    ║  Your 4-digit verification code is: ${otp}                     ║
-    ║                                                              ║
-    ║  This code will expire in 10 minutes.                           ║
-    ║  Please do not share this code with anyone.                     ║
-    ╚══════════════════════════════════════════════════════════════╝
-    
-    Email: ${email}
-    `);
-      
-      // Show alert for immediate access
-      alert(`🔔 OTP CODE: ${otp}\n\nEmail: ${email}\n\nUse this code to complete registration.`);
-      
-      console.log('✅ OTP displayed in development mode - registration can continue');
-      return; // Don't throw error in development mode
-    }
-    
-  } catch (error) {
-    console.error('❌ Error sending OTP email:', error);
-    throw new Error('Failed to send OTP email');
-  }
-};
-
 export const sendOTPEmailViaBackend = async (email: string, otp: string): Promise<void> => {
   try {
     console.log('🔄 Trying backend email service for:', email);
@@ -164,31 +90,11 @@ export const sendOTPEmailViaBackend = async (email: string, otp: string): Promis
     }
     
     const result = await response.json();
-    console.log('✅ Email sent successfully via backend:', result);
+    console.log(' Email sent successfully via backend:', result);
     
   } catch (backendError) {
-    console.error('❌ Backend email failed:', backendError);
-    
-    // Final fallback - show in console (for development)
-    console.log(`
-    ╔══════════════════════════════════════════════════════════════╗
-    ║                    STYLEESE VERIFICATION                   ║
-    ╠══════════════════════════════════════════════════════════════╣
-    ║  Your 4-digit verification code is: ${otp}                     ║
-    ║                                                              ║
-    ║  This code will expire in 10 minutes.                           ║
-    ║  Please do not share this code with anyone.                     ║
-    ╚══════════════════════════════════════════════════════════════╝
-    
-    Email: ${email}
-    `);
-    
-    // Show alert for development
-    if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-      alert(`🔔 DEVELOPMENT OTP: ${otp}\n\nEmail: ${email}\n\nEmail service not configured. This alert is only shown in development mode.`);
-    }
-    
-    throw new Error('Email service not configured - using development fallback');
+    console.error('Backend email failed:', backendError);
+    throw new Error('Failed to send OTP email. Please check your email address and try again.');
   }
 };
 

@@ -1,5 +1,7 @@
-import { doc, setDoc, serverTimestamp, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, getDoc, updateDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 
 export interface DeliveryAgentRequest {
   id: string;
@@ -17,6 +19,8 @@ export interface DeliveryAgentRequest {
   reviewedAt?: any;
   reviewedBy?: string;
   rejectionReason?: string;
+  processed?: boolean;
+  deletionFailed?: boolean;
 }
 
 export const createDeliveryAgentRequest = async (
@@ -67,7 +71,7 @@ export const createDeliveryAgentRequest = async (
 
 export const getPendingDeliveryAgentRequests = async (): Promise<DeliveryAgentRequest[]> => {
   try {
-    console.log('📋 Fetching pending delivery agent requests');
+    console.log('Fetching pending delivery agent requests');
     
     const requestsQuery = query(
       collection(db, 'deliveryAgentRequests'),
@@ -80,11 +84,14 @@ export const getPendingDeliveryAgentRequests = async (): Promise<DeliveryAgentRe
       id: doc.id
     })) as DeliveryAgentRequest[];
     
-    console.log(`✅ Found ${requests.length} pending delivery agent requests`);
-    return requests;
+    // Filter out processed requests (in case deletion failed)
+    const pendingRequests = requests.filter(request => !request.processed);
+    
+    console.log(`Found ${pendingRequests.length} pending delivery agent requests (filtered from ${requests.length} total)`);
+    return pendingRequests;
     
   } catch (error) {
-    console.error('❌ Error fetching delivery agent requests:', error);
+    console.error('Error fetching delivery agent requests:', error);
     throw new Error('Failed to fetch delivery agent requests');
   }
 };
@@ -94,38 +101,94 @@ export const approveDeliveryAgentRequest = async (
   adminId: string,
   email: string,
   password: string,
-  deliveryData: any
+  deliveryData: {
+    displayName: string;
+    phone: string;
+    vehicleType: string;
+    vehicleNumber: string;
+    drivingLicense: string;
+    address: string;
+    experience?: string;
+    availability: string;
+  }
 ): Promise<void> => {
   try {
-    console.log('✅ Approving delivery agent request:', requestId);
+    console.log('Approving delivery agent request:', requestId);
     
-    // Update request status
+    // Get the original request details
     const requestRef = doc(db, 'deliveryAgentRequests', requestId);
-    await updateDoc(requestRef, {
+    const requestDoc = await getDoc(requestRef);
+    
+    if (!requestDoc.exists()) {
+      throw new Error('Delivery agent request not found');
+    }
+    
+    const requestData = requestDoc.data();
+    
+    // Create delivery agent approval record (user will register themselves after receiving email)
+    await setDoc(doc(db, 'deliveryAgents', `approved_${requestId}`), {
+      email: email,
+      displayName: requestData.displayName,
+      phone: requestData.phone,
+      vehicleType: requestData.vehicleType,
+      vehicleNumber: requestData.vehicleNumber,
+      drivingLicense: requestData.drivingLicense,
+      address: requestData.address,
+      experience: requestData.experience,
+      availability: requestData.availability,
       status: 'approved',
-      reviewedAt: serverTimestamp(),
-      reviewedBy: adminId
+      approvedAt: serverTimestamp(),
+      approvedBy: adminId,
+      requestId: requestId,
+      requestedAt: requestData.requestedAt,
+      // Store temp password for first-time registration
+      tempPassword: password,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
     });
     
-    // Create actual delivery agent account
-    const { registerDeliveryGuy } = await import('./authService');
-    await registerDeliveryGuy(
-      email,
-      password,
-      deliveryData.displayName,
-      deliveryData.phone,
-      deliveryData.vehicleType,
-      deliveryData.vehicleNumber,
-      deliveryData.drivingLicense,
-      deliveryData.address,
-      deliveryData.experience,
-      deliveryData.availability
-    );
+    console.log('Delivery agent approval record created:', requestId);
     
-    console.log('✅ Delivery agent request approved and account created');
+    // Update request status to approved before deletion
+    try {
+      await updateDoc(requestRef, {
+        status: 'approved',
+        reviewedAt: serverTimestamp(),
+        reviewedBy: adminId,
+        processed: true
+      });
+      console.log('Request status updated to approved:', requestId);
+      
+      // Wait a moment for the update to propagate
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Delete the request
+      await deleteDoc(requestRef);
+      console.log('Delivery agent request deleted successfully:', requestId);
+    } catch (deleteError) {
+      console.error('Error deleting delivery agent request:', deleteError);
+      // Try to update status to approved even if deletion fails
+      try {
+        await updateDoc(requestRef, {
+          status: 'approved',
+          reviewedAt: serverTimestamp(),
+          reviewedBy: adminId,
+          processed: true,
+          deletionFailed: true
+        });
+        console.log('Request marked as approved but deletion failed:', requestId);
+      } catch (updateError) {
+        console.error('Failed to update request status:', updateError);
+      }
+    }
+    
+    // Send approval email notification
+    await sendApprovalEmail(email, deliveryData.displayName, password);
+    
+    console.log('Delivery agent request approved and account created');
     
   } catch (error) {
-    console.error('❌ Error approving delivery agent request:', error);
+    console.error('Error approving delivery agent request:', error);
     throw new Error('Failed to approve delivery agent request');
   }
 };
@@ -136,9 +199,18 @@ export const rejectDeliveryAgentRequest = async (
   rejectionReason: string
 ): Promise<void> => {
   try {
-    console.log('❌ Rejecting delivery agent request:', requestId);
+    console.log('Rejecting delivery agent request:', requestId);
     
     const requestRef = doc(db, 'deliveryAgentRequests', requestId);
+    
+    // Get request details for logging
+    const requestDoc = await getDoc(requestRef);
+    if (requestDoc.exists()) {
+      const requestData = requestDoc.data();
+      console.log('Rejecting request for:', requestData.displayName, requestData.email);
+    }
+    
+    // Update request status before deletion
     await updateDoc(requestRef, {
       status: 'rejected',
       reviewedAt: serverTimestamp(),
@@ -146,7 +218,9 @@ export const rejectDeliveryAgentRequest = async (
       rejectionReason
     });
     
-    console.log('✅ Delivery agent request rejected');
+    // Delete the request after rejection
+    await deleteDoc(requestRef);
+    console.log('Delivery agent request rejected and deleted:', requestId);
     
   } catch (error) {
     console.error('❌ Error rejecting delivery agent request:', error);
@@ -166,7 +240,42 @@ export const getDeliveryAgentRequest = async (requestId: string): Promise<Delive
     return null;
     
   } catch (error) {
-    console.error('❌ Error fetching delivery agent request:', error);
+    console.error(' Error fetching delivery agent request:', error);
     throw new Error('Failed to fetch delivery agent request');
+  }
+};
+
+export const sendApprovalEmail = async (email: string, displayName: string, password: string): Promise<void> => {
+  try {
+    console.log('Sending approval email to:', email);
+    
+    // Get API URL from environment or use default
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    
+    // Send approval email via backend
+    const response = await fetch(`${apiUrl}/api/send-approval-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        displayName,
+        password,
+        subject: 'StyleEase - Delivery Agent Application Approved!',
+        template: 'delivery_agent_approval'
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to send approval email');
+    }
+    
+    const result = await response.json();
+    console.log('Approval email sent successfully:', result);
+    
+  } catch (error) {
+    console.error('Error sending approval email:', error);
+    // Don't throw error - approval should still work even if email fails
   }
 };

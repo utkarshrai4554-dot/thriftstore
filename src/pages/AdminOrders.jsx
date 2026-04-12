@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { doc, updateDoc, getDoc, collection, query, orderBy, getDocs, onSnapshot } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, collection, query, orderBy, getDocs, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Badge } from '@/components/ui/badge';
 
@@ -19,15 +19,16 @@ const AdminOrders = () => {
     { id: 'partner3', name: 'Local Delivery Co', phone: '+1122334455', email: 'local@stylease.com' },
     { id: 'partner4', name: 'Speedy Delivery', phone: '+9998887777', email: 'speedy@stylease.com' }
   ]);
-  const [deliveryAgents, setDeliveryAgents] = useState([
-    { id: 'agent1', name: 'John Smith', phone: '+1234567890', status: 'online', deliveries: 45 },
-    { id: 'agent2', name: 'Sarah Johnson', phone: '+0987654321', status: 'offline', deliveries: 32 },
-    { id: 'agent3', name: 'Mike Wilson', phone: '+1122334455', status: 'online', deliveries: 28 }
+    const [deliveryAgentRequests, setDeliveryAgentRequests] = useState([
+    { id: 'req1', name: 'Alice Brown', phone: '+1555666777', email: 'alice@delivery.com', status: 'pending', experience: '2 years', vehicle: 'Motorcycle', appliedDate: '2024-01-15' },
+    { id: 'req2', name: 'Bob Davis', phone: '+1888999000', email: 'bob@delivery.com', status: 'pending', experience: '1 year', vehicle: 'Van', appliedDate: '2024-01-14' },
+    { id: 'req3', name: 'Carol White', phone: '+1222333444', email: 'carol@delivery.com', status: 'pending', experience: '3 years', vehicle: 'Car', appliedDate: '2024-01-13' },
+    { id: 'req4', name: 'David Lee', phone: '+1444555666', email: 'david@delivery.com', status: 'pending', experience: '6 months', vehicle: 'Bicycle', appliedDate: '2024-01-12' }
   ]);
 
   useEffect(() => {
     // Set up real-time listener for order updates
-    const unsubscribe = onSnapshot(
+    const unsubscribeOrders = onSnapshot(
       query(collection(db, 'orders'), orderBy('createdAt', 'desc')),
       (snapshot) => {
         const ordersData = snapshot.docs.map(doc => {
@@ -35,16 +36,21 @@ const AdminOrders = () => {
           return {
             id: doc.id,
             ...data,
-            createdAt: data.createdAt?.toDate(),
-            updatedAt: data.updatedAt?.toDate()
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt)
           };
         });
         setOrders(ordersData);
         setLoading(false);
+      },
+      (error) => {
+        console.error('Error fetching orders:', error);
+        setLoading(false);
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeOrders();
+    };
   }, []);
 
   const handleAcceptOrder = async (orderId) => {
@@ -110,31 +116,50 @@ const AdminOrders = () => {
     }
   };
 
-  const handleAddAgent = async (agent) => {
+  
+  
+  const handleApproveRequest = async (requestId) => {
     try {
-      const newAgent = {
-        ...agent,
-        id: Date.now().toString(),
-        createdAt: new Date()
-      };
-      
-      setDeliveryAgents([...deliveryAgents, newAgent]);
-      toast.success('Delivery agent added successfully!');
+      const request = deliveryAgentRequests.find(req => req.id === requestId);
+      if (request) {
+        // Add to Firebase deliveryAgent collection
+        const deliveryAgentRef = doc(collection(db, 'deliveryAgent'));
+        await setDoc(deliveryAgentRef, {
+          name: request.name,
+          phone: request.phone,
+          email: request.email,
+          status: 'online',
+          deliveries: 0,
+          experience: request.experience,
+          vehicle: request.vehicle,
+          appliedDate: request.appliedDate,
+          approvedDate: new Date().toISOString(),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        
+        // Remove from requests (this is dummy data, in real app you'd update Firebase)
+        setDeliveryAgentRequests(deliveryAgentRequests.filter(req => req.id !== requestId));
+        
+        toast.success(`Delivery agent request from ${request.name} approved!`);
+      }
     } catch (error) {
-      console.error('Error adding delivery agent:', error);
-      toast.error('Failed to add delivery agent');
+      console.error('Error approving request:', error);
+      toast.error('Failed to approve request');
     }
   };
 
-  const handleUpdateAgentStatus = async (agentId, status) => {
+  const handleRejectRequest = async (requestId) => {
     try {
-      setDeliveryAgents(deliveryAgents.map(agent => 
-        agent.id === agentId ? { ...agent, status } : agent
-      ));
-      toast.success(`Agent status updated to ${status}`);
+      const request = deliveryAgentRequests.find(req => req.id === requestId);
+      if (request) {
+        // Remove from requests
+        setDeliveryAgentRequests(deliveryAgentRequests.filter(req => req.id !== requestId));
+        toast.success(`Delivery agent request from ${request.name} rejected!`);
+      }
     } catch (error) {
-      console.error('Error updating agent status:', error);
-      toast.error('Failed to update agent status');
+      console.error('Error rejecting request:', error);
+      toast.error('Failed to reject request');
     }
   };
 
@@ -224,140 +249,141 @@ const AdminOrders = () => {
     <div className="bg-gradient-to-br from-amber-950 to-amber-900 min-h-screen">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-amber-100">Order Management</h1>
-          <p className="text-amber-200">Manage and track customer orders</p>
+          <h1 className="text-3xl font-bold text-gray-900">Order Management</h1>
+          <p className="text-gray-600">Manage and track customer orders</p>
         </div>
 
         {/* Order Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-amber-900 p-6 rounded-lg shadow border border-amber-700">
-          <div className="text-2xl font-bold text-amber-100">{orders.length}</div>
-          <div className="text-sm text-amber-200">Total Orders</div>
+        <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+          <div className="text-2xl font-bold text-gray-900">{orders.length}</div>
+          <div className="text-sm text-gray-600">Total Orders</div>
         </div>
-        <div className="bg-amber-900 p-6 rounded-lg shadow border border-amber-700">
-          <div className="text-2xl font-bold text-yellow-300">
+        <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+          <div className="text-2xl font-bold text-yellow-600">
             {orders.filter(o => o.status === 'pending').length}
           </div>
-          <div className="text-sm text-amber-200">Pending</div>
+          <div className="text-sm text-gray-600">Pending</div>
         </div>
-        <div className="bg-amber-900 p-6 rounded-lg shadow border border-amber-700">
-          <div className="text-2xl font-bold text-green-300">
+        <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+          <div className="text-2xl font-bold text-green-600">
             {orders.filter(o => o.status === 'accepted').length}
           </div>
-          <div className="text-sm text-amber-200">Accepted</div>
+          <div className="text-sm text-gray-600">Accepted</div>
         </div>
-        <div className="bg-amber-900 p-6 rounded-lg shadow border border-amber-700">
-          <div className="text-2xl font-bold text-purple-300">
+        <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+          <div className="text-2xl font-bold text-purple-600">
             {orders.filter(o => o.status === 'delivered').length}
           </div>
-          <div className="text-sm text-amber-200">Delivered</div>
+          <div className="text-sm text-gray-600">Delivered</div>
+        </div>
+      </div>
+      {/* Delivery Partners Management */}
+      <div className="bg-white rounded-lg shadow overflow-hidden mb-12 border border-gray-200">
+        <div className="px-8 py-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Delivery Partners</h2>
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Available Partners</h3>
+            <div className="space-y-3">
+              {deliveryPartners.map((partner) => (
+                <div key={partner.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div>
+                    <p className="font-medium text-gray-900">{partner.name}</p>
+                    <p className="text-sm text-gray-600">{partner.phone}</p>
+                    <p className="text-sm text-gray-600">{partner.email}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleAssignDelivery(selectedOrder.id)}
+                      disabled={!selectedOrder}
+                      className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                      Assign to Order
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Delivery Partners Management */}
-      <div className="bg-amber-900 rounded-lg shadow overflow-hidden mb-8 border border-amber-700">
-        <div className="px-6 py-4 border-b border-amber-700">
-          <h2 className="text-xl font-semibold text-amber-100 mb-4">Delivery Partners</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Partners List */}
-            <div>
-              <h3 className="text-lg font-medium text-amber-200 mb-3">Available Partners</h3>
-              <div className="space-y-2">
-                {deliveryPartners.map((partner) => (
-                  <div key={partner.id} className="flex items-center justify-between p-3 bg-amber-800 rounded-lg border border-amber-600">
-                    <div>
-                      <p className="font-medium text-amber-100">{partner.name}</p>
-                      <p className="text-sm text-amber-300">{partner.phone}</p>
-                      <p className="text-sm text-amber-300">{partner.email}</p>
+      {/* Delivery Agent Requests */}
+      <div className="bg-white rounded-lg shadow overflow-hidden mb-12 border border-gray-200">
+        <div className="px-8 py-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Delivery Agent Requests</h2>
+          <div className="space-y-4">
+            {deliveryAgentRequests.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600">No delivery agent requests at the moment.</p>
+              </div>
+            ) : (
+              deliveryAgentRequests.map((request) => (
+                <div key={request.id} className="bg-gray-50 rounded-lg border border-gray-200 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h4 className="font-semibold text-gray-900">{request.name}</h4>
+                        <Badge variant="outline" className="text-yellow-600 border-yellow-600">Pending</Badge>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                          </svg>
+                          <span className="text-gray-600">{request.phone}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          <span className="text-gray-600">{request.email}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <span className="text-gray-600">Applied: {request.appliedDate}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 mt-2 text-sm">
+                        <span className="text-gray-600">Experience: {request.experience}</span>
+                        <span className="text-gray-600">Vehicle: {request.vehicle}</span>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 ml-4">
                       <button
-                        onClick={() => handleAssignDelivery(selectedOrder.id)}
-                        disabled={!selectedOrder}
-                        className="px-3 py-1 bg-amber-600 text-white rounded-md hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                        onClick={() => handleApproveRequest(request.id)}
+                        className="px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium"
                       >
-                        Assign to Order
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleRejectRequest(request.id)}
+                        className="px-3 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-medium"
+                      >
+                        Reject
                       </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Delivery Agents */}
-            <div>
-              <h3 className="text-lg font-medium text-amber-200 mb-3">Delivery Agents</h3>
-              <div className="space-y-2">
-                {deliveryAgents.map((agent) => (
-                  <div key={agent.id} className="flex items-center justify-between p-3 bg-amber-800 rounded-lg border border-amber-600">
-                    <div>
-                      <p className="font-medium text-amber-100">{agent.name}</p>
-                      <p className="text-sm text-amber-300">{agent.phone}</p>
-                      <p className="text-sm text-amber-300">{agent.deliveries} deliveries</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={agent.status === 'online' ? 'default' : 'outline'}>
-                        {agent.status}
-                      </Badge>
-                      <button
-                        onClick={() => handleUpdateAgentStatus(agent.id, agent.status === 'online' ? 'offline' : 'online')}
-                        className="px-2 py-1 bg-amber-600 text-white rounded-md hover:bg-amber-500 text-sm"
-                      >
-                        {agent.status === 'online' ? 'Go Offline' : 'Go Online'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Add New Agent */}
-        <div className="px-6 py-4">
-          <h3 className="text-lg font-medium text-amber-200 mb-3">Add New Agent</h3>
-          <div className="flex gap-4">
-            <input
-              type="text"
-              placeholder="Agent Name"
-              className="flex-1 px-3 py-2 border border-amber-600 rounded-md bg-amber-800 text-amber-100 placeholder-amber-400"
-              id="newAgentName"
-            />
-            <input
-              type="tel"
-              placeholder="Phone Number"
-              className="flex-1 px-3 py-2 border border-amber-600 rounded-md bg-amber-800 text-amber-100 placeholder-amber-400"
-              id="newAgentPhone"
-            />
-            <button
-              onClick={() => {
-                const name = document.getElementById('newAgentName')?.value;
-                const phone = document.getElementById('newAgentPhone')?.value;
-                if (name && phone) {
-                  handleAddAgent({ name, phone });
-                  document.getElementById('newAgentName').value = '';
-                  document.getElementById('newAgentPhone').value = '';
-                }
-              }}
-              className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-500"
-            >
-              Add Agent
-            </button>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
 
       {/* Orders List */}
-      <div className="bg-amber-900 rounded-lg shadow overflow-hidden border border-amber-700">
-        <div className="px-6 py-4 border-b border-amber-700">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-amber-100">Order Management</h2>
+      <div className="bg-white rounded-lg shadow overflow-hidden mb-12 border border-gray-200">
+        <div className="px-8 py-6 border-b border-gray-200">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-900">Order Management</h2>
             <div className="flex gap-2">
               <button
                 onClick={() => setActiveTab('pending')}
                 className={`px-4 py-2 rounded-md font-medium transition-colors ${
                   activeTab === 'pending' 
-                    ? 'bg-amber-600 text-white' 
+                    ? 'bg-blue-600 text-white' 
                     : 'bg-amber-800 text-amber-300 hover:bg-amber-700'
                 }`}
               >
@@ -367,7 +393,7 @@ const AdminOrders = () => {
                 onClick={() => setActiveTab('completed')}
                 className={`px-4 py-2 rounded-md font-medium transition-colors ${
                   activeTab === 'completed' 
-                    ? 'bg-amber-600 text-white' 
+                    ? 'bg-blue-600 text-white' 
                     : 'bg-amber-800 text-amber-300 hover:bg-amber-700'
                 }`}
               >
@@ -379,7 +405,7 @@ const AdminOrders = () => {
           {/* Search Bar */}
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
@@ -388,76 +414,76 @@ const AdminOrders = () => {
               placeholder="Search by Order ID, Customer Name, or Email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-amber-800 border border-amber-600 rounded-md text-amber-100 placeholder-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
         </div>
         
         {filteredOrders.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-amber-300 mb-4">
+          <div className="text-center py-8">
+            <div className="text-gray-600 dark:text-amber-300">
               {searchQuery ? 'No orders found matching your search' : `No ${activeTab} orders found`}
             </div>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-amber-800">
+              <thead className="bg-white border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-amber-200 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-700 uppercase tracking-wider">
                     Order ID
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-amber-200 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-700 uppercase tracking-wider">
                     Customer
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-amber-200 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-700 uppercase tracking-wider">
                     Total
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-amber-200 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-700 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-amber-200 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-700 uppercase tracking-wider">
                     Delivery Partner
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-amber-200 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-700 uppercase tracking-wider">
                     Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-amber-200 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-amber-900 divide-y divide-amber-700">
+              <tbody className="bg-white divide-y divide-gray-200">
                 {filteredOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-amber-800">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-amber-100">
+                  <tr key={order.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-900">
                       #{order.id.slice(-8)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-amber-100">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-900">
                       <div>
                         <div className="font-medium">{order.userName}</div>
-                        <div className="text-amber-300">{order.userEmail}</div>
+                        <div className="text-gray-500 dark:text-gray-500">{order.userEmail}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-amber-100">
-                      ₹{order.finalAmount?.toFixed(2) || '0.00'}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-900">
+                      ¥{order.finalAmount?.toFixed(2) || '0.00'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-amber-100">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-900">
                       <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(order.status)}`}>
                         {getStatusText(order.status)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-amber-100">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-900">
                       {order.deliveryPartnerName || 'Not assigned'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-amber-100">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-600">
                       {order.createdAt?.toDate ? order.createdAt.toDate().toLocaleString() : new Date(order.createdAt).toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-amber-100">
-                      <div className="flex items-center space-x-2">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-900">
+                      <div className="flex items-center space-x-4">
                         <button
                           onClick={() => openOrderDetails(order)}
-                          className="px-3 py-1.5 bg-amber-700 text-amber-100 rounded-md hover:bg-amber-600 transition-colors text-sm font-medium"
+                          className="px-3 py-1.5 bg-white border border-gray-600 text-gray-700 rounded-md hover:bg-gray-50 transition-colors text-sm font-medium"
                         >
                           View Details
                         </button>
@@ -467,7 +493,7 @@ const AdminOrders = () => {
                               setSelectedOrder(order);
                               setShowAssignModal(true);
                             }}
-                            className="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
+                            className="px-3 py-1.5 bg-white border border-blue-600 text-black rounded-md hover:bg-blue-50 transition-colors text-sm font-medium"
                           >
                             Assign Delivery
                           </button>
@@ -481,7 +507,7 @@ const AdminOrders = () => {
                                 setShowDetails(false);
                               }
                             }}
-                            className="px-3 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-medium"
+                            className="px-3 py-1.5 bg-white border border-red-600 text-red-600 rounded-md hover:bg-red-50 transition-colors text-sm font-medium"
                           >
                             Reject
                           </button>
@@ -489,7 +515,7 @@ const AdminOrders = () => {
                         {order.status === 'accepted' && (
                           <button
                             onClick={() => handleMarkAsDelivered(order.id)}
-                            className="px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium"
+                            className="px-3 py-1.5 bg-white border border-green-600 text-green-600 rounded-md hover:bg-green-50 transition-colors text-sm font-medium"
                           >
                             Mark Delivered
                           </button>
@@ -669,21 +695,14 @@ const AdminOrders = () => {
 
       {/* Delivery Assignment Modal */}
       {showAssignModal && selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-gradient-to-br from-amber-900 to-amber-800 rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-amber-700 shadow-2xl">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto border border-gray-200 shadow-lg">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-amber-800 to-amber-700 px-6 py-4 rounded-t-xl border-b border-amber-600">
+            <div className="px-6 py-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-amber-600 rounded-full flex items-center justify-center">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2a1 1 0 011 1v6m0-5V6a1 1 0 011-1h2a1 1 0 011 1v1" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">Assign Delivery Partner</h3>
-                    <p className="text-amber-200 text-sm">Select a delivery partner for this order</p>
-                  </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-black">Assign Delivery Partner</h3>
+                  <p className="text-sm text-black mt-1">Select a delivery partner for this order</p>
                 </div>
                 <button
                   onClick={() => {
@@ -691,9 +710,9 @@ const AdminOrders = () => {
                     setShowAssignModal(false);
                     setSelectedPartner('');
                   }}
-                  className="text-amber-200 hover:text-white transition-colors"
+                  className="text-gray-400 hover:text-black p-1 rounded-md hover:bg-gray-100 transition-colors"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -702,54 +721,44 @@ const AdminOrders = () => {
             
             {/* Modal Body */}
             <div className="p-6 space-y-6">
-              {/* Debug Info */}
-              <div className="bg-amber-800 rounded p-2 text-xs border border-amber-700">
-                <p className="text-amber-200">Debug: Order ID: {selectedOrder.id}</p>
-                <p className="text-amber-200">Debug: Customer: {selectedOrder.customerName}</p>
-                <p className="text-amber-200">Debug: Selected Partner: {selectedPartner}</p>
-              </div>
-              
-              {/* Order Summary Card */}
-              <div className="bg-amber-800 rounded-lg p-4 border border-amber-700 shadow-sm">
+              {/* Order Summary */}
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-8 h-8 bg-amber-600 rounded-full flex items-center justify-center">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                    <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
                   </div>
                   <div>
-                    <h4 className="font-semibold text-amber-100">Order Summary</h4>
-                    <p className="text-amber-300 text-sm">Order #{selectedOrder.id ? selectedOrder.id.slice(-8) : 'Loading...'}</p>
+                    <h4 className="font-semibold text-black">Order Summary</h4>
+                    <p className="text-sm text-black">Order #{selectedOrder.id ? selectedOrder.id.slice(-8) : 'Loading...'}</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="bg-amber-700 rounded p-2 border border-amber-600">
-                    <p className="text-amber-300 text-xs">Customer</p>
-                    <p className="text-amber-100 font-medium">{selectedOrder.customerName || 'Loading...'}</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-black mb-1">Customer</p>
+                    <p className="text-sm font-medium text-black">{selectedOrder.customerName || 'Loading...'}</p>
                   </div>
-                  <div className="bg-amber-700 rounded p-2 border border-amber-600">
-                    <p className="text-amber-300 text-xs">Total Amount</p>
-                    <p className="text-amber-100 font-medium">₹{selectedOrder.totalPrice ? selectedOrder.totalPrice.toFixed(2) : '0.00'}</p>
+                  <div>
+                    <p className="text-xs text-black mb-1">Total Amount</p>
+                    <p className="text-sm font-medium text-black">¥{selectedOrder.totalPrice ? selectedOrder.totalPrice.toFixed(2) : '0.00'}</p>
                   </div>
                 </div>
               </div>
 
               {/* Partner Selection */}
               <div>
-                <label className="block text-sm font-semibold text-amber-100 mb-3 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2a5 5 0 00-9.552-2.312M17 20H7m0 0v-2a5 5 0 00-9.552 2.312M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2a5 5 0 00-5.356-1.857" />
-                  </svg>
+                <label className="block text-sm font-semibold text-black mb-3">
                   Select Delivery Partner
                 </label>
                 <div className="space-y-2">
                   {deliveryPartners.map((partner) => (
                     <label
                       key={partner.id}
-                      className={`flex items-center p-3 rounded-lg border cursor-pointer transition-all ${
+                      className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors ${
                         selectedPartner === partner.id
-                          ? 'bg-amber-700 border-amber-500'
-                          : 'bg-amber-800 border-amber-600 hover:bg-amber-700'
+                          ? 'bg-gray-50 border-gray-400'
+                          : 'bg-white border-gray-200 hover:bg-gray-50'
                       }`}
                     >
                       <input
@@ -761,35 +770,12 @@ const AdminOrders = () => {
                           console.log('Selected partner:', e.target.value);
                           setSelectedPartner(e.target.value);
                         }}
-                        className="sr-only"
+                        className="mr-3"
                       />
                       <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="font-medium text-amber-100">{partner.name}</p>
-                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                            selectedPartner === partner.id
-                              ? 'bg-amber-400 border-amber-300'
-                              : 'border-amber-500'
-                          }`}>
-                            {selectedPartner === partner.id && (
-                              <div className="w-2 h-2 bg-amber-900 rounded-full"></div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4 mt-1 text-sm text-amber-300">
-                          <span className="flex items-center gap-1">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                            </svg>
-                            {partner.phone}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                            {partner.email}
-                          </span>
-                        </div>
+                        <div className="font-medium text-black">{partner.name}</div>
+                        <div className="text-sm text-black">{partner.phone}</div>
+                        <div className="text-sm text-black">{partner.email}</div>
                       </div>
                     </label>
                   ))}
@@ -798,15 +784,15 @@ const AdminOrders = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="bg-gradient-to-r from-amber-800 to-amber-700 px-6 py-4 rounded-b-xl border-t border-amber-600">
-              <div className="flex justify-end space-x-3">
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+              <div className="flex justify-end gap-3">
                 <button
                   onClick={() => {
                     console.log('Cancel clicked');
                     setShowAssignModal(false);
                     setSelectedPartner('');
                   }}
-                  className="px-6 py-2.5 bg-amber-700 text-amber-100 rounded-lg hover:bg-amber-600 transition-colors font-medium"
+                  className="px-4 py-2 bg-white border border-gray-300 text-black rounded-md hover:bg-gray-50 transition-colors text-sm font-medium"
                 >
                   Cancel
                 </button>
@@ -816,7 +802,7 @@ const AdminOrders = () => {
                     handleAssignDelivery(selectedOrder.id);
                   }}
                   disabled={!selectedPartner}
-                  className="px-6 py-2.5 bg-gradient-to-r from-amber-600 to-amber-500 text-white rounded-lg hover:from-amber-500 hover:to-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium shadow-lg disabled:shadow-none"
+                  className="px-4 py-2 bg-white border border-blue-600 text-black rounded-md hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                 >
                   Assign Partner
                 </button>

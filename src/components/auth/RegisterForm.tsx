@@ -15,7 +15,27 @@ import { useToast } from '../../hooks/use-toast';
 
 const registerSchema = z.object({
   displayName: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Please enter a valid email address'),
+  email: z.string()
+    .email('Please enter a valid email address')
+    .refine((email) => {
+      // Check for common email domain typos
+      const commonTypos = {
+        'gmaill.com': 'gmail.com',
+        'gamil.com': 'gmail.com',
+        'gmial.com': 'gmail.com',
+        'gmaol.com': 'gmail.com',
+        'yahooo.com': 'yahoo.com',
+        'outlookt.com': 'outlook.com',
+        'hotmaill.com': 'hotmail.com'
+      };
+      
+      const domain = email.split('@')[1]?.toLowerCase();
+      if (commonTypos[domain]) {
+        return false;
+      }
+      
+      return true;
+    }, 'Please check your email domain. Did you mean gmail.com?'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string(),
   phone: z.string().optional(),

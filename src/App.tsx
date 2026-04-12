@@ -13,6 +13,7 @@ import { ReviewProvider } from "@/contexts/ReviewContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AdminRoute } from "@/components/auth/AdminRoute";
+import { DeliveryRoute } from "@/components/auth/DeliveryRoute";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminOrders from "@/pages/AdminOrders";
 import BuyOrders from "@/pages/BuyOrders";
@@ -44,6 +45,7 @@ import NGODashboard from "./pages/NGODashboard";
 import NGORegister from "./pages/NGORegister";
 import DonateHub from "./pages/DonateHub";
 import NGOLogin from "./pages/NGOLogin";
+import DeliveryAgentRegister from "./pages/DeliveryAgentRegister";
 
 const queryClient = new QueryClient();
 
@@ -146,9 +148,9 @@ const AppContent = () => {
         <Route 
           path="/delivery" 
           element={
-            <AdminRoute>
+            <DeliveryRoute>
               <DeliveryDashboard />
-            </AdminRoute>
+            </DeliveryRoute>
           } 
         />
         <Route 
@@ -162,6 +164,10 @@ const AppContent = () => {
         <Route 
           path="/ngo/login" 
           element={<NGOLogin />} 
+        />
+        <Route 
+          path="/delivery-agent-register" 
+          element={<DeliveryAgentRegister />} 
         />
         <Route 
           path="/ngo/dashboard" 

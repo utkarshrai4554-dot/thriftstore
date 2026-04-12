@@ -10,6 +10,8 @@ import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { createOTPRequest } from '@/services/otpService';
+import OTPVerification from '@/components/auth/OTPVerification';
 
 const NGORegister = () => {
   const [formData, setFormData] = useState({
@@ -26,34 +28,88 @@ const NGORegister = () => {
     contactPerson: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showOTP, setShowOTP] = useState(false);
+  const [otpId, setOtpId] = useState<string>('');
+  const [formErrors, setFormErrors] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setFormErrors(null);
 
     // Validate form data
     if (!formData.name || !formData.email || !formData.password || !formData.phone || !formData.city) {
-      console.error('❌ Missing required fields');
-      toast.error('Please fill all required fields');
+      setFormErrors('Please fill all required fields');
       setIsSubmitting(false);
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      console.error('❌ Passwords do not match');
-      toast.error('Passwords do not match');
+      setFormErrors('Passwords do not match');
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Check for common email domain typos
+    const commonTypos = {
+      'gmaill.com': 'gmail.com',
+      'gamil.com': 'gmail.com',
+      'gmial.com': 'gmail.com',
+      'gmaol.com': 'gmail.com',
+      'yahooo.com': 'yahoo.com',
+      'outlookt.com': 'outlook.com',
+      'hotmaill.com': 'hotmail.com'
+    };
+    
+    const domain = formData.email.split('@')[1]?.toLowerCase();
+    if (commonTypos[domain]) {
+      setFormErrors('Please check your email domain. Did you mean gmail.com?');
       setIsSubmitting(false);
       return;
     }
 
     try {
-      console.log('🔍 Starting NGO registration:', formData.email);
+      console.log('Starting NGO registration with OTP verification:', formData.email);
       
-      // First, create user in Firebase Authentication
+      // Step 1: Create OTP request
+      const otpRequestId = await createOTPRequest(formData.email);
+      console.log('OTP request created:', otpRequestId);
+      
+      // Step 2: Show OTP verification screen
+      setOtpId(otpRequestId);
+      setShowOTP(true);
+      
+      toast({
+        title: "Verification Code Sent",
+        description: "A 4-digit code has been sent to your email address.",
+      });
+      
+    } catch (error) {
+      console.error('NGO registration error:', error);
+      setFormErrors('Registration failed. Please try again.');
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: "Failed to send verification code. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleOTPVerified = async () => {
+    setIsSubmitting(true);
+    setFormErrors(null);
+
+    try {
+      console.log('OTP verified, completing NGO registration...');
+      
+      // Step 3: Complete registration after OTP verification
       const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       const user = userCredential.user;
       
-      console.log('✅ Firebase auth successful for NGO! User UID:', user.uid);
+      console.log('Firebase auth successful for NGO! User UID:', user.uid);
       
       // Then save to ngoRegistrations collection
       const ngoData = {
@@ -66,9 +122,13 @@ const NGORegister = () => {
 
       const docRef = await addDoc(collection(db, 'ngoRegistrations'), ngoData);
       
-      console.log('✅ NGO registration saved to Firestore');
-      toast.success('NGO registration submitted! Admin will review your application.');
+      console.log('NGO registration saved to Firestore');
+      toast({
+        title: "Registration Successful",
+        description: "NGO registration submitted! Admin will review your application.",
+      });
       
+      // Reset form
       setFormData({
         name: "",
         email: "",
@@ -82,24 +142,49 @@ const NGORegister = () => {
         website: "",
         contactPerson: ""
       });
-
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 2000);
+      setShowOTP(false);
+      setOtpId('');
       
-    } catch (error: any) {
-      console.error('NGO registration error:', error);
-      
-      // Check if it's a Firebase Auth error
-      if (error.code && error.code.startsWith('auth/')) {
-        toast.error(`Registration failed: ${error.message}`);
-      } else {
-        toast.error('Failed to submit registration. Please try again.');
-      }
+    } catch (error) {
+      console.error('NGO registration completion error:', error);
+      setFormErrors('Registration failed. Please try again.');
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: "Failed to complete registration. Please try again.",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const handleOTPCancel = () => {
+    setShowOTP(false);
+    setOtpId('');
+    setFormErrors(null);
+  };
+
+  const handleOTPBack = () => {
+    // Go back to registration form to resend OTP
+    setShowOTP(false);
+    setOtpId('');
+    // Keep formData to allow resending
+  };
+
+  // Show OTP verification screen
+  if (showOTP) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <OTPVerification
+          email={formData.email}
+          otpId={otpId}
+          onVerified={handleOTPVerified}
+          onCancel={handleOTPCancel}
+          onBack={handleOTPBack}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen py-8">

@@ -105,6 +105,31 @@ const getOTPTemplate = (otp, email) => {
         
         <div class="otp-code">${otp}</div>
         
+        <div class="next-steps">
+          <h3>Next Steps:</h3>
+          <ol>
+            <li><strong>Complete Registration:</strong> Click the button below to complete your account setup</li>
+            <li>Log in to your StyleEase delivery agent account</li>
+            <li>Update your profile and availability</li>
+            <li>Start receiving delivery assignments</li>
+            <li>Begin earning with every successful delivery!</li>
+          </ol>
+        </div>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="http://localhost:8080/delivery-agent-register" 
+             style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); 
+                    color: white; 
+                    padding: 15px 30px; 
+                    text-decoration: none; 
+                    border-radius: 8px; 
+                    font-weight: bold; 
+                    display: inline-block;
+                    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);">
+            Complete Registration
+          </a>
+        </div>
+        
         <div class="info">
           <h3>📋 Important Information:</h3>
           <ul>
@@ -248,11 +273,12 @@ app.post('/api/send-otp', async (req, res) => {
 
 // Start server
 const server = app.listen(PORT, () => {
-  console.log(`🚀 Gmail Email Server running on port ${PORT}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-  console.log(`📧 Email Status: http://localhost:${PORT}/api/email-status`);
-  console.log(`📨 Send OTP: POST http://localhost:${PORT}/api/send-otp`);
-  console.log(`📬 Gmail configured: ${process.env.GMAIL_USER}`);
+  console.log(`Gmail Email Server running on port ${PORT}`);
+  console.log(`Health check: http://localhost:${PORT}/health`);
+  console.log(`Email Status: http://localhost:${PORT}/api/email-status`);
+  console.log(`Send OTP: POST http://localhost:${PORT}/api/send-otp`);
+  console.log(`Send Approval: POST http://localhost:${PORT}/api/send-approval-email`);
+  console.log(`Gmail configured: ${process.env.GMAIL_USER}`);
 });
 
 module.exports = app;

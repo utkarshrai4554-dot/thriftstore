@@ -301,7 +301,12 @@ const Orders = () => {
                         <p className="text-lg font-semibold">${order.totalAmount?.toFixed(2) || '0.00'}</p>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handleViewDetails(order)}>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleViewDetails(order)}
+                          className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-all duration-200"
+                        >
                           View Details
                         </Button>
                         {order.trackingNumber && (
