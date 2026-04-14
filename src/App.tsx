@@ -1,3 +1,4 @@
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,6 +15,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AdminRoute } from "@/components/auth/AdminRoute";
 import { DeliveryRoute } from "@/components/auth/DeliveryRoute";
+import { deliveryCleanupService } from "@/services/deliveryCleanupService";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminOrders from "@/pages/AdminOrders";
 import BuyOrders from "@/pages/BuyOrders";
@@ -208,24 +210,36 @@ const AppContent = () => {
   );
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <CartProvider>
-            <WishlistProvider>
-              <ReviewProvider>
-                <Toaster />
-                <Sonner />
-                <AppContent />
-              </ReviewProvider>
-            </WishlistProvider>
-          </CartProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  // Start the delivery cleanup service when the app starts
+  React.useEffect(() => {
+    deliveryCleanupService.start();
+    
+    // Cleanup when the app unmounts
+    return () => {
+      deliveryCleanupService.stop();
+    };
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <CartProvider>
+              <WishlistProvider>
+                <ReviewProvider>
+                  <Toaster />
+                  <Sonner />
+                  <AppContent />
+                </ReviewProvider>
+              </WishlistProvider>
+            </CartProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

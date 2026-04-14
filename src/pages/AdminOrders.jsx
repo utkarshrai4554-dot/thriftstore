@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { doc, updateDoc, getDoc, collection, query, orderBy, getDocs, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Badge } from '@/components/ui/badge';
+import { getAvailableDeliveryAgents, assignOrderToAgent } from '@/services/deliveryAssignmentService';
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -13,12 +14,8 @@ const AdminOrders = () => {
   const [selectedPartner, setSelectedPartner] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('pending');
-  const [deliveryPartners] = useState([
-    { id: 'partner1', name: 'Stylease Express', phone: '+1234567890', email: 'express@stylease.com' },
-    { id: 'partner2', name: 'QuickShip Logistics', phone: '+0987654321', email: 'quickship@stylease.com' },
-    { id: 'partner3', name: 'Local Delivery Co', phone: '+1122334455', email: 'local@stylease.com' },
-    { id: 'partner4', name: 'Speedy Delivery', phone: '+9998887777', email: 'speedy@stylease.com' }
-  ]);
+  const [deliveryAgents, setDeliveryAgents] = useState([]);
+  const [loadingAgents, setLoadingAgents] = useState(true);
     const [deliveryAgentRequests, setDeliveryAgentRequests] = useState([
     { id: 'req1', name: 'Alice Brown', phone: '+1555666777', email: 'alice@delivery.com', status: 'pending', experience: '2 years', vehicle: 'Motorcycle', appliedDate: '2024-01-15' },
     { id: 'req2', name: 'Bob Davis', phone: '+1888999000', email: 'bob@delivery.com', status: 'pending', experience: '1 year', vehicle: 'Van', appliedDate: '2024-01-14' },
@@ -48,10 +45,26 @@ const AdminOrders = () => {
       }
     );
 
+    // Fetch available delivery agents
+    fetchDeliveryAgents();
+
     return () => {
       unsubscribeOrders();
     };
   }, []);
+
+  const fetchDeliveryAgents = async () => {
+    try {
+      setLoadingAgents(true);
+      const agents = await getAvailableDeliveryAgents();
+      setDeliveryAgents(agents);
+    } catch (error) {
+      console.error('Error fetching delivery agents:', error);
+      toast.error('Failed to fetch delivery agents');
+    } finally {
+      setLoadingAgents(false);
+    }
+  };
 
   const handleAcceptOrder = async (orderId) => {
     try {
@@ -94,25 +107,27 @@ const AdminOrders = () => {
     }
   };
 
-  const handleAssignDelivery = async (orderId) => {
+  const handleAssignDelivery = async (orderId, agentId) => {
     try {
-      const orderRef = doc(db, 'orders', orderId);
-      const selectedPartnerData = deliveryPartners.find(p => p.id === selectedPartner);
+      const selectedAgent = deliveryAgents.find(agent => agent.uid === agentId);
       
-      await updateDoc(orderRef, {
-        deliveryPartner: selectedPartner,
-        deliveryPartnerName: selectedPartnerData?.name,
-        status: 'accepted', // Update status to accepted when delivery is assigned
-        assignedAt: new Date(),
-        updatedAt: new Date()
-      });
+      if (!selectedAgent) {
+        toast.error('Please select a delivery agent');
+        return;
+      }
 
-      toast.success(`Delivery partner ${selectedPartnerData?.name} assigned successfully!`);
+      await assignOrderToAgent(orderId, agentId, selectedAgent);
+      
+      toast.success(`Order assigned to ${selectedAgent.displayName}! Waiting for acceptance...`);
       setShowAssignModal(false);
       setSelectedPartner('');
+      
+      // Refresh delivery agents list
+      await fetchDeliveryAgents();
+      
     } catch (error) {
-      console.error('Error assigning delivery partner:', error);
-      toast.error('Failed to assign delivery partner');
+      console.error('Error assigning delivery agent:', error);
+      toast.error('Failed to assign delivery agent');
     }
   };
 
@@ -278,23 +293,50 @@ const AdminOrders = () => {
           <div className="text-sm text-gray-600">Delivered</div>
         </div>
       </div>
-      {/* Delivery Partners Management */}
+      {/* Delivery Agents Management */}
       <div className="bg-white rounded-lg shadow overflow-hidden mb-12 border border-gray-200">
         <div className="px-8 py-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Delivery Partners</h2>
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Available Partners</h3>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">Available Delivery Agents</h2>
+            <button
+              onClick={fetchDeliveryAgents}
+              disabled={loadingAgents}
+              className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:opacity-50 text-sm"
+            >
+              {loadingAgents ? 'Loading...' : 'Refresh'}
+            </button>
+          </div>
+          {loadingAgents ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : deliveryAgents.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-600">No available delivery agents at the moment.</p>
+            </div>
+          ) : (
             <div className="space-y-3">
-              {deliveryPartners.map((partner) => (
-                <div key={partner.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+              {deliveryAgents.map((agent) => (
+                <div key={agent.uid} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
                   <div>
-                    <p className="font-medium text-gray-900">{partner.name}</p>
-                    <p className="text-sm text-gray-600">{partner.phone}</p>
-                    <p className="text-sm text-gray-600">{partner.email}</p>
+                    <p className="font-medium text-gray-900">{agent.displayName}</p>
+                    <p className="text-sm text-gray-600">{agent.phone}</p>
+                    <p className="text-sm text-gray-600">{agent.email}</p>
+                    <div className="flex items-center gap-4 mt-1">
+                      <span className="text-xs text-gray-500">{agent.vehicleType} ({agent.vehicleNumber})</span>
+                      <span className="text-xs text-gray-500">{agent.totalDeliveries} deliveries</span>
+                      <span className="text-xs text-gray-500">Rating: {agent.rating.toFixed(1)}</span>
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => handleAssignDelivery(selectedOrder.id)}
+                      onClick={() => {
+                        if (selectedOrder) {
+                          handleAssignDelivery(selectedOrder.id, agent.uid);
+                        } else {
+                          toast.error('Please select an order first');
+                        }
+                      }}
                       disabled={!selectedOrder}
                       className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                     >
@@ -304,7 +346,7 @@ const AdminOrders = () => {
                 </div>
               ))}
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -701,8 +743,8 @@ const AdminOrders = () => {
             <div className="px-6 py-4 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-black">Assign Delivery Partner</h3>
-                  <p className="text-sm text-black mt-1">Select a delivery partner for this order</p>
+                  <h3 className="text-lg font-semibold text-black">Assign Delivery Agent</h3>
+                  <p className="text-sm text-black mt-1">Select a delivery agent for this order</p>
                 </div>
                 <button
                   onClick={() => {
@@ -746,40 +788,56 @@ const AdminOrders = () => {
                 </div>
               </div>
 
-              {/* Partner Selection */}
+              {/* Agent Selection */}
               <div>
                 <label className="block text-sm font-semibold text-black mb-3">
-                  Select Delivery Partner
+                  Select Delivery Agent
                 </label>
                 <div className="space-y-2">
-                  {deliveryPartners.map((partner) => (
+                  {deliveryAgents.map((agent) => (
                     <label
-                      key={partner.id}
+                      key={agent.uid}
                       className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors ${
-                        selectedPartner === partner.id
+                        selectedPartner === agent.uid
                           ? 'bg-gray-50 border-gray-400'
                           : 'bg-white border-gray-200 hover:bg-gray-50'
                       }`}
                     >
                       <input
                         type="radio"
-                        name="deliveryPartner"
-                        value={partner.id}
-                        checked={selectedPartner === partner.id}
+                        name="deliveryAgent"
+                        value={agent.uid}
+                        checked={selectedPartner === agent.uid}
                         onChange={(e) => {
-                          console.log('Selected partner:', e.target.value);
+                          console.log('Selected agent:', e.target.value);
                           setSelectedPartner(e.target.value);
                         }}
                         className="mr-3"
                       />
                       <div className="flex-1">
-                        <div className="font-medium text-black">{partner.name}</div>
-                        <div className="text-sm text-black">{partner.phone}</div>
-                        <div className="text-sm text-black">{partner.email}</div>
+                        <div className="font-medium text-black">{agent.displayName}</div>
+                        <div className="text-sm text-black">{agent.phone}</div>
+                        <div className="text-sm text-black">{agent.email}</div>
+                        <div className="flex items-center gap-4 mt-1">
+                          <span className="text-xs text-gray-500">{agent.vehicleType} ({agent.vehicleNumber})</span>
+                          <span className="text-xs text-gray-500">{agent.totalDeliveries} deliveries</span>
+                          <span className="text-xs text-gray-500">Rating: {agent.rating.toFixed(1)}</span>
+                        </div>
                       </div>
                     </label>
                   ))}
                 </div>
+                {deliveryAgents.length === 0 && (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-600">No available delivery agents</p>
+                    <button
+                      onClick={fetchDeliveryAgents}
+                      className="mt-2 px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                    >
+                      Refresh Agents
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -798,13 +856,13 @@ const AdminOrders = () => {
                 </button>
                 <button
                   onClick={() => {
-                    console.log('Assign partner clicked for order:', selectedOrder.id);
-                    handleAssignDelivery(selectedOrder.id);
+                    console.log('Assign agent clicked for order:', selectedOrder.id);
+                    handleAssignDelivery(selectedOrder.id, selectedPartner);
                   }}
                   disabled={!selectedPartner}
                   className="px-4 py-2 bg-white border border-blue-600 text-black rounded-md hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                 >
-                  Assign Partner
+                  Assign Agent
                 </button>
               </div>
             </div>
