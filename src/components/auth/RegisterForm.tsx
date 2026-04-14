@@ -7,11 +7,12 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Loader2 } from 'lucide-react';
+import { Loader2, User, Truck, Building } from 'lucide-react';
 import { registerUser, AuthError } from '../../services/authService';
 import { createOTPRequest } from '../../services/otpService';
-import OTPVerification from './OTPVerification';
 import { useToast } from '../../hooks/use-toast';
+import { useTheme } from '../../contexts/ThemeContext';
+import OTPVerification from './OTPVerification';
 
 const registerSchema = z.object({
   displayName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -53,13 +54,17 @@ interface RegisterFormProps {
   onLoginClick?: () => void;
 }
 
+type UserRole = 'customer' | 'delivery' | 'ngo';
+
 export const RegisterForm = ({ onSuccess, onLoginClick }: RegisterFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showOTP, setShowOTP] = useState(false);
   const [otpId, setOtpId] = useState<string>('');
   const [formData, setFormData] = useState<RegisterFormData | null>(null);
+  const [selectedRole, setSelectedRole] = useState<UserRole>('customer');
   const { toast } = useToast();
+  const theme = useTheme();
 
   const {
     register,
@@ -201,15 +206,58 @@ export const RegisterForm = ({ onSuccess, onLoginClick }: RegisterFormProps) => 
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle>Create Account</CardTitle>
-        <CardDescription>
-          Fill in your details to create a new account
+        <CardTitle className="text-black">
+          {selectedRole === 'ngo' ? 'NGO Registration' : 'Create Account'}
+        </CardTitle>
+        <CardDescription className={theme.getThemeColors().foreground}>
+          {selectedRole === 'ngo' 
+            ? 'Register your NGO to receive donations from our platform'
+            : 'Fill in your details to create a new account'
+          }
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {/* Role Selection */}
+        <div className="space-y-3 mb-6">
+          <Label className="text-sm font-medium text-black">Select your role:</Label>
+          <div className="grid grid-cols-3 gap-2">
+            <Button
+              type="button"
+              variant={selectedRole === 'customer' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedRole('customer')}
+              className="flex flex-col gap-1 h-auto py-3"
+            >
+              <User className="h-4 w-4" />
+              <span className="text-xs">Customer</span>
+            </Button>
+            <Button
+              type="button"
+              variant={selectedRole === 'delivery' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedRole('delivery')}
+              className="flex flex-col gap-1 h-auto py-3"
+            >
+              <Truck className="h-4 w-4" />
+              <span className="text-xs">Delivery</span>
+            </Button>
+            <Button
+              type="button"
+              variant={selectedRole === 'ngo' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedRole('ngo')}
+              className={`flex flex-col gap-1 h-auto py-3 ${
+                selectedRole === 'ngo' ? (theme.theme === 'light' ? 'text-black' : 'text-yellow-100') : ''
+              }`}
+            >
+              <Building className="h-4 w-4" />
+              <span className="text-xs">NGO</span>
+            </Button>
+          </div>
+        </div>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="displayName">Full Name</Label>
+            <Label htmlFor="displayName" className={theme.getThemeColors().foreground}>Full Name</Label>
             <Input
               id="displayName"
               type="text"
@@ -223,7 +271,7 @@ export const RegisterForm = ({ onSuccess, onLoginClick }: RegisterFormProps) => 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className={theme.getThemeColors().foreground}>Email</Label>
             <Input
               id="email"
               type="email"
@@ -237,7 +285,7 @@ export const RegisterForm = ({ onSuccess, onLoginClick }: RegisterFormProps) => 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password" className={theme.getThemeColors().foreground}>Password</Label>
             <Input
               id="password"
               type="password"
@@ -251,7 +299,7 @@ export const RegisterForm = ({ onSuccess, onLoginClick }: RegisterFormProps) => 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <Label htmlFor="confirmPassword" className={theme.getThemeColors().foreground}>Confirm Password</Label>
             <Input
               id="confirmPassword"
               type="password"
@@ -265,7 +313,7 @@ export const RegisterForm = ({ onSuccess, onLoginClick }: RegisterFormProps) => 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number (Optional)</Label>
+            <Label htmlFor="phone" className={theme.getThemeColors().foreground}>Phone Number (Optional)</Label>
             <Input
               id="phone"
               type="tel"
@@ -279,7 +327,7 @@ export const RegisterForm = ({ onSuccess, onLoginClick }: RegisterFormProps) => 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="address">Address (Optional)</Label>
+            <Label htmlFor="address" className={theme.getThemeColors().foreground}>Address (Optional)</Label>
             <Input
               id="address"
               type="text"
@@ -293,7 +341,7 @@ export const RegisterForm = ({ onSuccess, onLoginClick }: RegisterFormProps) => 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="birthdate">Birth Date (Optional)</Label>
+            <Label htmlFor="birthdate" className={theme.getThemeColors().foreground}>Birth Date (Optional)</Label>
             <Input
               id="birthdate"
               type="date"
@@ -315,22 +363,28 @@ export const RegisterForm = ({ onSuccess, onLoginClick }: RegisterFormProps) => 
 
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create Account
+            {selectedRole === 'delivery' && <Truck className="mr-2 h-4 w-4" />}
+            {selectedRole === 'ngo' && <Building className="mr-2 h-4 w-4" />}
+            {selectedRole === 'customer' && <User className="mr-2 h-4 w-4" />}
+            <span className={`flex flex-col gap-1 h-auto py-3 ${
+                selectedRole === 'delivery' ? 'text-black' : 'text-gray-600'
+              }`}>Create Account</span>
           </Button>
-        </form>
 
-        {onLoginClick && (
-          <div className="mt-4 text-center text-sm">
-            Already have an account?{' '}
-            <Button
-              variant="link"
-              className="p-0 h-auto font-normal"
-              onClick={onLoginClick}
-            >
-              Login here
-            </Button>
-          </div>
-        )}
+          {onLoginClick && (
+            <div className="mt-4 text-center text-sm">
+              Already have an account?{' '}
+              <Button
+                variant="link"
+                className="p-0 h-auto font-normal text-gray-900"
+                onClick={onLoginClick}
+              >
+                Login here
+              </Button>
+            </div>
+          )}
+        </form>
+        )
       </CardContent>
     </Card>
   );

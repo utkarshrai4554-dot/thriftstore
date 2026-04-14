@@ -214,7 +214,7 @@ const DonationRequests = () => {
                 <Card key={request.id} className={`shadow-lg hover:shadow-xl transition-shadow ${isFullyFulfilled ? 'opacity-75' : ''}`}>
                   <CardHeader className="pb-4">
                     <div className="flex items-start justify-between">
-                      <CardTitle className="text-lg line-clamp-2">{request.title}</CardTitle>
+                      <CardTitle className="text-lg line-clamp-2 text-black">{request.title}</CardTitle>
                       {getUrgencyBadge(request.urgency)}
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">

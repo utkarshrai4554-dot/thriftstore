@@ -18,6 +18,8 @@ export interface Order {
   id?: string;
   userId: string;
   orderNumber: string;
+  customerName?: string;
+  customerEmail?: string;
   items: OrderItem[];
   totalAmount: number;
   discountAmount?: number;

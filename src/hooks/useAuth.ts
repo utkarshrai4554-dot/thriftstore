@@ -1,5 +1,6 @@
 import React, { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
+import { Timestamp } from 'firebase/firestore';
 import { auth } from '../lib/firebase';
 import { getUserProfile, updateUserLastLogin } from '../services/userService';
 
@@ -7,7 +8,7 @@ interface User {
   uid: string;
   email: string;
   displayName: string;
-  role?: 'customer' | 'admin' | 'ngo' | 'seller';
+  role?: 'customer' | 'admin' | 'ngo' | 'seller' | 'delivery';
   photoURL?: string;
   phoneNumber?: string;
   lastLoginAt?: any;
@@ -18,7 +19,6 @@ interface User {
   isActive: boolean;
   createdAt: Date | Timestamp;
   updatedAt: Date | Timestamp;
-  lastLoginAt?: any;
 }
 
 interface AuthContextType {
@@ -48,8 +48,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log('🔍 Auth State Changed - User:', user?.uid);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log('🔍 Auth State Changed - User:', firebaseUser?.uid);
+      
+      // Convert Firebase user to our User interface
+      const user = firebaseUser ? {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email || '',
+        displayName: firebaseUser.displayName || '',
+        isEmailVerified: firebaseUser.emailVerified,
+        // Other properties will be populated from userProfile
+      } as User : null;
+      
       setUser(user);
       
       if (user) {
@@ -73,7 +83,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     });
 
     return unsubscribe;
-  }, [user]);
+  }, []); // Empty dependency array - only run once on mount
 
   const logout = async () => {
     try {

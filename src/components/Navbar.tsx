@@ -36,14 +36,23 @@ const Navbar = () => {
 
   // Filter navLinks based on user role
   const filteredNavLinks = navLinks.filter(link => {
-    if (link.to === "/admin" || link.to === "/delivery") {
-      return userProfile?.role === 'admin';  // Only admin and delivery for admins
+    // Only show admin links for admins
+    if (link.to === "/admin") {
+      return userProfile?.role === 'admin';
+    }
+    // Show delivery link only for delivery agents
+    if (link.to === "/delivery") {
+      return userProfile?.role === 'delivery';
     }
     // Restrict Shop, Sell, and Donate for NGO users
     if (userProfile?.role === 'ngo' && (link.to === "/products" || link.to === "/sell" || link.to === "/donate")) {
       return false;
     }
-    return true;  // Show all other links for everyone
+    // Hide Shop, Sell, Donate for delivery agents
+    if (userProfile?.role === 'delivery' && (link.to === "/products" || link.to === "/sell" || link.to === "/donate")) {
+      return false;
+    }
+    return true;  // Show all other links for regular users
   });
 
   // NGO-specific navigation links
@@ -65,6 +74,21 @@ const Navbar = () => {
           {/* Show NGO-specific navigation for NGO users */}
           {userProfile?.role === 'ngo' ? (
             ngoNavLinks.map((l) => (
+              <Link
+                key={l.to}
+                to={l.to}
+                className={`text-sm font-medium transition-colors hover:text-primary ${
+                  location.pathname === l.to ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                {l.label}
+              </Link>
+            ))
+          ) : userProfile?.role === 'delivery' ? (
+            // Delivery agent specific navigation
+            [
+              { to: "/delivery", label: "Dashboard", icon: Package }
+            ].map((l) => (
               <Link
                 key={l.to}
                 to={l.to}
@@ -221,6 +245,20 @@ const Navbar = () => {
           {/* Mobile Navigation Links */}
           {userProfile?.role === 'ngo' ? (
             ngoNavLinks.map((l) => (
+              <Link
+                key={l.to}
+                to={l.to}
+                onClick={() => setOpen(false)}
+                className="block py-2 text-sm font-medium text-muted-foreground hover:text-primary"
+              >
+                {l.label}
+              </Link>
+            ))
+          ) : userProfile?.role === 'delivery' ? (
+            // Delivery agent specific mobile navigation
+            [
+              { to: "/delivery", label: "Dashboard", icon: Package }
+            ].map((l) => (
               <Link
                 key={l.to}
                 to={l.to}

@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
-import StyleaseChatbot from "@/components/chat/StyleaseChatbot";
 import { BirthdayRewardChecker } from "@/components/BirthdayRewardChecker";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/contexts/CartContext";
@@ -45,7 +44,10 @@ import NGODashboard from "./pages/NGODashboard";
 import NGORegister from "./pages/NGORegister";
 import DonateHub from "./pages/DonateHub";
 import NGOLogin from "./pages/NGOLogin";
-import DeliveryAgentRegister from "./pages/DeliveryAgentRegister";
+import { AuthPage } from "./components/auth/AuthPage";
+import { DeliveryLogin } from "./pages/DeliveryLogin";
+import DeliveryHome from "./pages/DeliveryHome";
+import { DeliveryAssignment } from "./pages/DeliveryAssignment";
 
 const queryClient = new QueryClient();
 
@@ -146,6 +148,14 @@ const AppContent = () => {
           } 
         />
         <Route 
+          path="/admin/delivery-assignment" 
+          element={
+            <AdminRoute>
+              <DeliveryAssignment />
+            </AdminRoute>
+          } 
+        />
+        <Route 
           path="/delivery" 
           element={
             <DeliveryRoute>
@@ -166,8 +176,12 @@ const AppContent = () => {
           element={<NGOLogin />} 
         />
         <Route 
+          path="/delivery-login" 
+          element={<DeliveryLogin onSuccess={() => window.location.href = '/delivery'} />} 
+        />
+        <Route 
           path="/delivery-agent-register" 
-          element={<DeliveryAgentRegister />} 
+          element={<AuthPage initialAuthType="delivery" initialIsLogin={false} />} 
         />
         <Route 
           path="/ngo/dashboard" 
@@ -203,8 +217,7 @@ const AppContent = () => {
         />
         <Route path="*" element={<NotFound />} />
       </Routes>
-      <StyleaseChatbot />
-    </BrowserRouter>
+          </BrowserRouter>
   );
 };
 

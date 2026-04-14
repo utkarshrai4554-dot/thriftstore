@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Delivery Agent Approval Flow</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Delivery Agent Approval Flow</h1>
+    <p>This page tests the complete delivery agent approval and login workflow.</p>
+
+    <!-- Step 1: Test Registration -->
+    <div class="test-section">
+        <h3>Step 1: Test Registration</h3>
+        <p>Test creating a delivery agent registration request (simulates user registration).</p>
+        
+        <div class="form-group">
+            <label for="reg-email">Email:</label>
+            <input type="email" id="reg-email" value="test.delivery@styleease.com" placeholder="Enter email">
+        </div>
+        <div class="form-group">
+            <label for="reg-password">Password:</label>
+            <input type="password" id="reg-password" value="TestPass123!" placeholder="Enter password">
+        </div>
+        <div class="form-group">
+            <label for="reg-name">Full Name:</label>
+            <input type="text" id="reg-name" value="Test Delivery Agent" placeholder="Enter full name">
+        </div>
+        <div class="form-group">
+            <label for="reg-phone">Phone:</label>
+            <input type="tel" id="reg-phone" value="9876543210" placeholder="Enter phone">
+        </div>
+        <div class="form-group">
+            <label for="reg-vehicle">Vehicle Type:</label>
+            <select id="reg-vehicle">
+                <option value="bike">Bike</option>
+                <option value="scooter">Scooter</option>
+                <option value="car">Car</option>
+                <option value="van">Van</option>
+                <option value="truck">Truck</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="reg-vehicle-number">Vehicle Number:</label>
+            <input type="text" id="reg-vehicle-number" value="MH-12-AB-1234" placeholder="Enter vehicle number">
+        </div>
+        <div class="form-group">
+            <label for="reg-license">Driving License:</label>
+            <input type="text" id="reg-license" value="DL2024001234" placeholder="Enter driving license">
+        </div>
+        <div class="form-group">
+            <label for="reg-address">Address:</label>
+            <input type="text" id="reg-address" value="123 Test Street, Mumbai, India" placeholder="Enter address">
+        </div>
+        <div class="form-group">
+            <label for="reg-availability">Availability:</label>
+            <select id="reg-availability">
+                <option value="full-time">Full-time</option>
+                <option value="part-time">Part-time</option>
+                <option value="weekend">Weekend</option>
+            </select>
+        </div>
+        
+        <button onclick="testRegistration()">Create Registration Request</button>
+        <div id="registration-result"></div>
+    </div>
+
+    <!-- Step 2: Test Approval -->
+    <div class="test-section">
+        <h3>Step 2: Test Admin Approval</h3>
+        <p>Test approving the delivery agent request (simulates admin approval).</p>
+        
+        <div class="form-group">
+            <label for="admin-email">Admin Email:</label>
+            <input type="email" id="admin-email" value="admin@styleease.com" placeholder="Enter admin email">
+        </div>
+        <div class="form-group">
+            <label for="admin-password">Admin Password:</label>
+            <input type="password" id="admin-password" value="AdminPass123!" placeholder="Enter admin password">
+        </div>
+        <div class="form-group">
+            <label for="request-id">Request ID:</label>
+            <input type="text" id="request-id" placeholder="Enter request ID from registration step">
+        </div>
+        
+        <button onclick="testApproval()">Approve Request</button>
+        <div id="approval-result"></div>
+    </div>
+
+    <!-- Step 3: Test Login -->
+    <div class="test-section">
+        <h3>Step 3: Test Delivery Agent Login</h3>
+        <p>Test logging in as the approved delivery agent with their original credentials.</p>
+        
+        <div class="form-group">
+            <label for="login-email">Email:</label>
+            <input type="email" id="login-email" value="test.delivery@styleease.com" placeholder="Enter email">
+        </div>
+        <div class="form-group">
+            <label for="login-password">Password:</label>
+            <input type="password" id="login-password" value="TestPass123!" placeholder="Enter password">
+        </div>
+        
+        <button onclick="testDeliveryLogin()">Test Delivery Agent Login</button>
+        <div id="login-result"></div>
+    </div>
+
+    <!-- Step 4: Test Email Service -->
+    <div class="test-section">
+        <h3>Step 4: Test Email Service</h3>
+        <p>Test the approval email notification service.</p>
+        
+        <div class="form-group">
+            <label for="email-test-email">Test Email:</label>
+            <input type="email" id="email-test-email" value="test.delivery@styleease.com" placeholder="Enter email to test">
+        </div>
+        
+        <button onclick="testEmailService()">Send Test Approval Email</button>
+        <div id="email-result"></div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCpKm4tr8kg9-fy4psyAajPhU8T9IHAzQ0",
+            authDomain: "styleease-2170f.firebaseapp.com",
+            projectId: "styleease-2170f",
+            storageBucket: "styleease-2170f.firebasestorage.app",
+            messagingSenderId: "921047643742",
+            appId: "1:921047643742:web:29a1189bd75f69cf42e6cf",
+            measurementId: "G-DM4BG77729"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let currentRequestId = null;
+        let currentAdminUser = null;
+
+        function showResult(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="${isError ? 'error' : 'success'}">${message}</div>`;
+        }
+
+        function showInfo(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="info">${message}</div>`;
+        }
+
+        async function testRegistration() {
+            try {
+                showInfo('registration-result', 'Creating delivery agent registration request...');
+
+                const email = document.getElementById('reg-email').value;
+                const password = document.getElementById('reg-password').value;
+                const displayName = document.getElementById('reg-name').value;
+                const phone = document.getElementById('reg-phone').value;
+                const vehicleType = document.getElementById('reg-vehicle').value;
+                const vehicleNumber = document.getElementById('reg-vehicle-number').value;
+                const drivingLicense = document.getElementById('reg-license').value;
+                const address = document.getElementById('reg-address').value;
+                const availability = document.getElementById('reg-availability').value;
+
+                // Create registration request in Firestore
+                const requestId = `delivery_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                await db.collection('deliveryAgentRequests').doc(requestId).set({
+                    id: requestId,
+                    displayName,
+                    email,
+                    password, // Store password for approval
+                    phone,
+                    vehicleType,
+                    vehicleNumber,
+                    drivingLicense,
+                    address,
+                    availability,
+                    status: 'pending',
+                    requestedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                currentRequestId = requestId;
+                showResult('registration-result', `✅ Registration request created successfully! Request ID: ${requestId}`);
+
+            } catch (error) {
+                showResult('registration-result', `❌ Registration failed: ${error.message}`, true);
+            }
+        }
+
+        async function testApproval() {
+            try {
+                if (!currentRequestId) {
+                    showResult('approval-result', '❌ Please create a registration request first', true);
+                    return;
+                }
+
+                showInfo('approval-result', 'Approving delivery agent request...');
+
+                const adminEmail = document.getElementById('admin-email').value;
+                const adminPassword = document.getElementById('admin-password').value;
+                const requestId = document.getElementById('request-id').value || currentRequestId;
+
+                // Sign in as admin (simplified for testing)
+                const adminCredential = await auth.signInWithEmailAndPassword(adminEmail, adminPassword);
+                currentAdminUser = adminCredential.user;
+
+                // Get the registration request
+                const requestDoc = await db.collection('deliveryAgentRequests').doc(requestId).get();
+                if (!requestDoc.exists) {
+                    showResult('approval-result', '❌ Registration request not found', true);
+                    return;
+                }
+
+                const requestData = requestDoc.data();
+
+                // Create Firebase Auth account for delivery agent
+                let deliveryUserCredential;
+                try {
+                    deliveryUserCredential = await auth.createUserWithEmailAndPassword(
+                        requestData.email, 
+                        requestData.password
+                    );
+                    showResult('approval-result', '✅ Firebase Auth account created for delivery agent');
+                } catch (authError) {
+                    if (authError.code === 'auth/email-already-in-use') {
+                        deliveryUserCredential = await auth.signInWithEmailAndPassword(
+                            requestData.email, 
+                            requestData.password
+                        );
+                        showResult('approval-result', '✅ Using existing Firebase Auth account');
+                    } else {
+                        throw authError;
+                    }
+                }
+
+                // Create user document
+                await db.collection('users').doc(deliveryUserCredential.user.uid).set({
+                    email: requestData.email,
+                    displayName: requestData.displayName,
+                    phone: requestData.phone,
+                    address: requestData.address,
+                    role: 'delivery',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    isEmailVerified: false,
+                    isActive: true
+                });
+
+                // Create delivery agent record
+                await db.collection('deliveryAgents').doc(deliveryUserCredential.user.uid).set({
+                    email: requestData.email,
+                    displayName: requestData.displayName,
+                    phone: requestData.phone,
+                    vehicleType: requestData.vehicleType,
+                    vehicleNumber: requestData.vehicleNumber,
+                    drivingLicense: requestData.drivingLicense,
+                    address: requestData.address,
+                    experience: requestData.experience,
+                    availability: requestData.availability,
+                    status: 'approved',
+                    approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    approvedBy: currentAdminUser.uid,
+                    requestId: requestId,
+                    requestedAt: requestData.requestedAt,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Update and delete request
+                await db.collection('deliveryAgentRequests').doc(requestId).update({
+                    status: 'approved',
+                    reviewedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    reviewedBy: currentAdminUser.uid,
+                    processed: true
+                });
+
+                await db.collection('deliveryAgentRequests').doc(requestId).delete();
+
+                showResult('approval-result', '🎉 Delivery agent approved successfully! Firebase Auth account created with their chosen password.');
+
+                // Sign out admin
+                await auth.signOut();
+                currentAdminUser = null;
+
+            } catch (error) {
+                showResult('approval-result', `❌ Approval failed: ${error.message}`, true);
+            }
+        }
+
+        async function testDeliveryLogin() {
+            try {
+                showInfo('login-result', 'Testing delivery agent login...');
+
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+
+                // Sign in as delivery agent
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                
+                // Check user document
+                const userDoc = await db.collection('users').doc(userCredential.user.uid).get();
+                if (!userDoc.exists()) {
+                    showResult('login-result', '❌ User document not found', true);
+                    return;
+                }
+
+                const userData = userDoc.data();
+                if (userData.role !== 'delivery') {
+                    showResult('login-result', '❌ User is not a delivery agent', true);
+                    return;
+                }
+
+                // Check delivery agent approval
+                const agentDoc = await db.collection('deliveryAgents').doc(userCredential.user.uid).get();
+                if (!agentDoc.exists()) {
+                    showResult('login-result', '❌ Delivery agent record not found', true);
+                    return;
+                }
+
+                const agentData = agentDoc.data();
+                if (agentData.status !== 'approved') {
+                    showResult('login-result', '❌ Delivery agent not approved', true);
+                    return;
+                }
+
+                showResult('login-result', '🎉 Delivery agent login successful! Can access dashboard with original credentials.');
+
+                // Sign out
+                await auth.signOut();
+
+            } catch (error) {
+                showResult('login-result', `❌ Login failed: ${error.message}`, true);
+            }
+        }
+
+        async function testEmailService() {
+            try {
+                showInfo('email-result', 'Testing email approval service...');
+
+                const email = document.getElementById('email-test-email').value;
+                const displayName = 'Test Delivery Agent';
+                const password = 'TestPass123!';
+
+                const response = await fetch('http://localhost:3001/api/send-approval-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email,
+                        displayName,
+                        password,
+                        subject: 'StyleEase - Delivery Agent Application Approved!',
+                        template: 'delivery_agent_approval'
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult('email-result', `✅ Approval email sent successfully! Message ID: ${result.messageId}`);
+                } else {
+                    showResult('email-result', `❌ Email send failed: ${result.error}`, true);
+                }
+
+            } catch (error) {
+                showResult('email-result', `❌ Email service test failed: ${error.message}`, true);
+            }
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            showInfo('registration-result', 'Ready to test delivery agent approval flow. Complete each step in order.');
+        });
+    </script>
+</body>
+</html>

@@ -305,7 +305,7 @@ const Donate = () => {
                               {request.requestedByNGO || 'Unknown NGO'}
                             </div>
                           </TableCell>
-                          <TableCell className="font-medium">{request.title}</TableCell>
+                          <TableCell className="font-medium text-black">{request.title}</TableCell>
                           <TableCell>
                             <div className="max-w-xs">
                               <p className="truncate" title={request.items}>

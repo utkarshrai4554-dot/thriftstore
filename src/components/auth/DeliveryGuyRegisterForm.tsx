@@ -148,7 +148,7 @@ export const DeliveryGuyRegisterForm = ({ onSuccess, onLoginClick }: DeliveryGuy
       // Step 3: Complete registration after OTP verification
       const requestId = await registerDeliveryGuy(
         formData.email,
-        formData.password,
+        formData.password, // Include password for use during approval
         formData.displayName,
         formData.phone,
         formData.vehicleType,

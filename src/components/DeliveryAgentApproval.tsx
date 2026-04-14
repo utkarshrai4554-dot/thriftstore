@@ -47,14 +47,14 @@ export const DeliveryAgentApproval: React.FC = () => {
     try {
       setIsProcessing(true);
       
-      // Generate a temporary password for the delivery agent
-      const tempPassword = 'TempPass123!'; // In production, this should be randomly generated and sent via email
+      // Extract password from request data (stored during registration)
+      const registrationPassword = request.password || 'TempPass123!'; // Fallback for backward compatibility
       
       await approveDeliveryAgentRequest(
         request.id,
         user.uid,
         request.email,
-        tempPassword,
+        registrationPassword,
         {
           displayName: request.displayName,
           phone: request.phone,
@@ -67,8 +67,8 @@ export const DeliveryAgentApproval: React.FC = () => {
         }
       );
 
-      toast.success(`Delivery agent ${request.displayName} approved successfully!`);
-      fetchRequests(); // Refresh the list
+      toast.success(`Delivery agent ${request.displayName} approved successfully! Account created with their chosen password.`);
+      fetchRequests(); // Refresh list
       setSelectedRequest(null);
       
     } catch (error) {
@@ -178,7 +178,7 @@ export const DeliveryAgentApproval: React.FC = () => {
                       <Truck className="h-6 w-6 text-orange-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-lg">{request.displayName}</h3>
+                      <h3 className="font-semibold text-lg text-black">{request.displayName}</h3>
                       <p className="text-sm text-muted-foreground">{request.email}</p>
                     </div>
                   </div>

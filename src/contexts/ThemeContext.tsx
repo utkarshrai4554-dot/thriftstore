@@ -6,6 +6,14 @@ interface ThemeContextType {
   theme: Theme;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
+  getSelectedTextColor: () => string;
+  getSelectedBgColor: () => string;
+  getThemeColors: () => {
+    background: string;
+    foreground: string;
+    card: string;
+    border: string;
+  };
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -43,12 +51,37 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
   };
 
+  const getSelectedTextColor = () => {
+    return theme === 'light' ? 'text-yellow-700' : 'text-white';
+  };
+
+  const getSelectedBgColor = () => {
+    return theme === 'light' ? 'bg-yellow-100' : 'bg-white';
+  };
+
+  const getThemeColors = () => {
+    return theme === 'light' ? {
+      background: 'bg-white',
+      foreground: 'text-gray-900',
+      card: 'bg-white',
+      border: 'border-gray-200'
+    } : {
+      background: 'bg-amber-900',
+      foreground: 'text-white',
+      card: 'bg-amber-800',
+      border: 'border-amber-700'
+    };
+  };
+
   return (
     <ThemeContext.Provider
       value={{
         theme,
         toggleTheme,
         setTheme,
+        getSelectedTextColor,
+        getSelectedBgColor,
+        getThemeColors,
       }}
     >
       {children}

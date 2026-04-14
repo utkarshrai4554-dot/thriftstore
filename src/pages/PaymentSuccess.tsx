@@ -108,7 +108,7 @@ const PaymentSuccess = () => {
           {/* Order Summary */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-black">
                 <Package className="h-5 w-5" />
                 Order Summary
               </CardTitle>
@@ -162,7 +162,7 @@ const PaymentSuccess = () => {
           {/* Shipping Information */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-black">
                 <Truck className="h-5 w-5" />
                 Shipping Information
               </CardTitle>
@@ -187,7 +187,7 @@ const PaymentSuccess = () => {
         {/* Order Items */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-black">
               <ShoppingBag className="h-5 w-5" />
               Order Items
             </CardTitle>

@@ -2,12 +2,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import {
   BarChart3, Users, Package, Gift, Truck, TrendingUp,
-  CheckCircle, XCircle, DollarSign, ShoppingBag, Eye
+  CheckCircle, XCircle, DollarSign, ShoppingBag, Eye, X
 } from "lucide-react";
 import { collection, query, where, orderBy, getDocs, getDoc, doc as docRef, setDoc, deleteDoc, updateDoc, getCountFromServer, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -342,7 +343,7 @@ const AdminDashboard = () => {
     <div className="min-h-screen py-8">
       <div className="container mx-auto px-4">
         <div className="mb-8">
-          <h1 className="font-display text-3xl font-bold mb-1">Admin Dashboard</h1>
+          <h1 className="font-display text-3xl font-bold mb-1 text-green-600">Admin Dashboard</h1>
           <p className="text-muted-foreground">Manage your thrift store platform</p>
         </div>
 
@@ -378,7 +379,7 @@ const AdminDashboard = () => {
           <TabsContent value="products" className="mt-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Items Awaiting Review</CardTitle>
+                <CardTitle className="text-lg text-green-600">Items Awaiting Review</CardTitle>
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -451,19 +452,7 @@ const AdminDashboard = () => {
                       ))}
                     </div>
                     <div className="mt-4 pt-4 border-t space-y-2">
-                      <Link to="/admin/products">
-                        <Button className="w-full" variant="outline">
-                          <Package className="h-4 w-4 mr-2" />
-                          View All Product Approvals
-                        </Button>
-                      </Link>
-                      <Link to="/admin/donation-assignment">
-                        <Button className="w-full">
-                          <Eye className="h-4 w-4 mr-2" />
-                          View All Donation Requests ({pendingItems.length})
-                        </Button>
-                      </Link>
-                    </div>
+                                          </div>
                   </>
                 )}
               </CardContent>
@@ -615,6 +604,164 @@ const AdminDashboard = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Item Details Modal */}
+        <Dialog open={!!selectedItem} onOpenChange={() => setSelectedItem(null)}>
+          <DialogContent className="max-w-2xl [&_[data-radix-dialog-close]]:hidden">
+            <DialogHeader>
+              <div className="flex items-center justify-between">
+                <DialogTitle className="text-black">Item Details</DialogTitle>
+                <div 
+                  onClick={() => setSelectedItem(null)}
+                  className="w-8 h-8 flex items-center justify-center border border-black rounded cursor-pointer hover:bg-black hover:text-white transition-colors"
+                  style={{ color: 'black' }}
+                >
+                  <X className="h-4 w-4" style={{ color: 'black' }} />
+                </div>
+              </div>
+            </DialogHeader>
+            {selectedItem && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Title</label>
+                    <p className="font-semibold text-black">{selectedItem.title}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Type</label>
+                    <Badge className={selectedItem.type === 'donation' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}>
+                      {selectedItem.type === 'donation' ? 'Donation' : 'Product'}
+                    </Badge>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Status</label>
+                    <p className="capitalize text-black">{selectedItem.status}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Created Date</label>
+                    <p className="text-black">{selectedItem.createdAt.toLocaleDateString()}</p>
+                  </div>
+                </div>
+
+                {selectedItem.type === 'product' && selectedItem.sellerInfo && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Seller Information</label>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <p><strong>Name:</strong> {selectedItem.sellerInfo.displayName}</p>
+                      <p><strong>Email:</strong> {selectedItem.sellerInfo.email}</p>
+                    </div>
+                  </div>
+                )}
+
+                {selectedItem.type === 'donation' && selectedItem.donorInfo && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Donor Information</label>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <p><strong>Name:</strong> {selectedItem.donorInfo.displayName}</p>
+                      <p><strong>Email:</strong> {selectedItem.donorInfo.email}</p>
+                      {selectedItem.donorInfo.phone && (
+                        <p><strong>Phone:</strong> {selectedItem.donorInfo.phone}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {selectedItem.items && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Items</label>
+                    <p>{selectedItem.items}</p>
+                  </div>
+                )}
+
+                {selectedItem.quantity && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Quantity</label>
+                    <p>{selectedItem.quantity}</p>
+                  </div>
+                )}
+
+                {selectedItem.category && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Category</label>
+                    <p className="capitalize">{selectedItem.category}</p>
+                  </div>
+                )}
+
+                {selectedItem.cause && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Cause</label>
+                    <p>{selectedItem.cause}</p>
+                  </div>
+                )}
+
+                {selectedItem.urgency && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Urgency</label>
+                    <Badge className={
+                      selectedItem.urgency === 'urgent' ? 'bg-red-100 text-red-800' :
+                      selectedItem.urgency === 'high' ? 'bg-orange-100 text-orange-800' :
+                      selectedItem.urgency === 'low' ? 'bg-gray-100 text-gray-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }>
+                      {selectedItem.urgency}
+                    </Badge>
+                  </div>
+                )}
+
+                {selectedItem.pickupAddress && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Pickup Address</label>
+                    <p>{selectedItem.pickupAddress}</p>
+                  </div>
+                )}
+
+                {selectedItem.description && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Description</label>
+                    <p className="text-gray-700">{selectedItem.description}</p>
+                  </div>
+                )}
+
+                {selectedItem.images && selectedItem.images.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Images</label>
+                    <div className="grid grid-cols-3 gap-2 mt-2">
+                      {selectedItem.images.map((image, index) => (
+                        <div key={index} className="border rounded-lg overflow-hidden">
+                          <img 
+                            src={image.url} 
+                            alt={`Item image ${index + 1}`}
+                            className="w-full h-24 object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-4 border-t">
+                  <Button 
+                    onClick={() => handleApproveProduct(selectedItem.id)}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Approve
+                  </Button>
+                  <Button 
+                    variant="destructive"
+                    onClick={() => {
+                      handleRejectProduct(selectedItem.id);
+                      setSelectedItem(null);
+                    }}
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

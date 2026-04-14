@@ -271,4 +271,210 @@ router.post('/test-email', async (req, res) => {
   }
 });
 
+// Send delivery agent approval email endpoint
+router.post('/send-approval-email', async (req, res) => {
+  try {
+    const { email, displayName, password, subject, template } = req.body;
+
+    if (!email || !displayName || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email, display name, and password are required'
+      });
+    }
+
+    console.log('🚚 Sending delivery agent approval email to:', email);
+
+    // Create transporter
+    const transporter = createGmailTransporter();
+
+    // Verify transporter configuration
+    try {
+      await transporter.verify();
+      console.log('✅ Gmail transporter verified successfully');
+    } catch (verifyError) {
+      console.error('❌ Gmail transporter verification failed:', verifyError);
+      return res.status(500).json({
+        success: false,
+        error: 'Email service configuration error'
+      });
+    }
+
+    // Email content for delivery agent approval
+    let emailContent;
+    if (template === 'delivery_agent_approval') {
+      emailContent = {
+        subject: subject || 'StyleEase - Delivery Agent Application Approved!',
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>StyleEase - Delivery Agent Application Approved</title>
+            <style>
+              body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 20px;
+              }
+              .header {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 30px;
+                text-align: center;
+                border-radius: 10px 10px 0 0;
+              }
+              .content {
+                background: #f8f9fa;
+                padding: 30px;
+                border-radius: 0 0 10px 10px;
+                border: 1px solid #e9ecef;
+              }
+              .welcome {
+                font-size: 24px;
+                font-weight: bold;
+                margin-bottom: 20px;
+                color: #2c3e50;
+              }
+              .info-box {
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                border-left: 4px solid #28a745;
+                margin: 20px 0;
+              }
+              .credentials {
+                background: #fff3cd;
+                padding: 15px;
+                border-radius: 8px;
+                margin: 15px 0;
+                border: 1px dashed #ffc107;
+              }
+              .login-btn {
+                display: inline-block;
+                background: #28a745;
+                color: white;
+                padding: 12px 30px;
+                text-decoration: none;
+                border-radius: 6px;
+                font-weight: bold;
+                margin-top: 20px;
+              }
+              .footer {
+                text-align: center;
+                margin-top: 30px;
+                color: #6c757d;
+                font-size: 14px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h1>🚚 StyleEase Delivery</h1>
+              <p>Your Application Has Been Approved!</p>
+            </div>
+            
+            <div class="content">
+              <h2 class="welcome">Congratulations, ${displayName}!</h2>
+              
+              <p>We're pleased to inform you that your delivery agent application has been <strong>approved</strong> by our admin team.</p>
+              
+              <div class="info-box">
+                <h3>🎉 Welcome to the StyleEase Delivery Team!</h3>
+                <p>You can now start accepting deliveries and earning with our platform. Your account has been set up with the credentials you provided during registration.</p>
+              </div>
+              
+              <div class="credentials">
+                <h3>🔐 Your Login Credentials:</h3>
+                <p><strong>Email:</strong> ${email}</p>
+                <p><strong>Password:</strong> ${password}</p>
+                <p><em>Please keep these credentials secure and do not share them with anyone.</em></p>
+              </div>
+              
+              <p style="text-align: center;">
+                <a href="https://styleease-thrift.vercel.app/auth" class="login-btn">
+                  Login to Your Delivery Dashboard
+                </a>
+              </p>
+            </div>
+            
+            <div class="footer">
+              <p>If you have any questions or need assistance, please contact our support team.</p>
+              <p>Thank you for joining StyleEase Delivery!</p>
+              <p>© 2024 StyleEase. All rights reserved.</p>
+            </div>
+          </body>
+          </html>
+        `,
+        text: `StyleEase - Delivery Agent Application Approved
+
+Congratulations, ${displayName}!
+
+We're pleased to inform you that your delivery agent application has been approved by our admin team.
+
+Welcome to the StyleEase Delivery Team!
+
+You can now start accepting deliveries and earning with our platform. Your account has been set up with the credentials you provided during registration.
+
+Your Login Credentials:
+Email: ${email}
+Password: ${password}
+
+Please keep these credentials secure and do not share them with anyone.
+
+Login to your delivery dashboard: https://styleease-thrift.vercel.app/auth
+
+If you have any questions or need assistance, please contact our support team.
+
+Thank you for joining StyleEase Delivery!
+© 2024 StyleEase. All rights reserved.`
+      };
+    }
+
+    const mailOptions = {
+      from: `"StyleEase" <${process.env.GMAIL_USER}>`,
+      to: email,
+      ...emailContent
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    
+    console.log('✅ Delivery agent approval email sent successfully:', info.messageId);
+
+    res.json({
+      success: true,
+      message: 'Approval email sent successfully',
+      messageId: info.messageId
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to send delivery agent approval email:', error);
+    
+    // Provide more specific error messages
+    let errorMessage = 'Failed to send approval email';
+    let statusCode = 500;
+    
+    if (error.code === 'EAUTH') {
+      errorMessage = 'Email authentication failed. Please check Gmail credentials.';
+      statusCode = 401;
+    } else if (error.code === 'ECONNECTION') {
+      errorMessage = 'Failed to connect to email service. Please try again.';
+      statusCode = 503;
+    } else if (error.code === 'EMESSAGE') {
+      errorMessage = 'Invalid email address or message format.';
+      statusCode = 400;
+    }
+    
+    res.status(statusCode).json({
+      success: false,
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 module.exports = router;

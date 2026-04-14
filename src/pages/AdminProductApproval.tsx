@@ -449,19 +449,20 @@ const AdminProductApproval = () => {
       
       const productData = sellProductDoc.data();
       
-      // Move to products collection with approved status
-      const approvedProductRef = doc(db, 'products', productId);
-      await setDoc(approvedProductRef, {
+      // Move to deliveryAssignment collection for delivery agent assignment
+      const deliveryAssignmentRef = doc(db, 'deliveryAssignment', productId);
+      await setDoc(deliveryAssignmentRef, {
         ...productData,
-        status: 'approved',
+        status: 'awaiting-assignment',
         approvedAt: new Date(),
+        approvedBy: user?.uid,
         updatedAt: new Date()
       });
       
       // Delete from sellProducts collection
       await deleteDoc(sellProductRef);
       
-      toast.success('Product approved and moved to shop');
+      toast.success('Product approved and moved to delivery assignment');
       
       loadProductRequests();
       fetchTabCounts();
@@ -704,7 +705,7 @@ const AdminProductApproval = () => {
             <Card className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <span>Product Details</span>
+                  <span className="text-black">Product Details</span>
                   <Button variant="outline" onClick={() => setSelectedProduct(null)}>
                     <X className="w-4 h-4" />
                   </Button>

@@ -138,7 +138,7 @@ const AddressInput = ({
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-black">
           <MapPin className="h-5 w-5" />
           Address Information
           {required && <span className="text-red-500">*</span>}

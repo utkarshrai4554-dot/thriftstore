@@ -505,7 +505,7 @@ const DonateHub = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-primary">Total Donations</p>
-                  <p className="text-3xl font-bold text-primary-foreground">{impact.totalDonations}</p>
+                  <p className="text-3xl font-bold text-black">{impact.totalDonations}</p>
                 </div>
                 <Heart className="h-8 w-8 text-primary" />
               </div>
@@ -516,7 +516,7 @@ const DonateHub = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-success">Items Donated</p>
-                  <p className="text-3xl font-bold text-success-foreground">{impact.itemsDonated}</p>
+                  <p className="text-3xl font-bold text-black">{impact.itemsDonated}</p>
                 </div>
                 <Package className="h-8 w-8 text-success" />
               </div>
@@ -527,7 +527,7 @@ const DonateHub = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-warm">NGOs Helped</p>
-                  <p className="text-3xl font-bold text-warm-foreground">{impact.ngosHelped}</p>
+                  <p className="text-3xl font-bold text-black">{impact.ngosHelped}</p>
                 </div>
                 <Users className="h-8 w-8 text-warm" />
               </div>
@@ -538,7 +538,7 @@ const DonateHub = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-accent">Requests Fulfilled</p>
-                  <p className="text-3xl font-bold text-accent-foreground">{impact.requestsFulfilled}</p>
+                  <p className="text-3xl font-bold text-black">{impact.requestsFulfilled}</p>
                 </div>
                 <Target className="h-8 w-8 text-accent" />
               </div>
@@ -587,7 +587,7 @@ const DonateHub = () => {
                     <Card key={request.id} className={`shadow-lg hover:shadow-xl transition-shadow ${isFullyFulfilled ? 'opacity-75' : ''}`}>
                       <CardHeader className="pb-4">
                         <div className="flex items-start justify-between">
-                          <CardTitle className="text-lg line-clamp-2">{request.title}</CardTitle>
+                          <CardTitle className="text-lg line-clamp-2 text-black">{request.title}</CardTitle>
                           {getUrgencyBadge(request.urgency)}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -907,7 +907,7 @@ const DonateHub = () => {
               {/* My Donation History */}
               <Card className="shadow-lg">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-black">
                     <Package className="h-5 w-5 text-blue-600" />
                     My Donation History
                   </CardTitle>
@@ -945,7 +945,7 @@ const DonateHub = () => {
               {/* Community Impact */}
               <Card className="shadow-lg">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-black">
                     <TrendingUp className="h-5 w-5 text-green-600" />
                     Community Impact
                   </CardTitle>

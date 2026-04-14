@@ -372,7 +372,7 @@ const Profile = () => {
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <h1 className="font-display text-3xl font-bold">My Profile</h1>
+          <h1 className="font-display text-3xl font-bold text-black">My Profile</h1>
           <div className="flex gap-2">
             {!isEditing ? (
               <Button onClick={() => setIsEditing(true)} variant="outline">
@@ -426,7 +426,7 @@ const Profile = () => {
                       <p className="text-orange-700">{user?.email}</p>
                       <div className="flex gap-2 mt-1">
                         <Badge variant="secondary">
-                          Member since {new Date(user?.metadata.creationTime || '').getFullYear()}
+                          Member since {userProfile?.createdAt ? new Date(userProfile.createdAt.toDate ? userProfile.createdAt.toDate() : userProfile.createdAt).getFullYear() : 'Unknown'}
                         </Badge>
                         {isNGOVerified && (
                           <Badge className="bg-green-100 text-green-800 border-green-200">
@@ -659,7 +659,7 @@ const Profile = () => {
             {/* Personal Information */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-green-600">
                   <User className="h-5 w-5" />
                   Personal Information
                 </CardTitle>
@@ -673,13 +673,13 @@ const Profile = () => {
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <h3 className="font-display text-xl font-semibold">
+                    <h3 className="font-display text-xl font-semibold text-black">
                       {userProfile?.displayName || user?.email?.split('@')[0]}
                     </h3>
                     <p className="text-muted-foreground">{user?.email}</p>
                     <div className="flex gap-2 mt-1">
                       <Badge variant="secondary">
-                        Member since {new Date(user?.metadata.creationTime || '').getFullYear()}
+                        Member since {userProfile?.createdAt ? new Date(userProfile.createdAt.toDate ? userProfile.createdAt.toDate() : userProfile.createdAt).getFullYear() : 'Unknown'}
                       </Badge>
                       {/* Debug: Show NGO status */}
                       {process.env.NODE_ENV === 'development' && (
@@ -770,7 +770,7 @@ const Profile = () => {
             {/* Account Statistics */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-black">
                   <ShoppingBag className="h-5 w-5" />
                   Account Statistics
                 </CardTitle>
@@ -816,7 +816,7 @@ const Profile = () => {
             {/* Quick Actions */}
             <Card>
               <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
+                <CardTitle className="text-black">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Link to="/cart">
@@ -852,7 +852,7 @@ const Profile = () => {
             {/* Account Settings */}
             <Card>
               <CardHeader>
-                <CardTitle>Account Settings</CardTitle>
+                <CardTitle className="text-black">Account Settings</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Button 

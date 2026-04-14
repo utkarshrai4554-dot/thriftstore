@@ -20,9 +20,12 @@ const Cart = () => {
   const { items, removeFromCart, updateQuantity, getCartTotal, clearCart, loading } = useCart();
   const { user } = useAuth();
   const [couponCode, setCouponCode] = useState('');
-  const [userPoints, setUserPoints] = useState<any>(null);
+  const [coupon, setCoupon] = useState(null);
   const [usePoints, setUsePoints] = useState(false);
   const [pointsToUse, setPointsToUse] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
+  const [userPoints, setUserPoints] = useState({ points: 0 });
 
   const handleQuantityChange = (id: string, newQuantity: number) => {
     if (newQuantity < 1) {
@@ -214,6 +217,8 @@ const Cart = () => {
       const orderData: any = {
         userId: user.uid,
         orderNumber: 'ORD-' + Date.now(),
+        customerName: user.displayName || userProfile?.displayName || 'Not provided',
+        customerEmail: user.email || userProfile?.email || 'Not provided',
         items: items.map(item => ({
           productId: item.id,
           productName: item.name,

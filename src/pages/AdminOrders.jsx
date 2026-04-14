@@ -433,10 +433,7 @@ const AdminOrders = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-700 uppercase tracking-wider">
                     Order ID
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-700 uppercase tracking-wider">
-                    Customer
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-700 uppercase tracking-wider">
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-700 uppercase tracking-wider">
                     Total
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-700 uppercase tracking-wider">
@@ -459,14 +456,8 @@ const AdminOrders = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-900">
                       #{order.id.slice(-8)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-900">
-                      <div>
-                        <div className="font-medium">{order.userName}</div>
-                        <div className="text-gray-500 dark:text-gray-500">{order.userEmail}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-900">
-                      ¥{order.finalAmount?.toFixed(2) || '0.00'}
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-900">
+                      Rs.{order.finalAmount?.toFixed(2) || '0.00'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-900">
                       <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(order.status)}`}>
@@ -554,7 +545,7 @@ const AdminOrders = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-amber-300">Customer Name</label>
-                    <p className="text-amber-100">{selectedOrder.userName || 'Loading...'}</p>
+                    <p className="text-amber-100">{selectedOrder.userName || selectedOrder.customerName || selectedOrder.customerName || 'Not provided'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-amber-300">Email</label>
@@ -737,11 +728,11 @@ const AdminOrders = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-black mb-1">Customer</p>
-                    <p className="text-sm font-medium text-black">{selectedOrder.customerName || 'Loading...'}</p>
+                    <p className="text-sm font-medium text-black">{selectedOrder.userName || selectedOrder.customerName || 'Not provided'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-black mb-1">Total Amount</p>
-                    <p className="text-sm font-medium text-black">¥{selectedOrder.totalPrice ? selectedOrder.totalPrice.toFixed(2) : '0.00'}</p>
+                    <p className="text-sm font-medium text-black">Rs.{selectedOrder.totalPrice ? selectedOrder.totalPrice.toFixed(2) : '0.00'}</p>
                   </div>
                 </div>
               </div>

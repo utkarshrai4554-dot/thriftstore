@@ -215,7 +215,7 @@ const SellProduct = () => {
     <div className="min-h-screen py-8">
       <div className="container mx-auto px-4 max-w-2xl">
         <div className="mb-8">
-          <h1 className="font-display text-3xl font-bold mb-2">Sell Your Item</h1>
+          <h1 className="font-display text-3xl font-bold mb-2 text-black">Sell Your Item</h1>
           <p className="text-muted-foreground">List your pre-loved items. We'll verify and handle the rest.</p>
         </div>
 

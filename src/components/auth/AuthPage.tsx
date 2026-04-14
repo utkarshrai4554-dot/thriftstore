@@ -1,16 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
 import { DeliveryGuyRegisterForm } from './DeliveryGuyRegisterForm';
 import { Button } from '@/components/ui/button';
 import { Building, Truck, User } from 'lucide-react';
 
-export const AuthPage = () => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [authType, setAuthType] = useState<'user' | 'ngo' | 'delivery'>('user');
+interface AuthPageProps {
+  initialAuthType?: 'user' | 'ngo' | 'delivery';
+  initialIsLogin?: boolean;
+}
+
+export const AuthPage = ({ initialAuthType = 'user', initialIsLogin = true }: AuthPageProps) => {
+  const [isLogin, setIsLogin] = useState(initialIsLogin);
+  const [authType, setAuthType] = useState<'user' | 'ngo' | 'delivery'>(initialAuthType);
+  const { user, userProfile } = useAuth();
 
   const handleAuthSuccess = () => {
-    window.location.href = '/';
+    // Check user role and redirect accordingly
+    if (userProfile?.role === 'delivery') {
+      window.location.href = '/delivery';
+    } else if (userProfile?.role === 'ngo') {
+      window.location.href = '/ngo/dashboard';
+    } else {
+      window.location.href = '/';
+    }
   };
 
   return (
@@ -42,7 +56,7 @@ export const AuthPage = () => {
                 className="flex flex-col gap-1 h-auto py-3"
               >
                 <Truck className="h-4 w-4" />
-                <span className="text-xs">Delivery</span>
+                <span className="text-xs">Delivery Guy</span>
               </Button>
               <Button
                 variant={authType === 'ngo' ? 'default' : 'outline'}
@@ -78,73 +92,30 @@ export const AuthPage = () => {
         </div>
         
         {/* Forms */}
-        {authType === 'user' ? (
-          isLogin ? (
-            <LoginForm
-              onSuccess={handleAuthSuccess}
-              onRegisterClick={() => setIsLogin(false)}
-            />
-          ) : (
-            <RegisterForm
-              onSuccess={handleAuthSuccess}
-              onLoginClick={() => setIsLogin(true)}
-            />
-          )
+        {isLogin ? (
+          <LoginForm
+            onSuccess={handleAuthSuccess}
+            onRegisterClick={() => setIsLogin(false)}
+          />
+        ) : authType === 'user' ? (
+          <RegisterForm
+            onSuccess={handleAuthSuccess}
+            onLoginClick={() => setIsLogin(true)}
+          />
         ) : authType === 'delivery' ? (
-          isLogin ? (
-            <div className="text-center py-8">
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
-                <Truck className="h-12 w-12 mx-auto mb-4 text-orange-600" />
-                <h3 className="text-lg font-semibold mb-2">Delivery Portal</h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  Access your delivery dashboard and manage orders.
-                </p>
-                <Button
-                  onClick={() => window.location.href = '/delivery-login'}
-                  className="w-full mb-4"
-                >
-                  Delivery Login
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => window.location.href = '/delivery-register'}
-                  className="w-full"
-                >
-                  Register New Delivery Guy
-                </Button>
-              </div>
-              <div className="mt-4 text-center">
-                <Button
-                  variant="outline"
-                  onClick={() => setAuthType('user')}
-                  className="text-sm"
-                >
-                  ← Back to User Login
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <DeliveryGuyRegisterForm
-              onSuccess={handleAuthSuccess}
-              onLoginClick={() => setIsLogin(true)}
-            />
-          )
+          <DeliveryGuyRegisterForm
+            onSuccess={handleAuthSuccess}
+            onLoginClick={() => setIsLogin(true)}
+          />
         ) : (
           <div className="text-center py-8">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
               <Building className="h-12 w-12 mx-auto mb-4 text-blue-600" />
-              <h3 className="text-lg font-semibold mb-2">NGO Portal</h3>
+              <h3 className="text-lg font-semibold mb-2">NGO Registration</h3>
               <p className="text-sm text-gray-600 mb-4">
-                Access your NGO dashboard and manage donations.
+                Register your NGO to start receiving donations.
               </p>
               <Button
-                onClick={() => window.location.href = '/ngo-login'}
-                className="w-full mb-4"
-              >
-                NGO Login
-              </Button>
-              <Button
-                variant="outline"
                 onClick={() => window.location.href = '/ngo-register'}
                 className="w-full"
               >
@@ -157,7 +128,7 @@ export const AuthPage = () => {
                 onClick={() => setAuthType('user')}
                 className="text-sm"
               >
-                ← Back to User Login
+                ← Back
               </Button>
             </div>
           </div>

@@ -1,12 +1,13 @@
 import { doc, setDoc, serverTimestamp, getDoc, updateDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
 export interface DeliveryAgentRequest {
   id: string;
   displayName: string;
   email: string;
+  password?: string; // Password stored for use during approval
   phone: string;
   vehicleType: string;
   vehicleNumber: string;
@@ -25,6 +26,7 @@ export interface DeliveryAgentRequest {
 
 export const createDeliveryAgentRequest = async (
   email: string,
+  password: string,
   deliveryData: {
     displayName: string;
     phone: string;
@@ -47,6 +49,7 @@ export const createDeliveryAgentRequest = async (
       id: requestId,
       displayName: deliveryData.displayName,
       email: email,
+      password: password, // Store password for use during approval
       phone: deliveryData.phone,
       vehicleType: deliveryData.vehicleType,
       vehicleNumber: deliveryData.vehicleNumber,
@@ -113,9 +116,9 @@ export const approveDeliveryAgentRequest = async (
   }
 ): Promise<void> => {
   try {
-    console.log('Approving delivery agent request:', requestId);
+    console.log(' Approving delivery agent request:', requestId);
     
-    // Get the original request details
+    // Get original request details
     const requestRef = doc(db, 'deliveryAgentRequests', requestId);
     const requestDoc = await getDoc(requestRef);
     
@@ -125,8 +128,39 @@ export const approveDeliveryAgentRequest = async (
     
     const requestData = requestDoc.data();
     
-    // Create delivery agent approval record (user will register themselves after receiving email)
-    await setDoc(doc(db, 'deliveryAgents', `approved_${requestId}`), {
+    // Create Firebase Authentication account for delivery agent
+    let userCredential;
+    try {
+      console.log(' Creating Firebase Auth account for delivery agent:', email);
+      userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log(' Firebase Auth account created successfully for:', userCredential.user.email);
+    } catch (authError: any) {
+      if (authError.code === 'auth/email-already-in-use') {
+        console.log(' Email already exists in Firebase Auth, using existing account');
+        // Try to sign in to get the user credential
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        throw new Error(`Failed to create Firebase Auth account: ${authError.message}`);
+      }
+    }
+    
+    // Create user document in users collection
+    await setDoc(doc(db, 'users', userCredential.user.uid), {
+      email: email,
+      displayName: requestData.displayName,
+      phone: requestData.phone,
+      address: requestData.address,
+      role: 'delivery',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      isEmailVerified: false,
+      isActive: true
+    });
+    
+    console.log(' User document created in users collection');
+    
+    // Create delivery agent approval record
+    await setDoc(doc(db, 'deliveryAgents', userCredential.user.uid), {
       email: email,
       displayName: requestData.displayName,
       phone: requestData.phone,
@@ -141,13 +175,20 @@ export const approveDeliveryAgentRequest = async (
       approvedBy: adminId,
       requestId: requestId,
       requestedAt: requestData.requestedAt,
-      // Store temp password for first-time registration
-      tempPassword: password,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
     
-    console.log('Delivery agent approval record created:', requestId);
+    console.log(' Delivery agent approval record created:', userCredential.user.uid);
+    
+    // Sign out admin to prevent session conflicts
+    try {
+      await auth.signOut();
+      console.log(' Admin signed out successfully after delivery agent approval');
+    } catch (signOutError) {
+      console.error(' Error signing out admin:', signOutError);
+      // Don't throw error - approval should still work even if sign out fails
+    }
     
     // Update request status to approved before deletion
     try {
@@ -157,14 +198,14 @@ export const approveDeliveryAgentRequest = async (
         reviewedBy: adminId,
         processed: true
       });
-      console.log('Request status updated to approved:', requestId);
+      console.log(' Request status updated to approved:', requestId);
       
-      // Wait a moment for the update to propagate
+      // Wait a moment for update to propagate
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Delete the request
+      // Delete request
       await deleteDoc(requestRef);
-      console.log('Delivery agent request deleted successfully:', requestId);
+      console.log(' Delivery agent request deleted successfully:', requestId);
     } catch (deleteError) {
       console.error('Error deleting delivery agent request:', deleteError);
       // Try to update status to approved even if deletion fails
@@ -183,12 +224,12 @@ export const approveDeliveryAgentRequest = async (
     }
     
     // Send approval email notification
-    await sendApprovalEmail(email, deliveryData.displayName, password);
+    await sendApprovalEmail(email, requestData.displayName, password);
     
-    console.log('Delivery agent request approved and account created');
+    console.log(' Delivery agent request approved and account created successfully');
     
   } catch (error) {
-    console.error('Error approving delivery agent request:', error);
+    console.error(' Error approving delivery agent request:', error);
     throw new Error('Failed to approve delivery agent request');
   }
 };

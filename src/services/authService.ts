@@ -98,7 +98,7 @@ export const registerDeliveryGuy = async (
     
     // Create delivery agent request instead of direct registration
     const { createDeliveryAgentRequest } = await import('./deliveryAgentService');
-    const requestId = await createDeliveryAgentRequest(email, {
+    const requestId = await createDeliveryAgentRequest(email, password, {
       displayName,
       phone,
       vehicleType,
@@ -223,15 +223,25 @@ export const loginUser = async (email: string, password: string): Promise<User> 
     console.log('Login successful for user:', userCredential.user.email);
     return userCredential.user;
   } catch (error: any) {
-    console.error('❌ Firebase login error:', {
+    console.error('❌ Firebase login error:', error);
+    console.error('Error details:', {
       code: error.code,
       message: error.message,
-      fullError: error
+      customData: error.customData
     });
     
+    // Handle different types of Firebase errors
+    let errorCode = error.code || 'unknown';
+    let errorMessage = getErrorMessage(errorCode);
+    
+    // If the error doesn't have a code, use the message directly
+    if (!error.code && error.message) {
+      errorMessage = error.message;
+    }
+    
     throw {
-      code: error.code,
-      message: getErrorMessage(error.code)
+      code: errorCode,
+      message: errorMessage
     } as AuthError;
   }
 };
