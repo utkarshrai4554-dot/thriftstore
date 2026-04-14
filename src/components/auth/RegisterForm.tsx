@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Alert, AlertDescription } from '../ui/alert';
 import { Loader2, User, Truck, Building } from 'lucide-react';
 import { registerUser, AuthError } from '../../services/authService';
+import { createDeliveryAgentRequest } from '../../services/deliveryAgentService';
 import { createOTPRequest } from '../../services/otpService';
 import { useToast } from '../../hooks/use-toast';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -41,7 +42,13 @@ const registerSchema = z.object({
   confirmPassword: z.string(),
   phone: z.string().optional(),
   address: z.string().optional(),
-  birthdate: z.string().optional()
+  birthdate: z.string().optional(),
+  // Delivery-specific fields
+  vehicleType: z.string().optional(),
+  vehicleNumber: z.string().optional(),
+  drivingLicense: z.string().optional(),
+  experience: z.string().optional(),
+  availability: z.string().optional()
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -132,19 +139,43 @@ export const RegisterForm = ({ onSuccess, onLoginClick }: RegisterFormProps) => 
       console.log('🔍 OTP verified, completing registration...');
       
       // Step 3: Complete registration after OTP verification
-      await registerUser(
-        formData.email,
-        formData.password,
-        formData.displayName,
-        formData.phone,
-        formData.address,
-        formData.birthdate
-      );
+      if (selectedRole === 'delivery') {
+        // For delivery agents, create a delivery agent request instead of direct registration
+        if (!formData.vehicleType || !formData.vehicleNumber || !formData.drivingLicense || !formData.experience || !formData.availability) {
+          throw new Error('All delivery agent fields are required: vehicle type, vehicle number, driving license, experience, and availability');
+        }
+        
+        await createDeliveryAgentRequest(formData.email, formData.password, {
+          displayName: formData.displayName,
+          phone: formData.phone,
+          vehicleType: formData.vehicleType,
+          vehicleNumber: formData.vehicleNumber,
+          drivingLicense: formData.drivingLicense,
+          address: formData.address,
+          experience: formData.experience,
+          availability: formData.availability
+        });
 
-      toast({
-        title: "Registration Successful!",
-        description: "Your account has been created successfully.",
-      });
+        toast({
+          title: "Delivery Agent Request Submitted!",
+          description: "Your delivery agent request has been submitted. You will be notified once approved.",
+        });
+      } else {
+        // For customers and NGOs, use regular registration
+        await registerUser(
+          formData.email,
+          formData.password,
+          formData.displayName,
+          formData.phone,
+          formData.address,
+          formData.birthdate
+        );
+
+        toast({
+          title: "Registration Successful!",
+          description: "Your account has been created successfully.",
+        });
+      }
 
       console.log('✅ Registration completed successfully');
       onSuccess?.();
@@ -354,6 +385,100 @@ export const RegisterForm = ({ onSuccess, onLoginClick }: RegisterFormProps) => 
               <p className="text-sm text-destructive">{errors.birthdate.message}</p>
             )}
           </div>
+
+          {/* Delivery-specific fields */}
+          {selectedRole === 'delivery' && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="vehicleType" className={theme.getThemeColors().foreground}>Vehicle Type *</Label>
+                <select
+                  id="vehicleType"
+                  {...register('vehicleType')}
+                  disabled={isLoading}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select your vehicle type</option>
+                  <option value="Motorcycle">Motorcycle</option>
+                  <option value="Scooter">Scooter</option>
+                  <option value="Bicycle">Bicycle</option>
+                  <option value="Car">Car</option>
+                  <option value="Van">Van</option>
+                  <option value="Truck">Truck</option>
+                </select>
+                {errors.vehicleType && (
+                  <p className="text-sm text-destructive">{errors.vehicleType.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="vehicleNumber" className={theme.getThemeColors().foreground}>Vehicle Number *</Label>
+                <Input
+                  id="vehicleNumber"
+                  type="text"
+                  placeholder="Enter your vehicle number"
+                  {...register('vehicleNumber')}
+                  disabled={isLoading}
+                />
+                {errors.vehicleNumber && (
+                  <p className="text-sm text-destructive">{errors.vehicleNumber.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="drivingLicense" className={theme.getThemeColors().foreground}>Driving License Number *</Label>
+                <Input
+                  id="drivingLicense"
+                  type="text"
+                  placeholder="Enter your driving license number"
+                  {...register('drivingLicense')}
+                  disabled={isLoading}
+                />
+                {errors.drivingLicense && (
+                  <p className="text-sm text-destructive">{errors.drivingLicense.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="experience" className={theme.getThemeColors().foreground}>Delivery Experience *</Label>
+                <select
+                  id="experience"
+                  {...register('experience')}
+                  disabled={isLoading}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select your experience</option>
+                  <option value="Less than 6 months">Less than 6 months</option>
+                  <option value="6 months - 1 year">6 months - 1 year</option>
+                  <option value="1-2 years">1-2 years</option>
+                  <option value="2-5 years">2-5 years</option>
+                  <option value="More than 5 years">More than 5 years</option>
+                </select>
+                {errors.experience && (
+                  <p className="text-sm text-destructive">{errors.experience.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="availability" className={theme.getThemeColors().foreground}>Availability *</Label>
+                <select
+                  id="availability"
+                  {...register('availability')}
+                  disabled={isLoading}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select your availability</option>
+                  <option value="Full-time (8+ hours/day)">Full-time (8+ hours/day)</option>
+                  <option value="Part-time (4-8 hours/day)">Part-time (4-8 hours/day)</option>
+                  <option value="Flexible (as needed)">Flexible (as needed)</option>
+                  <option value="Weekends only">Weekends only</option>
+                  <option value="Evenings only">Evenings only</option>
+                </select>
+                {errors.availability && (
+                  <p className="text-sm text-destructive">{errors.availability.message}</p>
+                )}
+              </div>
+            </>
+          )}
 
           {error && (
             <Alert variant="destructive">

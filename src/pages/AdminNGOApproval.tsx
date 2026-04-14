@@ -328,7 +328,7 @@ const AdminNGOApproval = () => {
     <div className="min-h-screen py-8">
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="mb-8">
-          <h1 className="font-display text-3xl font-bold mb-1">NGO Approval Dashboard</h1>
+          <h1 className="font-display text-3xl font-bold mb-1"  style={{ color: 'hsl(var(--dark-brown))' }}>NGO Approval Dashboard</h1>
           <p className="text-muted-foreground">Review and approve NGO registration applications</p>
         </div>
 
@@ -395,7 +395,7 @@ const AdminNGOApproval = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Quick Links</CardTitle>
+              <CardTitle className="text-lg" style={{ color: 'hsl(var(--dark-brown))' }}>Quick Links</CardTitle>
               <p className="text-sm text-muted-foreground">Quick access to admin functions</p>
             </CardHeader>
             <CardContent>
@@ -440,7 +440,7 @@ const AdminNGOApproval = () => {
             onClick={() => setActiveTab('approved')}
             className="flex items-center gap-2"
           >
-            <span>Approved NGOs</span>
+            <span >Approved NGOs</span>
             {approvedNGOs.length > 0 && (
               <Badge variant="secondary" className="ml-2">
                 {approvedNGOs.length}
@@ -553,7 +553,7 @@ const AdminNGOApproval = () => {
         {activeTab === 'approved' && (
           <Card>
             <CardHeader>
-              <CardTitle>Approved NGOs</CardTitle>
+              <CardTitle  style={{ color: 'hsl(var(--dark-brown))' }}>Approved NGOs</CardTitle>
             </CardHeader>
             <CardContent>
               {approvedNGOs.length === 0 ? (

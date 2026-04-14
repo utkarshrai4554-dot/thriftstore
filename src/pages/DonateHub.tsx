@@ -548,18 +548,14 @@ const DonateHub = () => {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="requests" className="flex items-center gap-2">
-              <Target className="h-4 w-4" />
+              <Target className="h-4 w-6" />
               Fulfill NGO Requests
             </TabsTrigger>
             <TabsTrigger value="general" className="flex items-center gap-2">
-              <Package className="h-4 w-4" />
+              <Package className="h-4 w-6" />
               General Donations
-            </TabsTrigger>
-            <TabsTrigger value="impact" className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Track Impact
             </TabsTrigger>
           </TabsList>
 

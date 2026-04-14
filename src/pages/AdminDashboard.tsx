@@ -371,9 +371,8 @@ const AdminDashboard = () => {
             <TabsTrigger value="ngo-approval">NGO Approval</TabsTrigger>
             <TabsTrigger value="assign-donation">Assign Donation</TabsTrigger>
             <TabsTrigger value="assign-delivery">Assign Delivery</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="delivery-requests">Delivery Agent Requests</TabsTrigger>
-            <TabsTrigger value="delivery">Delivery Agents</TabsTrigger>
+            
           </TabsList>
 
           <TabsContent value="products" className="mt-4">
@@ -462,7 +461,7 @@ const AdminDashboard = () => {
           <TabsContent value="ngo-approval" className="mt-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
+                <CardTitle className="text-lg flex items-center gap-2"  style={{ color: 'hsl(var(--dark-brown))' }}>
                   <Users className="h-5 w-5" />
                   NGO Management
                 </CardTitle>
@@ -474,7 +473,7 @@ const AdminDashboard = () => {
                       <Users className="h-6 w-6 text-blue-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-lg">NGO Registrations</h3>
+                      <h3 className="font-semibold text-lg"  style={{ color: 'hsl(var(--dark-brown))' }}>NGO Registrations</h3>
                       <p className="text-sm text-muted-foreground">Review and approve NGO registration requests</p>
                     </div>
                   </div>

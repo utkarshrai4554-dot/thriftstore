@@ -13,19 +13,10 @@ const AdminOrders = () => {
   const [selectedPartner, setSelectedPartner] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('pending');
-  const [deliveryPartners] = useState([
-    { id: 'partner1', name: 'Stylease Express', phone: '+1234567890', email: 'express@stylease.com' },
-    { id: 'partner2', name: 'QuickShip Logistics', phone: '+0987654321', email: 'quickship@stylease.com' },
-    { id: 'partner3', name: 'Local Delivery Co', phone: '+1122334455', email: 'local@stylease.com' },
-    { id: 'partner4', name: 'Speedy Delivery', phone: '+9998887777', email: 'speedy@stylease.com' }
-  ]);
-    const [deliveryAgentRequests, setDeliveryAgentRequests] = useState([
-    { id: 'req1', name: 'Alice Brown', phone: '+1555666777', email: 'alice@delivery.com', status: 'pending', experience: '2 years', vehicle: 'Motorcycle', appliedDate: '2024-01-15' },
-    { id: 'req2', name: 'Bob Davis', phone: '+1888999000', email: 'bob@delivery.com', status: 'pending', experience: '1 year', vehicle: 'Van', appliedDate: '2024-01-14' },
-    { id: 'req3', name: 'Carol White', phone: '+1222333444', email: 'carol@delivery.com', status: 'pending', experience: '3 years', vehicle: 'Car', appliedDate: '2024-01-13' },
-    { id: 'req4', name: 'David Lee', phone: '+1444555666', email: 'david@delivery.com', status: 'pending', experience: '6 months', vehicle: 'Bicycle', appliedDate: '2024-01-12' }
-  ]);
-
+  const [deliveryPartners, setDeliveryPartners] = useState([]);
+  const [connectionStatus, setConnectionStatus] = useState('connected');
+  const [lastUpdate, setLastUpdate] = useState(new Date());
+    
   useEffect(() => {
     // Set up real-time listener for order updates
     const unsubscribeOrders = onSnapshot(
@@ -48,8 +39,56 @@ const AdminOrders = () => {
       }
     );
 
+    // Set up real-time listener for delivery partners
+    const unsubscribeDeliveryPartners = onSnapshot(
+      collection(db, 'deliveryAgents'),
+      (snapshot) => {
+        setConnectionStatus('connected');
+        setLastUpdate(new Date());
+        
+        const partnersData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          
+          // Handle lastSeen field properly
+          let lastSeen = null;
+          if (data.lastSeen) {
+            if (data.lastSeen.toDate) {
+              lastSeen = data.lastSeen.toDate();
+            } else if (data.lastSeen instanceof Date) {
+              lastSeen = data.lastSeen;
+            } else if (typeof data.lastSeen === 'string' || typeof data.lastSeen === 'number') {
+              const date = new Date(data.lastSeen);
+              lastSeen = isNaN(date.getTime()) ? null : date;
+            }
+          }
+          
+          return {
+            id: doc.id,
+            name: data.displayName || data.name || 'Unknown',
+            phone: data.phone || 'Not provided',
+            email: data.email || 'Not provided',
+            status: data.status || 'offline',
+            currentAssignments: data.currentAssignments || 0,
+            vehicle: data.vehicle || null,
+            experience: data.experience || null,
+            lastSeen: lastSeen,
+            isOnline: data.isOnline || false,
+            ...data
+          };
+        }).filter(partner => partner.status === 'approved'); // Only show approved agents
+        
+        setDeliveryPartners(partnersData);
+        console.log('Real-time delivery partners updated:', partnersData.length);
+      },
+      (error) => {
+        console.error('Error fetching delivery partners:', error);
+        setConnectionStatus('disconnected');
+      }
+    );
+
     return () => {
       unsubscribeOrders();
+      unsubscribeDeliveryPartners();
     };
   }, []);
 
@@ -99,11 +138,24 @@ const AdminOrders = () => {
       const orderRef = doc(db, 'orders', orderId);
       const selectedPartnerData = deliveryPartners.find(p => p.id === selectedPartner);
       
+      if (!selectedPartnerData) {
+        toast.error('Selected delivery partner not found');
+        return;
+      }
+      
       await updateDoc(orderRef, {
         deliveryPartner: selectedPartner,
         deliveryPartnerName: selectedPartnerData?.name,
+        deliveryPartnerPhone: selectedPartnerData?.phone,
         status: 'accepted', // Update status to accepted when delivery is assigned
         assignedAt: new Date(),
+        updatedAt: new Date()
+      });
+
+      // Update delivery agent's assignment count
+      await updateDoc(doc(db, 'deliveryAgents', selectedPartner), {
+        currentAssignments: (selectedPartnerData.currentAssignments || 0) + 1,
+        lastAssigned: new Date(),
         updatedAt: new Date()
       });
 
@@ -118,51 +170,7 @@ const AdminOrders = () => {
 
   
   
-  const handleApproveRequest = async (requestId) => {
-    try {
-      const request = deliveryAgentRequests.find(req => req.id === requestId);
-      if (request) {
-        // Add to Firebase deliveryAgent collection
-        const deliveryAgentRef = doc(collection(db, 'deliveryAgent'));
-        await setDoc(deliveryAgentRef, {
-          name: request.name,
-          phone: request.phone,
-          email: request.email,
-          status: 'online',
-          deliveries: 0,
-          experience: request.experience,
-          vehicle: request.vehicle,
-          appliedDate: request.appliedDate,
-          approvedDate: new Date().toISOString(),
-          createdAt: new Date(),
-          updatedAt: new Date()
-        });
-        
-        // Remove from requests (this is dummy data, in real app you'd update Firebase)
-        setDeliveryAgentRequests(deliveryAgentRequests.filter(req => req.id !== requestId));
-        
-        toast.success(`Delivery agent request from ${request.name} approved!`);
-      }
-    } catch (error) {
-      console.error('Error approving request:', error);
-      toast.error('Failed to approve request');
-    }
-  };
-
-  const handleRejectRequest = async (requestId) => {
-    try {
-      const request = deliveryAgentRequests.find(req => req.id === requestId);
-      if (request) {
-        // Remove from requests
-        setDeliveryAgentRequests(deliveryAgentRequests.filter(req => req.id !== requestId));
-        toast.success(`Delivery agent request from ${request.name} rejected!`);
-      }
-    } catch (error) {
-      console.error('Error rejecting request:', error);
-      toast.error('Failed to reject request');
-    }
-  };
-
+  
   const filteredOrders = orders.filter(order => {
   const matchesSearch = searchQuery === '' || 
     order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -208,13 +216,34 @@ const AdminOrders = () => {
     // Example: await emailService.sendOrderNotification(order, action, reason);
   };
 
+  // Function to simulate partner status changes (for demonstration)
+  const simulatePartnerStatusChange = async () => {
+    if (deliveryPartners.length === 0) return;
+    
+    const randomPartner = deliveryPartners[Math.floor(Math.random() * deliveryPartners.length)];
+    const newStatus = !randomPartner.isOnline;
+    
+    try {
+      await updateDoc(doc(db, 'deliveryAgents', randomPartner.id), {
+        isOnline: newStatus,
+        lastSeen: new Date(),
+        updatedAt: new Date()
+      });
+      
+      toast.success(`${randomPartner.name} is now ${newStatus ? 'online' : 'offline'}`);
+    } catch (error) {
+      console.error('Error updating partner status:', error);
+      toast.error('Failed to update partner status');
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'accepted': return 'bg-green-100 text-green-800';
       case 'rejected': return 'bg-red-100 text-red-800';
       case 'shipped': return 'bg-blue-100 text-blue-800';
-      case 'delivered': return 'bg-purple-100 text-purple-800';
+      case 'delivered': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -225,7 +254,7 @@ const AdminOrders = () => {
       case 'accepted': return 'Accepted';
       case 'rejected': return 'Rejected';
       case 'shipped': return 'Shipped';
-      case 'delivered': return 'Delivered';
+      case 'delivered': return 'Approved';
       default: return status;
     }
   };
@@ -249,8 +278,8 @@ const AdminOrders = () => {
     <div className="bg-gradient-to-br from-amber-950 to-amber-900 min-h-screen">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Order Management</h1>
-          <p className="text-gray-600">Manage and track customer orders</p>
+          <h1 className="text-3xl font-bold text-gray-900">Approved Products</h1>
+          <p className="text-gray-600">Manage and approve delivery assignments</p>
         </div>
 
         {/* Order Stats */}
@@ -281,103 +310,111 @@ const AdminOrders = () => {
       {/* Delivery Partners Management */}
       <div className="bg-white rounded-lg shadow overflow-hidden mb-12 border border-gray-200">
         <div className="px-8 py-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Delivery Partners</h2>
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Available Partners</h3>
-            <div className="space-y-3">
-              {deliveryPartners.map((partner) => (
-                <div key={partner.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <div>
-                    <p className="font-medium text-gray-900">{partner.name}</p>
-                    <p className="text-sm text-gray-600">{partner.phone}</p>
-                    <p className="text-sm text-gray-600">{partner.email}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleAssignDelivery(selectedOrder.id)}
-                      disabled={!selectedOrder}
-                      className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                    >
-                      Assign to Order
-                    </button>
-                  </div>
-                </div>
-              ))}
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">Real-time Delivery Partners</h2>
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${connectionStatus === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                <span className="text-gray-600">
+                  {connectionStatus === 'connected' ? 'Connected' : 'Disconnected'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-gray-600">Online: {deliveryPartners.filter(p => p.isOnline).length}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                <span className="text-gray-600">Offline: {deliveryPartners.filter(p => !p.isOnline).length}</span>
+              </div>
+              <div className="text-xs text-gray-500">
+                Last update: {lastUpdate.toLocaleTimeString()}
+              </div>
+              <button
+                onClick={simulatePartnerStatusChange}
+                disabled={deliveryPartners.length === 0}
+                className="px-3 py-1 bg-amber-600 text-white rounded-md hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium"
+              >
+                Simulate Status Change
+              </button>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Delivery Agent Requests */}
-      <div className="bg-white rounded-lg shadow overflow-hidden mb-12 border border-gray-200">
-        <div className="px-8 py-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Delivery Agent Requests</h2>
-          <div className="space-y-4">
-            {deliveryAgentRequests.length === 0 ? (
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Available Partners ({deliveryPartners.length})</h3>
+            {deliveryPartners.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-gray-600">No delivery agent requests at the moment.</p>
+                <p className="text-gray-600">No approved delivery partners available at the moment.</p>
               </div>
             ) : (
-              deliveryAgentRequests.map((request) => (
-                <div key={request.id} className="bg-gray-50 rounded-lg border border-gray-200 p-4">
-                  <div className="flex items-center justify-between">
+              <div className="space-y-3">
+                {deliveryPartners.map((partner) => (
+                  <div key={partner.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h4 className="font-semibold text-gray-900">{request.name}</h4>
-                        <Badge variant="outline" className="text-yellow-600 border-yellow-600">Pending</Badge>
+                        <div className={`w-3 h-3 rounded-full ${partner.isOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
+                        <p className="font-medium text-gray-900">{partner.name}</p>
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          partner.isOnline ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {partner.isOnline ? 'Online' : 'Offline'}
+                        </span>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                         <div className="flex items-center gap-2">
                           <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                           </svg>
-                          <span className="text-gray-600">{request.phone}</span>
+                          <span className="text-gray-600">{partner.phone}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                           </svg>
-                          <span className="text-gray-600">{request.email}</span>
+                          <span className="text-gray-600">{partner.email}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
-                          <span className="text-gray-600">Applied: {request.appliedDate}</span>
+                          <span className="text-gray-600">Active: {partner.currentAssignments || 0} deliveries</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4 mt-2 text-sm">
-                        <span className="text-gray-600">Experience: {request.experience}</span>
-                        <span className="text-gray-600">Vehicle: {request.vehicle}</span>
+                      <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                        {partner.vehicle && partner.vehicle !== 'Not specified' && <span>Vehicle: {partner.vehicle}</span>}
+                        {partner.experience && partner.experience !== 'Not specified' && <span>Experience: {partner.experience}</span>}
+                        {partner.lastSeen && partner.lastSeen instanceof Date && !isNaN(partner.lastSeen.getTime()) && <span>Last seen: {partner.lastSeen.toLocaleString()}</span>}
                       </div>
                     </div>
                     <div className="flex gap-2 ml-4">
                       <button
-                        onClick={() => handleApproveRequest(request.id)}
-                        className="px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium"
+                        onClick={() => {
+                          if (!selectedOrder) {
+                            toast.error('Please select an order first');
+                            return;
+                          }
+                          setSelectedPartner(partner.id);
+                          handleAssignDelivery(selectedOrder.id);
+                        }}
+                        disabled={!selectedOrder || !partner.isOnline}
+                        className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
                       >
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => handleRejectRequest(request.id)}
-                        className="px-3 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-medium"
-                      >
-                        Reject
+                        Assign to Order
                       </button>
                     </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         </div>
       </div>
 
+      
       {/* Orders List */}
       <div className="bg-white rounded-lg shadow overflow-hidden mb-12 border border-gray-200">
         <div className="px-8 py-6 border-b border-gray-200">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-900">Order Management</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-900">Approved Products</h2>
             <div className="flex gap-2">
               <button
                 onClick={() => setActiveTab('pending')}
@@ -397,7 +434,7 @@ const AdminOrders = () => {
                     : 'bg-amber-800 text-amber-300 hover:bg-amber-700'
                 }`}
               >
-                Completed Orders ({orders.filter(o => o.status === 'delivered').length})
+                Approved Orders ({orders.filter(o => o.status === 'delivered').length})
               </button>
             </div>
           </div>
@@ -508,7 +545,7 @@ const AdminOrders = () => {
                             onClick={() => handleMarkAsDelivered(order.id)}
                             className="px-3 py-1.5 bg-white border border-green-600 text-green-600 rounded-md hover:bg-green-50 transition-colors text-sm font-medium"
                           >
-                            Mark Delivered
+                            Approve Product
                           </button>
                         )}
                       </div>
