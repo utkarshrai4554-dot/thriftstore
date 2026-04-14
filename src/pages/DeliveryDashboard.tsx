@@ -3,10 +3,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, MapPin, ArrowRight, Truck, CheckCircle, User, Phone, RefreshCw } from "lucide-react";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import DeliveryAgentInterface from "@/components/DeliveryAgentInterface";
 
 interface DeliveryAgent {
   uid: string;
@@ -30,39 +29,10 @@ const DeliveryDashboard = () => {
   const { user } = useAuth();
   const [deliveryAgents, setDeliveryAgents] = useState<DeliveryAgent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isDeliveryAgent, setIsDeliveryAgent] = useState(false);
-  const [userRole, setUserRole] = useState<string>('');
 
   useEffect(() => {
-    checkUserRole();
     fetchDeliveryAgents();
-  }, [user]);
-
-  const checkUserRole = async () => {
-    if (!user?.uid) return;
-    
-    try {
-      // Check if user is a delivery agent
-      const agentDoc = await getDoc(doc(db, 'deliveryAgents', user.uid));
-      if (agentDoc.exists()) {
-        setIsDeliveryAgent(true);
-        setUserRole('delivery_agent');
-        return;
-      }
-
-      // Check if user is admin
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (userDoc.exists() && userDoc.data().role === 'admin') {
-        setUserRole('admin');
-        return;
-      }
-
-      setUserRole('user');
-    } catch (error) {
-      console.error('Error checking user role:', error);
-      setUserRole('user');
-    }
-  };
+  }, []);
 
   const fetchDeliveryAgents = async () => {
     try {
@@ -86,9 +56,17 @@ const DeliveryDashboard = () => {
     }
   };
 
-  // If user is a delivery agent, show their interface
-  if (isDeliveryAgent) {
-    return <DeliveryAgentInterface />;
+  if (loading) {
+    return (
+      <div className="min-h-screen py-8">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <span className="ml-2">Loading delivery agents...</span>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
